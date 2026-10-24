@@ -114,6 +114,8 @@ const TF = (() => {
   const SUFFIX = {US:840,DE:276,F:276,XETRA:276,NL:528,AS:528,FR:250,PA:250,ES:724,MC:724,PT:620,LS:620,IT:380,MI:380,UK:826,L:826,LN:826,BE:56,CH:756,SW:756,DK:208,CO:208,SE:752,ST:752,FI:246,HE:246,NO:578,OL:578,PL:616,WA:616,IE:372};
   // Taxa máxima de retenção prevista na convenção (referência — confirmar)
   const CDT = {840:15,276:15,250:15,528:10,724:15,380:15,756:15,124:15,56:15,40:15,208:15,752:15,578:15,246:15,616:15,826:10,372:15,442:15,76:15,392:10};
+  const ANEXO_G_DEFAULT = {XTB:true};
+  const NIF_DEFAULT = {XTB:'980436613'};
   const BROKERS = {XTB:{name:'XTB',cp:616},DEGIRO:{name:'DEGIRO',cp:276},T212:{name:'Trading 212',cp:196},REVOLUT:{name:'Revolut',cp:440},OUTRA:{name:'Outra',cp:''}};
   const ETF_HINT = /\b(ETF|UCITS|ISHARES|VANGUARD|XTRACKERS|AMUNDI|SPDR|LYXOR|INVESCO|WISDOMTREE|VANECK)\b/i;
   const US_ETF = new Set(['SPY','VOO','VTI','IVV','QQQ','SCHD','VYM','VT','SMH','DIA','VUG','VEA','VWO','BND','GLD']);
@@ -226,7 +228,7 @@ const TF = (() => {
     const { realized, issues } = fifo(state.tx);
     const map = new Map();
     for (const r of realized.filter(r => r.sellDate.startsWith(y))) {
-      const key = r.ticker + '|' + r.sellDate + '|' + r.buyDate;
+      const key = r.saleId + '|' + r.buyDate;
       const m = map.get(key);
       if (m) { m.qty = r8(m.qty + r.qty); m.realizacao += r.realizacao; m.aquisicao += r.aquisicao; m.despesas += r.despesas; m.ganho += r.ganho; }
       else map.set(key, { ...r });
@@ -235,8 +237,10 @@ const TF = (() => {
       .sort((a, b) => a.sellDate.localeCompare(b.sellDate) || a.buyDate.localeCompare(b.buyDate) || a.ticker.localeCompare(b.ticker))
       .map(r => {
         const a = state.assets[r.ticker] || {}, country = Number(a.country) || 840;
-        const cpMap = st.brokerCp || {};
-        return { ...r, name: a.name || r.ticker, country, code: a.code || defaultCode(a.kind), anexo: country === 620 ? 'G' : 'J',
+        const cpMap = st.brokerCp || {}, gMap = { ...ANEXO_G_DEFAULT, ...(st.anexoG || {}) }, nifMap = { ...NIF_DEFAULT, ...(st.nif || {}) };
+        const viaG = !!gMap[r.broker];
+        return { ...r, name: a.name || r.ticker, country, code: a.code || defaultCode(a.kind), anexo: (country === 620 || viaG) ? 'G' : 'J',
+          nif: viaG ? (nifMap[r.broker] || '') : '',
           cp: cpMap[r.broker] != null && cpMap[r.broker] !== '' ? Number(cpMap[r.broker]) : (BROKERS[r.broker]?.cp ?? '') };
       });
     const J = lines.filter(l => l.anexo === 'J'), G = lines.filter(l => l.anexo === 'G');
@@ -486,7 +490,7 @@ const TF = (() => {
       : [c.kind, c.date, T(c.ticker), r8(c.qty), r2(c.qty * c.price)].join('|');
   }
 
-  return { COUNTRIES, ISO2, CDT, BROKERS, EPS, r2, r8, pad3, num, parseDate, norm, daysBetween, guessKind, guessCountry, defaultCode,
+  return { COUNTRIES, ISO2, CDT, BROKERS, ANEXO_G_DEFAULT, NIF_DEFAULT, EPS, r2, r8, pad3, num, parseDate, norm, daysBetween, guessKind, guessCountry, defaultCode,
     ensureAsset, fifo, positions, yearReport, years, parseCSV, parseSheets, parseXTBText, fingerprint };
 })();
 if (typeof module !== 'undefined') module.exports = TF;
@@ -1000,11 +1004,11 @@ function tables(rep) {
     money: [6, 10, 11, 12],
     rows: rep.J.map((l, i) => { const [sy, sm, sd] = ymd(l.sellDate), [by, bm, bd] = ymd(l.buyDate);
       return [i + 1, TF.pad3(l.country), l.code, sy, sm, sd, TF.r2(l.realizacao), by, bm, bd, TF.r2(l.aquisicao), TF.r2(l.despesas), 0, TF.pad3(l.cp), `${l.ticker} · ${fmtQ(l.qty)} un.`]; }) };
-  const G = { id: 'G', title: 'Anexo G · Quadro 9 — Mais-valias de ações nacionais',
+  const G = { id: 'G', title: 'Anexo G · Quadro 9 — Alienação de ações e ETFs (XTB e ações nacionais)',
     head: ['N.º', 'Titular', 'NIF entidade emitente', 'Código', 'Ano real.', 'Mês', 'Dia', 'Valor de realização', 'Ano aquis.', 'Mês', 'Dia', 'Valor de aquisição', 'Despesas e encargos', 'Referência'],
     money: [7, 11, 12],
     rows: rep.G.map((l, i) => { const [sy, sm, sd] = ymd(l.sellDate), [by, bm, bd] = ymd(l.buyDate);
-      return [i + 1, 'A', '', l.code, sy, sm, sd, TF.r2(l.realizacao), by, bm, bd, TF.r2(l.aquisicao), TF.r2(l.despesas), `${l.ticker} · ${fmtQ(l.qty)} un.`]; }) };
+      return [i + 1, 'A', l.nif || '', l.code, sy, sm, sd, TF.r2(l.realizacao), by, bm, bd, TF.r2(l.aquisicao), TF.r2(l.despesas), `${l.ticker} · ${fmtQ(l.qty)} un.`]; }) };
   const D = { id: 'D', title: 'Anexo J · Quadro 8 — Dividendos de fonte estrangeira',
     head: ['N.º', 'Código', 'País da fonte', 'Rendimento bruto', 'Imposto pago no estrangeiro', 'Imposto retido em Portugal', 'Crédito estimado (CDT)', 'Referência'],
     money: [3, 4, 5, 6],
@@ -1059,7 +1063,7 @@ function renderTax() {
   ${rep.issues.length ? `<div class="mt-3 rounded-2xl bg-loss/5 border border-loss/25 p-3 text-sm text-loss font-semibold">Há ${rep.issues.length} venda(s) sem compras suficientes registadas. O relatório ficará incompleto até as registar.</div>` : ''}
 
   <div class="flex flex-wrap gap-2 mt-4 no-print">
-    <button id="btnPdf" class="h-11 px-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold">Exportar relatório em PDF</button>
+    <button id="btnPdf" class="h-11 px-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold">Relatório para a contabilista</button>
     <button id="btnCopyAll" class="h-11 px-4 rounded-2xl bg-brand-50 hover:bg-brand-100 text-brand-700 text-sm font-bold">Copiar tabelas para Excel</button>
   </div>
 
@@ -1070,6 +1074,7 @@ function renderTax() {
   <details class="no-print mt-4 bg-white rounded-3xl border border-brand-100 p-4">
     <summary class="font-bold cursor-pointer">Como preencher no Portal das Finanças</summary>
     <div class="text-sm text-slate-700 space-y-2 mt-3 leading-relaxed">
+      <p>As vendas na XTB já vêm pré-preenchidas no Anexo G, Quadro 9, só com a realização: a app calcula o ano, mês, dia e valor de aquisição e as despesas que faltam. Use o botão Relatório para a contabilista para enviar tudo de uma vez.</p>
       <p>Cada linha do Quadro 9.2A corresponde a um lote FIFO: uma venda casada com uma compra. O valor de realização e o de aquisição vão sem despesas; as comissões de compra e venda vão na coluna própria de despesas e encargos.</p>
       <p>O código G01 aplica-se a ações. Para ETFs a app sugere G20 (unidades de participação em fundos), mas confirme o código com as instruções do anexo do ano em causa; pode alterá-lo em cada ativo na Carteira.</p>
       <p>Valores em moeda estrangeira são convertidos para euros com o câmbio de referência da data de cada operação: o da compra para o valor de aquisição e o da venda para o valor de realização.</p>
@@ -1082,6 +1087,13 @@ function renderTax() {
   <details class="no-print mt-3 bg-white rounded-3xl border border-brand-100 p-4">
     <summary class="font-bold cursor-pointer">Definições fiscais</summary>
     <form id="setForm" class="mt-3 space-y-4 text-sm">
+      <div><div class="lbl">Anexo onde a corretora comunica as vendas</div>
+        <div class="space-y-2">${Object.entries(TF.BROKERS).filter(([k]) => k !== 'OUTRA').map(([k, b]) => {
+          const g = (S.settings.anexoG || {})[k] ?? !!TF.ANEXO_G_DEFAULT[k];
+          return `<div class="flex items-center gap-2"><span class="w-24 text-slate-600">${b.name}</span>
+            <label class="flex items-center gap-1.5"><input type="checkbox" data-ag="${k}" ${g ? 'checked' : ''} class="w-4 h-4 accent-[#1D4ED8]">Anexo G</label>
+            <input data-nif="${k}" class="field !py-1.5 num flex-1" inputmode="numeric" placeholder="NIF da entidade" value="${esc((S.settings.nif || {})[k] ?? TF.NIF_DEFAULT[k] ?? '')}"></div>`; }).join('')}</div>
+        <p class="text-[11px] text-slate-500 mt-1">Marque Anexo G quando as vendas já aparecem pré-preenchidas nesse anexo no Portal das Finanças (caso da XTB). O NIF é o que aparece na coluna "NIF da entidade emitente".</p></div>
       <div><div class="lbl">País da contraparte por corretora (código numérico)</div>
         <div class="grid grid-cols-2 gap-2">${Object.entries(TF.BROKERS).filter(([k]) => k !== 'OUTRA').map(([k, b]) =>
           `<label class="flex items-center gap-2"><span class="w-24 text-slate-600">${b.name}</span><input data-cp="${k}" class="field !py-1.5 num" inputmode="numeric" value="${esc(S.settings.brokerCp[k] ?? TF.pad3(b.cp))}"></label>`).join('')}</div>
@@ -1102,42 +1114,150 @@ function renderTax() {
     if (!txt) return toast('Não há linhas para copiar neste ano');
     toast(await copyText(txt) ? 'Tabelas copiadas: cole no Excel' : 'Não foi possível copiar');
   };
-  $('#btnPdf').onclick = () => exportPDF(rep, tbs);
+  $('#btnPdf').onclick = () => openReportModal(rep);
   $('#setForm').onsubmit = e => {
     e.preventDefault();
     document.querySelectorAll('[data-cp]').forEach(i => S.settings.brokerCp[i.dataset.cp] = i.value.trim());
+    S.settings.anexoG ||= {}; S.settings.nif ||= {};
+    document.querySelectorAll('[data-ag]').forEach(i => S.settings.anexoG[i.dataset.ag] = i.checked);
+    document.querySelectorAll('[data-nif]').forEach(i => S.settings.nif[i.dataset.nif] = i.value.trim());
     document.querySelectorAll('[data-cdt]').forEach(i => S.settings.cdt[i.dataset.cdt] = TF.num(i.value));
     save(); renderTax(); toast('Definições guardadas');
   };
 }
 
-function exportPDF(rep, tbs) {
+/* ---------- Relatório para a contabilista (PDF e Excel, partilháveis) ---------- */
+function reportData(rep) {
+  const ymd = d => d.split('-').map(Number);
+  const all = [...rep.G, ...rep.J];
+  const saleNo = new Map(); [...new Set([...all].sort((x, y) => x.sellDate.localeCompare(y.sellDate)).map(l => l.saleId))].forEach((id, i) => saleNo.set(id, i + 1));
+  const sales = [...saleNo.keys()].map(id => {
+    const ls = all.filter(l => l.saleId === id), f = ls[0];
+    return { n: saleNo.get(id), date: f.sellDate, ticker: f.ticker, name: f.name, broker: f.broker, anexo: f.anexo,
+      qty: TF.r8(ls.reduce((s, l) => s + l.qty, 0)), real: ls.reduce((s, l) => s + l.realizacao, 0), lots: ls.length,
+      aq: ls.reduce((s, l) => s + l.aquisicao, 0), desp: ls.reduce((s, l) => s + l.despesas, 0), ganho: ls.reduce((s, l) => s + l.ganho, 0) };
+  }).sort((a, b) => a.date.localeCompare(b.date) || a.n - b.n);
+  const lineRow = (l, i, G) => { const [sy, sm, sd] = ymd(l.sellDate), [by, bm, bd] = ymd(l.buyDate);
+    return G ? [i + 1, saleNo.get(l.saleId), 'A', l.nif || '', l.code, sy, sm, sd, TF.r2(l.realizacao), by, bm, bd, TF.r2(l.aquisicao), TF.r2(l.despesas), TF.r2(l.ganho), `${l.ticker} · ${fmtQ(l.qty)} un.`]
+      : [i + 1, saleNo.get(l.saleId), TF.pad3(l.country), l.code, sy, sm, sd, TF.r2(l.realizacao), by, bm, bd, TF.r2(l.aquisicao), TF.r2(l.despesas), 0, TF.pad3(l.cp), TF.r2(l.ganho), `${l.ticker} · ${fmtQ(l.qty)} un.`]; };
+  const tickers = new Set(all.map(l => l.ticker)), end = rep.year + '-12-31';
+  const moves = S.tx.filter(t => tickers.has(t.ticker) && t.date <= end)
+    .sort((a, b) => a.ticker.localeCompare(b.ticker) || a.date.localeCompare(b.date) || (a.type === 'buy' ? -1 : 1))
+    .map(t => [t.ticker, fmtD(t.date), t.type === 'buy' ? 'Compra' : 'Venda', fmtQ(t.qty), TF.r2(t.price), TF.r2(t.qty * t.price), TF.r2(t.fees || 0),
+      t.currency && t.currency !== 'EUR' ? `${fmtN(t.priceOrig, 2)} ${t.currency} a ${fmtN(t.fx, 4)}` : 'EUR', bname(t.broker)]);
+  return {
+    sales,
+    G: { title: 'Anexo G - Quadro 9 (alienação onerosa de partes sociais e outros valores mobiliários)',
+      head: ['N.º', 'Venda', 'Titular', 'NIF entidade', 'Código', 'Ano real.', 'Mês', 'Dia', 'Valor realização', 'Ano aquis.', 'Mês', 'Dia', 'Valor aquisição', 'Despesas e encargos', 'Ganho/perda', 'Ativo'],
+      money: [8, 12, 13, 14], rows: rep.G.map((l, i) => lineRow(l, i, true)) },
+    J: { title: 'Anexo J - Quadro 9.2A (mais-valias obtidas no estrangeiro)',
+      head: ['N.º', 'Venda', 'País fonte', 'Código', 'Ano real.', 'Mês', 'Dia', 'Valor realização', 'Ano aquis.', 'Mês', 'Dia', 'Valor aquisição', 'Despesas e encargos', 'Imposto estrangeiro', 'País contraparte', 'Ganho/perda', 'Ativo'],
+      money: [7, 11, 12, 13, 15], rows: rep.J.map((l, i) => lineRow(l, i, false)) },
+    S: { title: 'Vendas do ano (como a corretora as comunica às Finanças)',
+      head: ['Venda', 'Data', 'Ativo', 'Quantidade', 'Valor realização', 'Valor aquisição', 'Despesas', 'Ganho/perda', 'Linhas FIFO', 'Anexo', 'Corretora'],
+      money: [4, 5, 6, 7], rows: sales.map(s => [s.n, fmtD(s.date), s.ticker, fmtQ(s.qty), TF.r2(s.real), TF.r2(s.aq), TF.r2(s.desp), TF.r2(s.ganho), s.lots, s.anexo, bname(s.broker)]) },
+    D: { title: 'Anexo J - Quadro 8 (dividendos de fonte estrangeira)',
+      head: ['N.º', 'Código', 'País fonte', 'Rendimento bruto', 'Imposto pago no estrangeiro', 'Imposto retido em Portugal', 'Crédito estimado', 'Observação'],
+      money: [3, 4, 5, 6], rows: rep.D.map((d, i) => [i + 1, d.code, TF.pad3(d.country), TF.r2(d.gross), TF.r2(d.taxForeign), TF.r2(d.taxPT), TF.r2(d.credit), `${cname(d.country)} · ${d.n} pagamento(s) · CDT ${d.rate}%`]) },
+    M: { title: 'Movimentos dos ativos vendidos (base do cálculo FIFO)',
+      head: ['Ativo', 'Data', 'Tipo', 'Quantidade', 'Preço unit. (EUR)', 'Total (EUR)', 'Comissões (EUR)', 'Moeda original', 'Corretora'],
+      money: [4, 5, 6], rows: moves }
+  };
+}
+
+const reportNotes = (rep, R) => [
+  'Método: FIFO (as unidades compradas há mais tempo são as primeiras a ser vendidas), com quantidades fracionadas até 8 casas decimais.',
+  'Valores em EUR. Conta XTB em euros: usam-se os montantes efetivamente debitados e creditados. Operações noutra moeda: câmbio de referência do BCE do dia de cada operação.',
+  'As vendas na XTB vêm pré-preenchidas no Anexo G, Quadro 9, com a data e o valor de realização. Faltam o ano, mês, dia e valor de aquisição e as despesas, indicados abaixo.',
+  R.sales.some(s => s.lots > 1) ? 'Quando uma venda corresponde a compras de datas diferentes, aparece em várias linhas (mesmo número na coluna "Venda") e o valor de realização foi repartido proporcionalmente. No portal, a linha pré-preenchida dessa venda deve ser dividida nessas linhas.' : 'Cada venda corresponde a uma única data de compra.',
+  'Despesas e encargos: comissões de compra (proporcionais à quantidade vendida) e de venda.',
+  rep.issues.length ? `ATENÇÃO: ${rep.issues.length} venda(s) sem compras suficientes registadas no histórico. As linhas respetivas estão incompletas.` : 'Todas as vendas têm compras correspondentes no histórico importado.'
+];
+
+function exportAccountantPDF(rep) {
   const JS = window.jspdf && window.jspdf.jsPDF;
-  if (!JS) { toast('Gerador de PDF indisponível: a abrir a impressão'); setTimeout(() => window.print(), 300); return; }
-  const doc = new JS({ orientation: 'landscape', unit: 'pt', format: 'a4' }), T = rep.totals, W = doc.internal.pageSize.getWidth();
-  doc.setFillColor(10, 42, 102); doc.rect(0, 0, W, 64, 'F');
-  doc.setTextColor(255); doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.text(`TaxFolio Portugal - Relatório IRS ${rep.year}`, 32, 40);
-  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.text(`Gerado em ${fmtD(today())}`, W - 32, 40, { align: 'right' });
-  doc.setTextColor(10, 42, 102); doc.setFontSize(10);
+  if (!JS || !JS.API.autoTable) return toast('Gerador de PDF ainda a carregar. Ligue-se à internet e tente de novo.');
+  const R = reportData(rep), T = rep.totals, st = S.settings;
+  const doc = new JS({ orientation: 'landscape', unit: 'pt', format: 'a4' }), W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
   const e = n => fmtEUR(n).replace(/\u00a0/g, ' ');
-  const lines = [
-    `Mais-valias: ganhos ${e(T.ganhos)} | perdas ${e(T.perdas)} | saldo ${e(T.saldo)} | saldo < 365 dias ${e(T.saldoCurto)}`,
-    `Dividendos estrangeiros: bruto ${e(T.divGross)} | retido no estrangeiro ${e(T.divForeign)} | crédito estimado ${e(T.divCredit)}`,
-    `Imposto estimado à taxa de 28%: mais-valias ${e(T.mvTax)} + dividendos ${e(T.divTax)} = ${e(T.total)}`];
-  lines.forEach((l, i) => doc.text(l, 32, 88 + i * 15));
-  let y = 140;
-  for (const t of tbs) {
-    if (y > 500) { doc.addPage(); y = 40; }
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.text(t.title.replace('—', '-'), 32, y); doc.setFont('helvetica', 'normal');
-    if (!t.rows.length) { doc.setFontSize(9); doc.text('Sem linhas para este ano.', 32, y + 16); y += 40; continue; }
-    doc.autoTable({ startY: y + 8, head: [t.head], body: t.rows.map(r => r.map((v, i) => cellTxt(t, i, v).replace(/\u00a0/g, ' '))),
-      styles: { fontSize: 7, cellPadding: 3, textColor: [10, 42, 102] }, headStyles: { fillColor: [29, 78, 216], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [244, 247, 252] }, margin: { left: 32, right: 32 } });
-    y = doc.lastAutoTable.finalY + 28;
+  const txt = (t, i, v) => cellTxt(t, i, v).replace(/\u00a0/g, ' ');
+  doc.setFillColor(10, 42, 102); doc.rect(0, 0, W, 70, 'F');
+  doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(17);
+  doc.text(`IRS ${rep.year} - Mais-valias e dividendos (ações e ETFs)`, 32, 32);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+  doc.text([st.holderName, st.holderNif ? 'NIF ' + st.holderNif : ''].filter(Boolean).join(' - ') || 'Relatório para preenchimento da declaração Modelo 3', 32, 52);
+  doc.text(`Gerado em ${fmtD(today())} com TaxFolio Portugal`, W - 32, 52, { align: 'right' });
+  doc.setTextColor(10, 42, 102);
+  doc.autoTable({ startY: 88, theme: 'plain', styles: { fontSize: 9, cellPadding: 3, textColor: [10, 42, 102] }, columnStyles: { 1: { halign: 'right', fontStyle: 'bold' }, 3: { halign: 'right', fontStyle: 'bold' } },
+    body: [['Vendas no ano', String(R.sales.length), 'Total de realização', e(T.realG + T.realJ)],
+      ['Ganhos', e(T.ganhos), 'Total de aquisição', e(T.aqG + T.aqJ)],
+      ['Perdas', e(T.perdas), 'Despesas e encargos', e(T.despG + T.despJ)],
+      ['Saldo de mais-valias', e(T.saldo), 'Saldo de títulos detidos < 365 dias', e(T.saldoCurto)],
+      ['Dividendos estrangeiros (bruto)', e(T.divGross), 'Imposto retido no estrangeiro', e(T.divForeign)]],
+    margin: { left: 32, right: W / 2 } });
+  let y = doc.lastAutoTable.finalY + 16;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text('Notas para a contabilista', 32, y); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+  y += 13;
+  for (const n of reportNotes(rep, R)) { const ls = doc.splitTextToSize('- ' + n, W - 64); doc.text(ls, 32, y); y += ls.length * 11 + 2; }
+  const table = (t, opts = {}) => {
+    if (!t.rows.length) return;
+    doc.addPage(); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(t.title, 32, 36); doc.setFont('helvetica', 'normal');
+    doc.autoTable({ startY: 48, head: [t.head], body: t.rows.map(r => r.map((v, i) => txt(t, i, v))),
+      styles: { fontSize: 7.5, cellPadding: 3, textColor: [10, 42, 102], halign: 'right' }, headStyles: { fillColor: [29, 78, 216], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [244, 247, 252] }, margin: { left: 24, right: 24 }, columnStyles: { [t.head.length - 1]: { halign: 'left' } }, ...opts });
+  };
+  table(R.S, { columnStyles: { 1: { halign: 'left' }, 2: { halign: 'left' }, 10: { halign: 'left' } } });
+  table(R.G); table(R.J); table(R.D); table(R.M, { columnStyles: { 0: { halign: 'left' }, 1: { halign: 'left' }, 2: { halign: 'left' }, 7: { halign: 'left' }, 8: { halign: 'left' } } });
+  const pages = doc.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) { doc.setPage(p); doc.setFontSize(7); doc.setTextColor(120);
+    doc.text(`Página ${p} de ${pages} - valores calculados a partir dos extratos importados; confirmar com os documentos da corretora.`, 32, H - 16); }
+  shareFile(doc.output('blob'), `IRS_${rep.year}_mais-valias_${(st.holderName || 'relatorio').split(' ')[0]}.pdf`, 'application/pdf');
+}
+
+function exportAccountantXLSX(rep) {
+  if (!window.XLSX) return toast('Gerador de Excel ainda a carregar. Ligue-se à internet e tente de novo.');
+  const R = reportData(rep), T = rep.totals, wb = XLSX.utils.book_new();
+  const sheet = (rows, widths) => { const ws = XLSX.utils.aoa_to_sheet(rows); ws['!cols'] = widths.map(w => ({ wch: w })); return ws; };
+  const resumo = [[`IRS ${rep.year} - Mais-valias e dividendos`], [S.settings.holderName || '', S.settings.holderNif ? 'NIF ' + S.settings.holderNif : ''], [],
+    ['Vendas no ano', R.sales.length], ['Total de realização', TF.r2(T.realG + T.realJ)], ['Total de aquisição', TF.r2(T.aqG + T.aqJ)], ['Despesas e encargos', TF.r2(T.despG + T.despJ)],
+    ['Ganhos', TF.r2(T.ganhos)], ['Perdas', TF.r2(T.perdas)], ['Saldo de mais-valias', TF.r2(T.saldo)], ['Saldo < 365 dias', TF.r2(T.saldoCurto)],
+    ['Dividendos estrangeiros (bruto)', TF.r2(T.divGross)], ['Imposto retido no estrangeiro', TF.r2(T.divForeign)], [], ['Notas'], ...reportNotes(rep, R).map(n => [n])];
+  XLSX.utils.book_append_sheet(wb, sheet(resumo, [34, 16]), 'Resumo');
+  for (const [t, name] of [[R.S, 'Vendas'], [R.G, 'Anexo G Q9'], [R.J, 'Anexo J Q9.2A'], [R.D, 'Dividendos J Q8'], [R.M, 'Movimentos']])
+    if (t.rows.length) XLSX.utils.book_append_sheet(wb, sheet([t.head, ...t.rows], t.head.map(h => Math.max(10, h.length + 2))), name);
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  shareFile(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `IRS_${rep.year}_mais-valias.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+
+async function shareFile(blob, name, type) {
+  const file = new File([blob], name, { type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return; } catch (err) { if (err.name === 'AbortError') return; }
   }
-  doc.setFontSize(7); doc.setTextColor(120);
-  doc.text('Estimativa informativa. Confirme os valores e códigos no Portal das Finanças ou com um contabilista certificado.', 32, doc.internal.pageSize.getHeight() - 20);
-  try { doc.save(`TaxFolio_IRS_${rep.year}.pdf`); toast('PDF exportado'); } catch (err) { window.print(); }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  toast('Ficheiro gerado');
+}
+
+function openReportModal(rep) {
+  const n = new Set([...rep.G, ...rep.J].map(l => l.saleId)).size;
+  openModal(`${modalHead('Relatório para a contabilista')}
+    <p class="text-sm text-slate-600 mb-3">IRS ${rep.year}: ${n} venda(s) e ${rep.D.length ? rep.D.reduce((s, d) => s + d.n, 0) + ' dividendo(s)' : 'sem dividendos estrangeiros'}. Inclui as datas e os valores de aquisição que faltam no Anexo G, o resumo do ano, notas explicativas e todos os movimentos usados no cálculo.</p>
+    ${rep.issues.length ? `<div class="rounded-2xl bg-loss/5 border border-loss/25 p-3 text-sm text-loss font-semibold mb-3">Há ${rep.issues.length} venda(s) sem compras suficientes. Importe o histórico completo antes de enviar.</div>` : ''}
+    <form id="repForm" class="space-y-3">
+      <div class="grid grid-cols-3 gap-3">
+        <div class="col-span-2"><label class="lbl" for="hName">Seu nome <span class="font-normal text-slate-400">(opcional)</span></label><input id="hName" class="field" value="${esc(S.settings.holderName || '')}"></div>
+        <div><label class="lbl" for="hNif">NIF</label><input id="hNif" class="field num" inputmode="numeric" value="${esc(S.settings.holderNif || '')}"></div>
+      </div>
+      <p class="text-[11px] text-slate-500 -mt-1">Ficam só neste telemóvel e servem para identificar o relatório.</p>
+      <button type="button" data-fmt="pdf" class="w-full h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold">Enviar PDF</button>
+      <button type="button" data-fmt="xlsx" class="w-full h-12 rounded-2xl bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold">Enviar Excel</button>
+      <p class="text-[11px] text-slate-500 text-center">Abre a partilha do iPhone: escolha WhatsApp, Mail ou Guardar em Ficheiros.</p>
+    </form>`);
+  document.querySelectorAll('[data-fmt]').forEach(b => b.onclick = () => {
+    S.settings.holderName = $('#hName').value.trim(); S.settings.holderNif = $('#hNif').value.trim(); save();
+    b.dataset.fmt === 'pdf' ? exportAccountantPDF(rep) : exportAccountantXLSX(rep);
+  });
 }
 
 /* ================= IMPORTAR ================= */
