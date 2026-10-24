@@ -903,6 +903,30 @@ function openCashCfg() {
   $('#ccForm').onsubmit = ev => { ev.preventDefault(); Object.assign(c, { goal: TF.num($('#ccGoal').value), divFrom: $('#ccFrom').value, place: $('#ccPlace').value }); save(); closeModal(); render(); toast('Definições guardadas'); };
 }
 
+function cashQHTML(kind, e, pre) {
+  if (kind === 'sell') return `<label class="flex items-center gap-2 text-sm font-semibold"><input id="fCash" type="checkbox" class="w-5 h-5 accent-[#0F9D6E]" ${e.fromCash ? 'checked' : ''}>Devolver o valor à caixa de oportunidade</label>`;
+  const back = e.fromCash ? e.qty * e.price + (e.fees || 0) : 0;
+  const ask = !!((S.cash || []).length || cashState().saldo > 0.004 || e.fromCash || pre);
+  UI.cq = { ask, back, val: e.id ? !!e.fromCash : (pre ? true : null) };
+  if (!ask) return '';
+  return `<div id="cashQ" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+    <div class="text-sm font-bold text-emerald-900">Este valor saiu da caixa de oportunidade?</div>
+    <div class="text-xs text-emerald-800 mt-0.5 num">Saldo na caixa: ${fmtEUR(cashState().saldo + back)}</div>
+    <div class="grid grid-cols-2 gap-2 mt-2">${[['1', 'Sim'], ['0', 'Não']].map(([v, l]) => `<button type="button" data-cq="${v}" class="h-10 rounded-xl text-sm font-bold border">${l}</button>`).join('')}</div>
+    <div id="cqInfo" class="text-xs mt-2 text-emerald-900 num"></div></div>`;
+}
+function paintCashQ(total) {
+  if (!UI.cq?.ask || !$('#cashQ')) return;
+  document.querySelectorAll('[data-cq]').forEach(b => {
+    const on = UI.cq.val !== null && (b.dataset.cq === '1') === UI.cq.val;
+    b.className = 'h-10 rounded-xl text-sm font-bold border ' + (on ? 'bg-gain text-white border-gain' : 'bg-white text-emerald-900 border-emerald-200');
+  });
+  const saldo = cashState().saldo + UI.cq.back, info = $('#cqInfo');
+  if (UI.cq.val === true) { const after = saldo - total;
+    info.innerHTML = total ? `Saldo depois da compra: <b class="${after < 0 ? 'text-loss' : ''}">${fmtEUR(after)}</b>${after < 0 ? ' · a caixa fica negativa' : ''}` : 'O valor da compra será debitado da caixa.'; }
+  else info.textContent = UI.cq.val === false ? 'A caixa não é alterada.' : 'Escolha uma opção para registar a compra.';
+}
+
 /* ================= DIVIDENDOS PREVISTOS ================= */
 const whtRate = c => c === 620 ? 28 : ({ 826: 0, 372: 0 })[c] ?? cdtRate(c);
 function qtyAt(tk, ex) {
@@ -1100,7 +1124,7 @@ function openTxForm(kind = 'buy', existing = null, fromCash = false) {
     <div id="fxWrap" class="${cur === 'EUR' ? 'hidden' : ''}"><label class="lbl" for="fFx">Câmbio no dia: 1 EUR = <span id="fxCur">${cur}</span></label>
       <input id="fFx" class="field num" inputmode="decimal" value="${e.fx ?? ''}" placeholder="ex.: 1,0850"><p id="fxInfo" class="text-[11px] text-slate-500 mt-1">Câmbio de referência do BCE da data da operação.</p></div>
     <div><label class="lbl" for="fFees">Taxas e comissões (EUR)</label><input id="fFees" class="field num" inputmode="decimal" value="${e.fees ?? ''}" placeholder="0,00"></div>
-    <label class="flex items-center gap-2 text-sm font-semibold"><input id="fCash" type="checkbox" class="w-5 h-5 accent-[#0F9D6E]" ${(e.fromCash || fromCash) ? 'checked' : ''}>${kind === 'buy' ? 'Pago com a caixa de oportunidade' : 'Devolver o valor à caixa de oportunidade'}</label>`}
+    ${cashQHTML(kind, e, fromCash)}`}
     <div><label class="lbl" for="fBroker">Corretora</label><select id="fBroker" class="field">${brokerOpts(e.broker || 'XTB')}</select></div>
     <div id="fPreview" class="rounded-2xl bg-brand-50 p-3 text-sm num min-h-[44px]"></div>
     <div class="flex gap-2 pt-1">
@@ -1127,7 +1151,9 @@ function openTxForm(kind = 'buy', existing = null, fromCash = false) {
       html += `<div class="text-xs mt-1 ${q > avail + 1e-9 ? 'text-loss font-bold' : 'text-slate-500'}">Disponível nessa data: ${fmtQ(avail)} un.</div>`;
     }
     pv.innerHTML = html;
+    paintCashQ(q * pe + fees);
   };
+  f.querySelectorAll('[data-cq]').forEach(b => b.onclick = () => { UI.cq.val = b.dataset.cq === '1'; preview(); });
   f.addEventListener('input', preview); preview();
   if (!isDiv) {
     let fxManual = e.fx != null;
@@ -1168,9 +1194,10 @@ function openTxForm(kind = 'buy', existing = null, fromCash = false) {
       if (!(qty > 0)) return toast('Indique uma quantidade maior que zero');
       if (!(p > 0)) return toast('Indique o preço unitário');
       if (cur !== 'EUR' && !(fx > 0)) return toast('Indique o câmbio para converter para EUR');
+      if (kind === 'buy' && UI.cq?.ask && UI.cq.val === null) { $('#cashQ')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return toast('Responda se o valor saiu da caixa'); }
       TF.ensureAsset(S, { ticker, name: $('#fName').value.trim() });
       const rec = { id: e.id || uid(), created: e.created || Date.now(), type: kind, ticker, date, qty, price: cur === 'EUR' ? p : p / fx,
-        priceOrig: p, currency: cur, fx: cur === 'EUR' ? null : fx, fees: TF.num($('#fFees').value), broker, fromCash: $('#fCash').checked };
+        priceOrig: p, currency: cur, fx: cur === 'EUR' ? null : fx, fees: TF.num($('#fFees').value), broker, fromCash: kind === 'sell' ? !!$('#fCash')?.checked : (UI.cq?.ask ? UI.cq.val === true : false) };
       if (existing) S.tx = S.tx.map(t => t.id === e.id ? rec : t); else S.tx.push(rec);
     }
     save(); closeModal(); render(); toast(existing ? 'Alterações guardadas' : 'Registado');
