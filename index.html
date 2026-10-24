@@ -76,6 +76,12 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
     </button>
   </div>
 </header>
+<div id="demoBar" class="hidden sticky z-20 bg-amber-100 border-b border-amber-200" style="top:calc(4rem + env(safe-area-inset-top,0px))">
+  <div class="max-w-3xl mx-auto px-4 py-2.5 flex items-center gap-3">
+    <div class="flex-1 min-w-0 text-sm leading-tight text-amber-950"><b>Dados de exemplo</b><br><span class="text-xs">Nada disto é seu. Os seus dados estão guardados.</span></div>
+    <button data-exitdemo class="shrink-0 h-10 px-4 rounded-full bg-amber-900 text-white text-sm font-bold">Sair do exemplo</button>
+  </div>
+</div>
 
 <main class="max-w-3xl mx-auto px-4 pt-5 pb-32">
   <section id="view-home" data-view></section>
@@ -708,6 +714,7 @@ function go(tab) {
   render(); window.scrollTo({ top: 0 });
 }
 function render() {
+  const bar = $('#demoBar'); if (bar) bar.classList.toggle('hidden', !S.demo);
   ({ home: renderHome, portfolio: renderPortfolio, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs })[UI.tab]();
 }
 
@@ -1353,6 +1360,7 @@ function openTxForm(kind = 'buy', existing = null, fromCash = false) {
   const cur = e.currency || 'EUR';
   const title = (existing ? 'Editar ' : 'Nova ') + ({ buy: 'compra', sell: 'venda', div: 'dividendo' })[kind];
   openModal(`${modalHead(title)}${seg}
+  ${S.demo ? '<div class="mb-3 rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs font-semibold text-amber-900">Está no modo exemplo: este registo é apagado quando sair do exemplo.</div>' : ''}
   <form id="txForm" class="space-y-3" novalidate>
     <div class="grid grid-cols-2 gap-3">
       <div class="col-span-2 sm:col-span-1"><label class="lbl" for="fTicker">Ticker</label>
@@ -1826,7 +1834,7 @@ function renderImport() {
       <button id="bkExport" class="h-10 px-4 rounded-xl bg-brand-50 text-brand-700 text-sm font-bold">Guardar cópia (JSON)</button>
       <label class="h-10 px-4 rounded-xl bg-brand-50 text-brand-700 text-sm font-bold grid place-items-center cursor-pointer">Restaurar cópia<input id="bkImport" type="file" accept=".json" class="sr-only"></label>
       <button data-demo class="h-10 px-4 rounded-xl bg-brand-50 text-brand-700 text-sm font-bold">Carregar dados de exemplo</button>
-      <button id="wipe" class="h-10 px-4 rounded-xl border border-loss/30 text-loss text-sm font-bold">Apagar tudo</button>
+      <button id="wipe" class="h-10 px-4 rounded-xl border border-loss/30 text-loss text-sm font-bold">${S.demo ? 'Sair do exemplo' : 'Apagar tudo'}</button>
     </div>`)}`;
 
   const fileIn = $('#file'), drop = $('#drop');
@@ -1843,8 +1851,10 @@ function renderImport() {
   }
   $('#bkExport').onclick = exportBackup;
   $('#bkImport').onchange = e => e.target.files[0] && importBackup(e.target.files[0]);
-  $('#wipe').onclick = () => { if (!confirm('Apagar todas as operações, dividendos e ativos deste dispositivo?')) return;
-    S.tx = []; S.div = []; S.assets = {}; S.cash = []; S.divCal = {}; S.divDone = {}; S.hist = {}; save(); UI.imp = null; renderImport(); toast('Dados apagados'); };
+  $('#wipe').onclick = () => { if (S.demo) return exitDemo();
+    if (!confirm('Apagar todas as operações, dividendos, caixa e ativos deste dispositivo?')) return;
+    S.tx = []; S.div = []; S.assets = {}; S.cash = []; S.divCal = {}; S.divDone = {}; S.hist = {}; S.settings.cashCfg = { goal: 0, divFrom: '', place: 'XTB' };
+    save(); UI.imp = null; renderImport(); toast('Dados apagados'); };
 }
 
 async function handleFile(file) {
@@ -1897,7 +1907,8 @@ async function importBackup(file) {
 }
 
 function loadDemo() {
-  if ((S.tx.length || S.div.length) && !confirm('Substituir os dados atuais pelos dados de exemplo?')) return;
+  if (S.demo) return toast('Já está a ver os dados de exemplo');
+  try { localStorage.setItem(KEY + '.real', JSON.stringify(S)); } catch (e) { return toast('Não foi possível guardar os seus dados antes do exemplo'); }
   S.tx = []; S.div = []; S.assets = {}; S.cash = []; S.divCal = {}; S.divDone = {}; S.settings.cashCfg = { goal: 1000, divFrom: '', place: 'XTB' }; let c = 1;
   const t = (type, ticker, date, qty, price, fees = 0, broker = 'XTB', name = '') => { TF.ensureAsset(S, { ticker, name }); S.tx.push({ id: uid(), created: c++, type, ticker, date, qty, price, priceOrig: price, currency: 'EUR', fx: null, fees, broker }); };
   t('buy', 'VWCE.DE', '2024-01-15', 0.85, 108.40, 0, 'XTB', 'Vanguard FTSE All-World UCITS ETF');
@@ -1917,15 +1928,31 @@ function loadDemo() {
   S.div.push({ id: uid(), created: c++, date: '2025-02-13', ticker: 'AAPL.US', gross: 0.17, taxForeign: 0.03, taxPT: 0, broker: 'T212' },
     { id: uid(), created: c++, date: '2025-06-12', ticker: 'MSFT.US', gross: 0.09, taxForeign: 0.01, taxPT: 0, broker: 'XTB' },
     { id: uid(), created: c++, date: '2025-05-08', ticker: 'EDP.PT', gross: 9.75, taxForeign: 0, taxPT: 2.73, broker: 'DEGIRO' });
-  save(); UI.year = '2025'; go('home'); toast('Dados de exemplo carregados');
+  S.demo = true; save(); UI.year = '2025'; go('home'); toast('Modo exemplo: os seus dados ficaram guardados à parte');
+}
+
+function exitDemo() {
+  if (!confirm('Sair do exemplo? Os dados de exemplo são apagados e a app volta aos seus dados.')) return;
+  let real = null; try { real = JSON.parse(localStorage.getItem(KEY + '.real') || 'null'); } catch (e) {}
+  const keep = { avKey: S.settings.avKey, fx: S.settings.fx, quota: S.settings.quota };
+  const market = { hist: S.hist, fxHist: S.fxHist, fxSeries: S.fxSeries };
+  for (const k of Object.keys(S)) delete S[k];
+  Object.assign(S, { tx: [], div: [], assets: {}, cash: [], divCal: {}, divDone: {}, settings: { brokerCp: {}, cdt: {} } }, real || {}, market);
+  S.settings ||= {}; S.settings.brokerCp ||= {}; S.settings.cdt ||= {};
+  for (const [k, v] of Object.entries(keep)) if (v != null && S.settings[k] == null) S.settings[k] = v;
+  S.demo = false;
+  try { localStorage.removeItem(KEY + '.real'); } catch (e) {}
+  UI.year = null; UI.imp = null; UI.ptab = 'assets';
+  save(); go('home'); toast(S.tx.length || S.div.length ? 'De volta aos seus dados' : 'Pronto: pode começar a registar os seus dados');
 }
 
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
-  if ('charts' in d) { UI.ptab = 'charts'; go('portfolio'); }
+  if ('exitdemo' in d) exitDemo();
+  else if ('charts' in d) { UI.ptab = 'charts'; go('portfolio'); }
   else if (d.bench) toggleBench(d.bench);
   else if ('benchadd' in d) openBenchAdd();
   else if (d.period) { UI.period = d.period; renderPortfolio(); }
