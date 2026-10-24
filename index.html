@@ -82,6 +82,8 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
   <section id="view-portfolio" data-view class="hidden"></section>
   <section id="view-tax" data-view class="hidden"></section>
   <section id="view-import" data-view class="hidden"></section>
+  <section id="view-cash" data-view class="hidden"></section>
+  <section id="view-divs" data-view class="hidden"></section>
 </main>
 
 <nav class="navbar fixed bottom-0 inset-x-0 z-30 bg-white border-t border-brand-100">
@@ -578,7 +580,7 @@ async function refreshPrices() {
   const left = AV_DAY - quotaToday();
   if (left <= 0) return toast(`Limite gratuito de ${AV_DAY} pedidos por dia atingido. Tente amanhã.`);
   const batch = todo.slice(0, left), errors = [];
-  UI.job = { done: 0, total: batch.length, cur: '' }; render();
+  UI.job = { done: 0, total: batch.length, cur: '', what: 'preços' }; render();
   const rates = await getFx();
   let ok = 0;
   for (let i = 0; i < batch.length; i++) {
@@ -635,7 +637,7 @@ function jobBanner() {
   if (!UI.job) return '';
   const j = UI.job, secs = Math.max(0, Math.round((j.total - j.done - 1) * AV_GAP / 1000));
   return `<div class="mb-3 rounded-2xl bg-brand-50 border border-brand-100 p-3 text-sm">
-    <div class="flex justify-between font-semibold"><span>A atualizar ${esc(j.cur)}…</span><span class="num">${j.done} de ${j.total}</span></div>
+    <div class="flex justify-between font-semibold"><span>A atualizar ${j.what || 'preços'}: ${esc(j.cur)}…</span><span class="num">${j.done} de ${j.total}</span></div>
     <div class="h-1.5 rounded-full bg-brand-100 mt-2 overflow-hidden"><div class="h-full bg-brand-600" style="width:${(j.done / j.total * 100).toFixed(0)}%"></div></div>
     <div class="text-xs text-slate-500 mt-1">${secs ? `Faltam cerca de ${secs} s. Mantenha a app aberta.` : 'Quase pronto.'}</div></div>`;
 }
@@ -706,7 +708,7 @@ function go(tab) {
   render(); window.scrollTo({ top: 0 });
 }
 function render() {
-  ({ home: renderHome, portfolio: renderPortfolio, tax: renderTax, import: renderImport })[UI.tab]();
+  ({ home: renderHome, portfolio: renderPortfolio, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs })[UI.tab]();
 }
 
 /* ---------- Componentes ---------- */
@@ -764,6 +766,8 @@ function renderHome() {
     <div class="flex gap-2 mt-3">${refreshBtn('bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-60')}
       <button data-qset class="h-10 px-3 rounded-2xl text-sm font-bold bg-brand-50 text-brand-700">Chave</button></div></div>`, 'mt-3') : ''}
 
+  ${cashCardHTML()}
+  ${divsCardHTML()}
   <div class="mt-3 rounded-3xl bg-brand-50 border border-brand-100 p-4 flex gap-3">
     <div class="shrink-0 w-11 h-11 rounded-2xl bg-white grid place-items-center">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#B9CEF1" stroke-width="3"/><path d="M12 3a9 9 0 0 1 8.5 6" stroke="#1D4ED8" stroke-width="3" stroke-linecap="round"/></svg>
@@ -795,6 +799,229 @@ function posRow(p) {
     <div class="text-right num"><div class="font-bold">${fmtEUR(p.value ?? p.cost)}</div>
       ${p.value != null ? `<div class="text-xs font-bold ${sgn(p.value - p.cost)}">${plus(p.value - p.cost)} (${pctStr(p.value - p.cost, p.cost)})</div>`
         : '<div class="text-xs text-slate-400">sem preço atual</div>'}</div></button>`;
+}
+
+/* ================= CAIXA DE OPORTUNIDADE ================= */
+const addDays = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const cashCfg = () => (S.settings.cashCfg ||= { goal: 0, divFrom: '', place: 'XTB' });
+const divNet = d => d.gross - (d.taxForeign || 0) - (d.taxPT || 0);
+const cdtRate = c => ({ ...TF.CDT, ...(S.settings.cdt || {}) })[c] ?? 15;
+function divIRS(d) {
+  const c = Number(d.country || S.assets[d.ticker]?.country) || 840;
+  if (c === 620) return 0;
+  const credit = Math.min(d.taxForeign || 0, d.gross * cdtRate(c) / 100, d.gross * 0.28);
+  return Math.max(0, d.gross * 0.28 - credit - (d.taxPT || 0));
+}
+function cashState() {
+  S.cash ||= [];
+  const cfg = cashCfg(), from = cfg.divFrom || S.cash.map(c => c.date).sort()[0] || today();
+  const mv = [];
+  S.cash.forEach(c => mv.push({ k: 'cash', id: c.id, date: c.date, amount: c.type === 'dep' ? c.amount : -c.amount, label: c.type === 'dep' ? 'Depósito' : 'Retirado', sub: c.note || 'à mão' }));
+  S.div.filter(d => d.date >= from).forEach(d => mv.push({ k: 'div', id: d.id, date: d.date, amount: divNet(d), label: 'Dividendo ' + d.ticker, sub: d.src === 'forecast' ? 'confirmado na app' : 'registado', irs: divIRS(d) }));
+  S.tx.filter(t => t.fromCash).forEach(t => mv.push({ k: t.type, id: t.id, date: t.date, amount: t.type === 'buy' ? -(t.qty * t.price + (t.fees || 0)) : t.qty * t.price - (t.fees || 0), label: (t.type === 'buy' ? 'Compra ' : 'Venda ') + t.ticker, sub: t.type === 'buy' ? 'usado da caixa' : 'devolvido à caixa' }));
+  mv.sort((a, b) => b.date.localeCompare(a.date) || 0);
+  const sum = f => mv.filter(f).reduce((s, m) => s + m.amount, 0), yr = String(new Date().getFullYear());
+  return { mv, from, cfg, saldo: sum(() => true), dep: sum(m => m.k === 'cash' && m.amount > 0), divs: sum(m => m.k === 'div'),
+    used: sum(m => (m.k === 'cash' && m.amount < 0) || m.k === 'buy' || m.k === 'sell'),
+    irs: mv.filter(m => m.k === 'div' && m.date.startsWith(yr)).reduce((s, m) => s + m.irs, 0), goal: cfg.goal || 0 };
+}
+const piggy = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9.5c1 .5 2 1.4 2 2.5M4 11c0-3 3.6-5 8-5 1.6 0 3 .2 4.2.7L19 5v3.6c.7.8 1 1.6 1 2.4 0 1.2-.6 2.3-1.6 3.2L18 18h-3l-.5-1.4c-.8.2-1.6.3-2.5.3s-1.7-.1-2.5-.3L9 18H6l-.6-2.8C4.5 14 4 12.6 4 11z"/><circle cx="15.5" cy="10" r=".6" fill="currentColor"/></svg>';
+
+function cashCardHTML() {
+  const c = cashState(), pct = c.goal ? Math.min(100, Math.max(0, c.saldo / c.goal * 100)) : 0;
+  return card(`<div class="p-4">
+    <button data-go="cash" class="w-full text-left flex items-center gap-3">
+      <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-gain grid place-items-center shrink-0">${piggy}</div>
+      <div class="flex-1 min-w-0"><div class="text-xs font-semibold text-slate-500">Caixa de oportunidade</div><div class="num text-2xl font-extrabold">${fmtEUR(c.saldo)}</div></div>
+      <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800">Na ${esc(bname(c.cfg.place))}</span>
+    </button>
+    ${c.goal ? `<div class="mt-3 h-2 rounded-full bg-brand-50 overflow-hidden"><div class="h-full bg-gain" style="width:${pct.toFixed(0)}%"></div></div>
+      <div class="text-xs text-slate-500 mt-1">${fmtN(pct, 0)}% da meta de ${fmtEUR(c.goal)}</div>` : ''}
+    <div class="grid grid-cols-2 gap-2 mt-3">
+      <button data-cash="dep" class="h-10 rounded-2xl bg-brand-50 text-brand-700 text-sm font-bold">+ Adicionar</button>
+      <button data-cash="use" class="h-10 rounded-2xl bg-brand-50 text-brand-700 text-sm font-bold">Usar</button>
+    </div></div>`, 'mt-3');
+}
+
+function renderCash() {
+  const c = cashState();
+  const stat = (l, v, cls = '') => `<div class="rounded-2xl bg-brand-50 p-3"><div class="text-xs text-slate-500 font-semibold">${l}</div><div class="num font-extrabold ${cls}">${v}</div></div>`;
+  $('#view-cash').innerHTML = `
+  <div class="flex items-center gap-2 mb-3"><button data-go="home" class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <h1 class="text-2xl font-extrabold tracking-tight flex-1">Caixa de oportunidade</h1>
+    <button data-cashcfg class="h-9 px-3 rounded-full bg-white border border-brand-100 text-sm font-bold text-brand-700">Definições</button></div>
+  ${cashCardHTML()}
+  <div class="grid grid-cols-2 gap-2 mt-3">
+    ${stat('Depositado', fmtEUR(c.dep))}${stat('Dividendos', plus(c.divs), 'text-gain')}
+    ${stat('Usado e retirado', fmtEUR(c.used))}${stat('Imposto a guardar ' + new Date().getFullYear(), fmtEUR(c.irs), 'text-amber-700')}
+  </div>
+  <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">Imposto a guardar: o que ainda vai pagar no IRS sobre os dividendos deste ano que entraram na caixa (28% menos o que já foi retido no estrangeiro).</p>
+  <button data-go="divs" class="w-full mt-3 h-11 rounded-2xl bg-white border border-brand-100 text-sm font-bold text-brand-700">Ver dividendos previstos</button>
+  <h2 class="font-extrabold text-lg mt-5 mb-2">Movimentos</h2>
+  ${c.mv.length ? card(c.mv.slice(0, 300).map(m => `<button data-cashmv="${m.k}:${m.id}" class="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-brand-50/60">
+      <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(m.label)}</div><div class="text-xs text-slate-500">${fmtD(m.date)} · ${esc(m.sub)}</div></div>
+      <div class="num font-bold text-sm ${m.amount > 0 ? 'text-gain' : ''}">${plus(m.amount)}</div></button>`).join(''), 'divide-y divide-brand-50 overflow-hidden')
+    : card('<div class="p-6 text-center text-sm text-slate-500">Adicione o primeiro valor à caixa. Os dividendos confirmados a partir de agora entram sozinhos.</div>')}
+  <p class="text-[11px] text-slate-400 mt-3">Dividendos contam a partir de ${fmtD(c.from)}. Pode mudar a data em Definições.</p>`;
+}
+
+function openCashForm(type = 'dep', ex = null) {
+  const e = ex || {};
+  openModal(`${modalHead(ex ? 'Editar movimento' : type === 'dep' ? 'Adicionar à caixa' : 'Usar da caixa')}
+  ${!ex && type === 'use' ? `<button data-cashbuy class="w-full mb-3 h-11 rounded-2xl bg-brand-50 text-brand-700 text-sm font-bold">Registar uma compra paga com a caixa</button><p class="text-xs text-slate-500 mb-3">Ou retire um valor sem compra associada:</p>` : ''}
+  <form id="cashForm" class="space-y-3">
+    <div class="grid grid-cols-2 gap-3">
+      <div><label class="lbl" for="cAmt">Valor (EUR)</label><input id="cAmt" class="field num" inputmode="decimal" value="${e.amount ?? ''}" placeholder="0,00"></div>
+      <div><label class="lbl" for="cDate">Data</label><input id="cDate" type="date" class="field" value="${e.date || today()}"></div>
+    </div>
+    <div><label class="lbl" for="cNote">Nota <span class="font-normal text-slate-400">(opcional)</span></label><input id="cNote" class="field" value="${esc(e.note || '')}" placeholder="${type === 'dep' ? 'Transferência do ordenado' : 'Levantamento para a conta à ordem'}"></div>
+    <div class="flex gap-2">${ex ? btn('Apagar', 'type="button" data-cdel', 'danger') : ''}
+      <button class="flex-1 h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold">${ex ? 'Guardar alterações' : type === 'dep' ? 'Adicionar' : 'Retirar'}</button></div>
+  </form>`);
+  const b = $('[data-cashbuy]'); if (b) b.onclick = () => openTxForm('buy', null, true);
+  const d = $('[data-cdel]'); if (d) d.onclick = () => { if (!confirm('Apagar este movimento?')) return; S.cash = S.cash.filter(x => x.id !== e.id); save(); closeModal(); render(); toast('Movimento apagado'); };
+  $('#cashForm').onsubmit = ev => {
+    ev.preventDefault();
+    const amount = TF.r2(TF.num($('#cAmt').value)); if (!(amount > 0)) return toast('Indique um valor maior que zero');
+    const rec = { id: e.id || uid(), type: e.type || type, amount, date: $('#cDate').value || today(), note: $('#cNote').value.trim() };
+    S.cash ||= [];
+    if (ex) S.cash = S.cash.map(x => x.id === e.id ? rec : x); else { if (!cashCfg().divFrom && !S.cash.length) cashCfg().divFrom = rec.date; S.cash.push(rec); }
+    save(); closeModal(); render(); toast(ex ? 'Alterações guardadas' : rec.type === 'dep' ? `+${fmtEUR(amount)} na caixa` : `${fmtEUR(amount)} retirado da caixa`);
+  };
+}
+
+function openCashCfg() {
+  const c = cashCfg();
+  openModal(`${modalHead('Definições da caixa')}
+  <form id="ccForm" class="space-y-3">
+    <div><label class="lbl" for="ccGoal">Meta (EUR) <span class="font-normal text-slate-400">(0 para não mostrar)</span></label><input id="ccGoal" class="field num" inputmode="decimal" value="${c.goal || ''}" placeholder="1000"></div>
+    <div><label class="lbl" for="ccFrom">Contar dividendos a partir de</label><input id="ccFrom" type="date" class="field" value="${c.divFrom || cashState().from}"></div>
+    <div><label class="lbl" for="ccPlace">Onde está o dinheiro</label><select id="ccPlace" class="field">${brokerOpts(c.place || 'XTB')}</select></div>
+    <button class="w-full h-12 rounded-2xl bg-brand-600 text-white font-bold">Guardar</button>
+  </form>`);
+  $('#ccForm').onsubmit = ev => { ev.preventDefault(); Object.assign(c, { goal: TF.num($('#ccGoal').value), divFrom: $('#ccFrom').value, place: $('#ccPlace').value }); save(); closeModal(); render(); toast('Definições guardadas'); };
+}
+
+/* ================= DIVIDENDOS PREVISTOS ================= */
+const whtRate = c => c === 620 ? 28 : ({ 826: 0, 372: 0 })[c] ?? cdtRate(c);
+function qtyAt(tk, ex) {
+  return TF.positions(TF.fifo(S.tx.filter(t => t.ticker === tk && t.date < ex)).lots, S.assets)[0]?.qty || 0;
+}
+function forecastList() {
+  const rates = S.settings.fx?.rates, t0 = today(), lo = addDays(t0, -45), hi = addDays(t0, 90), out = [];
+  S.divDone ||= {};
+  for (const [tk, cal] of Object.entries(S.divCal || {})) {
+    const a = S.assets[tk]; if (!a) continue;
+    for (const x of cal.data || []) {
+      const pay = x.pay || addDays(x.ex, 14), key = tk + '|' + x.ex;
+      if (pay < lo || pay > hi || S.divDone[key]) continue;
+      const qty = qtyAt(tk, x.ex); if (!(qty > 0)) continue;
+      const gross = toEURq(x.amt * qty, cal.cur, rates); if (gross == null) continue;
+      const c = Number(a.country) || 840, wr = whtRate(c);
+      const d = { ticker: tk, country: c, gross, taxForeign: c === 620 ? 0 : gross * wr / 100, taxPT: c === 620 ? gross * 0.28 : 0 };
+      out.push({ key, tk, ex: x.ex, pay, payKnown: !!x.pay, amt: x.amt, cur: cal.cur, qty, wr, ...d, net: divNet(d), irs: divIRS(d) });
+    }
+  }
+  return out.sort((a, b) => a.pay.localeCompare(b.pay));
+}
+
+async function refreshDividends() {
+  if (UI.job) return toast('Já há uma atualização em curso');
+  if (!navigator.onLine) return toast('Sem internet: ligue-se para atualizar');
+  const key = (S.settings.avKey || '').trim(); if (!key) return openQuoteSettings(false);
+  S.divCal ||= {};
+  const pos = TF.positions(TF.fifo(S.tx).lots, S.assets);
+  const todo = pos.map(p => ({ tk: p.ticker, ...quoteOf(p.ticker) })).filter(x => x.sym && x.cur !== 'GBX')
+    .sort((x, y) => (S.divCal[x.tk]?.at || 0) - (S.divCal[y.tk]?.at || 0));
+  if (!todo.length) return toast('Defina o símbolo de cotação nos ativos para procurar dividendos');
+  const left = AV_DAY - quotaToday(); if (left <= 0) return toast(`Limite gratuito de ${AV_DAY} pedidos por dia atingido. Tente amanhã.`);
+  const batch = todo.slice(0, left), errors = [];
+  UI.job = { done: 0, total: batch.length, cur: '', what: 'dividendos' }; render();
+  if (!S.settings.fx || Date.now() - S.settings.fx.at > 6 * 3600e3) await getFx();
+  for (let i = 0; i < batch.length; i++) {
+    const q = batch[i]; UI.job.cur = q.tk; render();
+    if (i > 0) await sleep(AV_GAP);
+    try {
+      const r = await fetch(`https://www.alphavantage.co/query?function=DIVIDENDS&symbol=${encodeURIComponent(q.sym)}&apikey=${encodeURIComponent(key)}`);
+      bumpQuota(); const j = await r.json();
+      if (j.Note || j.Information) { errors.push(`A Alpha Vantage recusou o pedido: ${j.Note || j.Information}`); break; }
+      const data = (Array.isArray(j.data) ? j.data : []).slice(0, 12).map(x => ({ ex: x.ex_dividend_date, pay: /^\d{4}-/.test(x.payment_date || '') ? x.payment_date : '', amt: parseFloat(x.amount) || 0 }))
+        .filter(x => /^\d{4}-/.test(x.ex || '') && x.amt > 0);
+      S.divCal[q.tk] = { at: Date.now(), sym: q.sym, cur: q.cur, data }; save();
+    } catch (e) { errors.push(`${q.tk}: sem ligação ao serviço`); }
+    UI.job.done = i + 1; render();
+  }
+  UI.job = null; save(); render();
+  if (todo.length > batch.length) errors.push(`${todo.length - batch.length} ativo(s) ficaram para amanhã por causa do limite diário.`);
+  errors.length ? showPriceReport(errors, [], batch.length) : toast('Dividendos previstos atualizados');
+}
+
+function renderDivs() {
+  const list = forecastList(), t0 = today(), fut = list.filter(x => x.pay >= t0), due = list.filter(x => x.pay <= t0);
+  const pos = TF.positions(TF.fifo(S.tx).lots, S.assets);
+  const none = pos.filter(p => S.divCal?.[p.ticker] && !list.some(x => x.tk === p.ticker));
+  const unknown = pos.filter(p => !S.divCal?.[p.ticker]);
+  const item = x => {
+    const now = x.pay <= t0;
+    return `<div class="p-4 ${now ? 'bg-emerald-50' : ''}">
+      <div class="flex justify-between gap-2"><div class="font-bold ${now ? 'text-emerald-800' : ''}">${esc(x.tk)} · ${now ? (x.pay === t0 ? 'pagamento hoje' : 'pago a ' + fmtD(x.pay)) : 'pagamento ' + fmtD(x.pay) + (x.payKnown ? '' : ' (aprox.)')}</div>
+        <div class="num font-extrabold ${now ? 'text-emerald-800' : ''}">${fmtEUR(x.net)}</div></div>
+      <div class="text-xs ${now ? 'text-emerald-800' : 'text-slate-500'} mt-0.5">${fmtN(x.amt, 4)} ${x.cur} por ação × ${fmtQ(x.qty)} · ${x.country === 620 ? 'após 28% retido em Portugal' : x.wr ? `após ${fmtN(x.wr, 0)}% retido na origem` : 'sem retenção na origem'} · IRS ${fmtEUR(x.irs)}</div>
+      ${now ? `<div class="grid grid-cols-2 gap-2 mt-2">
+        <button data-divok="${esc(x.key)}" class="h-10 rounded-xl bg-white border border-emerald-200 text-emerald-800 text-sm font-bold">Recebi</button>
+        <button data-divother="${esc(x.key)}" class="h-10 rounded-xl bg-white border border-emerald-200 text-emerald-800 text-sm font-bold">Outro valor</button></div>
+        <button data-divskip="${esc(x.key)}" class="mt-2 text-xs font-semibold text-slate-500">Não recebi este dividendo</button>` : ''}</div>`;
+  };
+  $('#view-divs').innerHTML = `
+  <div class="flex items-center gap-2 mb-3"><button data-go="cash" class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <h1 class="text-2xl font-extrabold tracking-tight flex-1">Dividendos previstos</h1>
+    <button data-divref class="h-9 px-3 rounded-full bg-white border border-brand-100 text-sm font-bold text-brand-700" ${UI.job ? 'disabled' : ''}>${UI.job ? 'A atualizar…' : 'Atualizar'}</button></div>
+  ${jobBanner()}
+  <div class="grid grid-cols-2 gap-2">
+    <div class="rounded-2xl bg-white border border-brand-100 p-3"><div class="text-xs text-slate-500 font-semibold">Próximos 90 dias</div><div class="num font-extrabold">${fmtEUR(fut.reduce((s, x) => s + x.net, 0))} líquido</div></div>
+    <div class="rounded-2xl bg-white border border-brand-100 p-3"><div class="text-xs text-slate-500 font-semibold">IRS a pagar sobre isto</div><div class="num font-extrabold text-amber-700">${fmtEUR(fut.reduce((s, x) => s + x.irs, 0))}</div></div>
+  </div>
+  ${due.length ? `<h2 class="font-extrabold mt-5 mb-2">Para confirmar</h2>${card(due.map(item).join(''), 'divide-y divide-brand-50 overflow-hidden')}` : ''}
+  <h2 class="font-extrabold mt-5 mb-2">Próximos</h2>
+  ${fut.filter(x => x.pay > t0).length ? card(fut.filter(x => x.pay > t0).map(item).join(''), 'divide-y divide-brand-50 overflow-hidden') : card('<div class="p-4 text-sm text-slate-500">Sem dividendos anunciados para os próximos 90 dias.</div>')}
+  ${none.length || unknown.length ? card(`${none.map(p => `<div class="px-4 py-3 flex justify-between text-sm"><span class="font-semibold">${esc(p.ticker)}</span><span class="text-slate-500">${p.kind === 'etf' ? 'ETF sem distribuição prevista' : 'sem dividendo anunciado'}</span></div>`).join('')}
+    ${unknown.map(p => `<div class="px-4 py-3 flex justify-between text-sm"><span class="font-semibold">${esc(p.ticker)}</span><span class="text-slate-500">${quoteOf(p.ticker).sym ? 'toque em Atualizar' : 'sem símbolo de cotação'}</span></div>`).join('')}`, 'mt-3 divide-y divide-brand-50 overflow-hidden') : ''}
+  <p class="text-[11px] text-slate-500 mt-4 leading-relaxed">Estimativa: dividendo anunciado por ação × ações que tinha na véspera da data ex-dividendo, convertido ao câmbio BCE de hoje. O valor certo só se sabe quando a corretora paga. Usa a mesma chave da Alpha Vantage dos preços (um pedido por ativo).</p>`;
+}
+
+function confirmDividend(key, netOverride) {
+  const x = forecastList().find(f => f.key === key); if (!x) return;
+  let d = { gross: x.gross, taxForeign: x.taxForeign, taxPT: x.taxPT };
+  if (netOverride != null) {
+    const keep = x.country === 620 ? 0.72 : 1 - x.wr / 100, g = keep > 0 ? netOverride / keep : netOverride;
+    d = { gross: g, taxForeign: x.country === 620 ? 0 : g - netOverride, taxPT: x.country === 620 ? g - netOverride : 0 };
+  }
+  const lastBuy = S.tx.filter(t => t.ticker === x.tk && t.type === 'buy').sort((a, b) => b.date.localeCompare(a.date))[0];
+  const rec = { id: uid(), created: Date.now(), date: x.pay <= today() ? x.pay : today(), ticker: x.tk, gross: TF.r2(d.gross), taxForeign: TF.r2(d.taxForeign), taxPT: TF.r2(d.taxPT), broker: lastBuy?.broker || cashCfg().place || 'XTB', src: 'forecast' };
+  S.div.push(rec); (S.divDone ||= {})[key] = rec.id;
+  if (!cashCfg().divFrom) cashCfg().divFrom = rec.date;
+  save(); closeModal(); render(); toast(`Dividendo registado: +${fmtEUR(divNet(rec))} na caixa`);
+}
+function openDivOther(key) {
+  const x = forecastList().find(f => f.key === key); if (!x) return;
+  openModal(`${modalHead('Dividendo de ' + esc(x.tk))}
+  <form id="dvForm" class="space-y-3">
+    <div><label class="lbl" for="dvNet">Valor que caiu na conta (EUR)</label><input id="dvNet" class="field num" inputmode="decimal" value="${fmtN(x.net)}"></div>
+    <p class="text-xs text-slate-500">A app calcula o bruto e o imposto retido a partir deste valor${x.wr ? ` (retenção de ${fmtN(x.country === 620 ? 28 : x.wr, 0)}%)` : ''}. Pode corrigir depois no Histórico.</p>
+    <button class="w-full h-12 rounded-2xl bg-brand-600 text-white font-bold">Registar dividendo</button>
+  </form>`);
+  $('#dvForm').onsubmit = ev => { ev.preventDefault(); const n = TF.num($('#dvNet').value); if (!(n > 0)) return toast('Indique o valor recebido'); confirmDividend(key, n); };
+}
+
+function divsCardHTML() {
+  const list = forecastList(), t0 = today(), due = list.filter(x => x.pay <= t0), fut = list.filter(x => x.pay >= t0);
+  if (!TF.positions(TF.fifo(S.tx).lots, S.assets).length) return '';
+  return `<button data-go="divs" class="mt-3 w-full text-left rounded-3xl border ${due.length ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-brand-100'} p-4 flex items-center gap-3">
+    <div class="flex-1"><div class="text-xs font-semibold ${due.length ? 'text-emerald-800' : 'text-slate-500'}">Dividendos previstos</div>
+      <div class="font-bold ${due.length ? 'text-emerald-800' : ''}">${due.length ? `${due.length} pagamento(s) para confirmar` : S.divCal && Object.keys(S.divCal).length ? `${fmtEUR(fut.reduce((s, x) => s + x.net, 0))} nos próximos 90 dias` : 'Veja quanto vai receber'}</div></div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>`;
 }
 
 /* ================= CARTEIRA ================= */
@@ -844,7 +1071,7 @@ const modalHead = t => `<div class="flex items-center justify-between mb-4"><h2 
   <button data-close class="w-9 h-9 rounded-full bg-brand-50 grid place-items-center" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`;
 const brokerOpts = sel => Object.entries(TF.BROKERS).map(([k, b]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>${b.name}</option>`).join('');
 
-function openTxForm(kind = 'buy', existing = null) {
+function openTxForm(kind = 'buy', existing = null, fromCash = false) {
   const e = existing || {}, isDiv = kind === 'div';
   const tickers = Object.keys(S.assets).sort().map(t => `<option value="${esc(t)}">`).join('');
   const seg = existing ? '' : `<div class="flex gap-1 p-1 rounded-2xl bg-brand-50 mb-4">${[['buy', 'Compra'], ['sell', 'Venda'], ['div', 'Dividendo']].map(([k, l]) =>
@@ -872,7 +1099,8 @@ function openTxForm(kind = 'buy', existing = null) {
     </div>
     <div id="fxWrap" class="${cur === 'EUR' ? 'hidden' : ''}"><label class="lbl" for="fFx">Câmbio no dia: 1 EUR = <span id="fxCur">${cur}</span></label>
       <input id="fFx" class="field num" inputmode="decimal" value="${e.fx ?? ''}" placeholder="ex.: 1,0850"><p id="fxInfo" class="text-[11px] text-slate-500 mt-1">Câmbio de referência do BCE da data da operação.</p></div>
-    <div><label class="lbl" for="fFees">Taxas e comissões (EUR)</label><input id="fFees" class="field num" inputmode="decimal" value="${e.fees ?? ''}" placeholder="0,00"></div>`}
+    <div><label class="lbl" for="fFees">Taxas e comissões (EUR)</label><input id="fFees" class="field num" inputmode="decimal" value="${e.fees ?? ''}" placeholder="0,00"></div>
+    <label class="flex items-center gap-2 text-sm font-semibold"><input id="fCash" type="checkbox" class="w-5 h-5 accent-[#0F9D6E]" ${(e.fromCash || fromCash) ? 'checked' : ''}>${kind === 'buy' ? 'Pago com a caixa de oportunidade' : 'Devolver o valor à caixa de oportunidade'}</label>`}
     <div><label class="lbl" for="fBroker">Corretora</label><select id="fBroker" class="field">${brokerOpts(e.broker || 'XTB')}</select></div>
     <div id="fPreview" class="rounded-2xl bg-brand-50 p-3 text-sm num min-h-[44px]"></div>
     <div class="flex gap-2 pt-1">
@@ -882,7 +1110,7 @@ function openTxForm(kind = 'buy', existing = null) {
   </form>`);
 
   const f = $('#txForm');
-  f.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => openTxForm(b.dataset.kind));
+  f.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => openTxForm(b.dataset.kind, null, fromCash));
   const preview = () => {
     const tk = $('#fTicker').value.trim().toUpperCase(), pv = $('#fPreview');
     if (isDiv) {
@@ -942,7 +1170,7 @@ function openTxForm(kind = 'buy', existing = null) {
       if (cur !== 'EUR' && !(fx > 0)) return toast('Indique o câmbio para converter para EUR');
       TF.ensureAsset(S, { ticker, name: $('#fName').value.trim() });
       const rec = { id: e.id || uid(), created: e.created || Date.now(), type: kind, ticker, date, qty, price: cur === 'EUR' ? p : p / fx,
-        priceOrig: p, currency: cur, fx: cur === 'EUR' ? null : fx, fees: TF.num($('#fFees').value), broker };
+        priceOrig: p, currency: cur, fx: cur === 'EUR' ? null : fx, fees: TF.num($('#fFees').value), broker, fromCash: $('#fCash').checked };
       if (existing) S.tx = S.tx.map(t => t.id === e.id ? rec : t); else S.tx.push(rec);
     }
     save(); closeModal(); render(); toast(existing ? 'Alterações guardadas' : 'Registado');
@@ -1339,7 +1567,7 @@ function renderImport() {
   $('#bkExport').onclick = exportBackup;
   $('#bkImport').onchange = e => e.target.files[0] && importBackup(e.target.files[0]);
   $('#wipe').onclick = () => { if (!confirm('Apagar todas as operações, dividendos e ativos deste dispositivo?')) return;
-    S.tx = []; S.div = []; S.assets = {}; save(); UI.imp = null; renderImport(); toast('Dados apagados'); };
+    S.tx = []; S.div = []; S.assets = {}; S.cash = []; S.divCal = {}; S.divDone = {}; save(); UI.imp = null; renderImport(); toast('Dados apagados'); };
 }
 
 async function handleFile(file) {
@@ -1360,7 +1588,8 @@ function showPreview(res) {
   if (!res.rows.length) { UI.imp = null; renderImport(); return toast('Nenhuma operação reconhecida. Escolha a corretora certa ou use "Outro CSV"'); }
   const existing = new Set([...S.tx.map(t => TF.fingerprint({ kind: t.type, ...t })), ...S.div.map(d => TF.fingerprint({ kind: 'div', ...d }))]);
   const seen = new Set();
-  res.rows.forEach(r => { const f = TF.fingerprint(r); r.dup = existing.has(f) || seen.has(f); r.sel = !r.dup; seen.add(f); });
+  const nearDiv = r => r.kind === 'div' && S.div.some(d => d.ticker === r.ticker.toUpperCase() && Math.abs(TF.daysBetween(d.date, r.date)) <= 5);
+  res.rows.forEach(r => { const f = TF.fingerprint(r); r.dup = existing.has(f) || seen.has(f) || nearDiv(r); r.sel = !r.dup; seen.add(f); });
   UI.imp = res; renderImport();
   setTimeout(() => $('#impPrev')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
@@ -1385,14 +1614,14 @@ async function importBackup(file) {
   try {
     const d = JSON.parse(await file.text()); if (!Array.isArray(d.tx) || !Array.isArray(d.div)) throw 0;
     if (!confirm('Substituir os dados atuais por esta cópia?')) return;
-    S.tx = d.tx; S.div = d.div; S.assets = d.assets || {}; S.settings = d.settings || { brokerCp: {}, cdt: {} };
+    S.tx = d.tx; S.div = d.div; S.assets = d.assets || {}; S.cash = d.cash || []; S.divCal = d.divCal || {}; S.divDone = d.divDone || {}; S.settings = d.settings || { brokerCp: {}, cdt: {} };
     S.settings.brokerCp ||= {}; S.settings.cdt ||= {}; save(); renderImport(); toast('Cópia restaurada');
   } catch (e) { toast('Ficheiro de cópia inválido'); }
 }
 
 function loadDemo() {
   if ((S.tx.length || S.div.length) && !confirm('Substituir os dados atuais pelos dados de exemplo?')) return;
-  S.tx = []; S.div = []; S.assets = {}; let c = 1;
+  S.tx = []; S.div = []; S.assets = {}; S.cash = []; S.divCal = {}; S.divDone = {}; S.settings.cashCfg = { goal: 1000, divFrom: '', place: 'XTB' }; let c = 1;
   const t = (type, ticker, date, qty, price, fees = 0, broker = 'XTB', name = '') => { TF.ensureAsset(S, { ticker, name }); S.tx.push({ id: uid(), created: c++, type, ticker, date, qty, price, priceOrig: price, currency: 'EUR', fx: null, fees, broker }); };
   t('buy', 'VWCE.DE', '2024-01-15', 0.85, 108.40, 0, 'XTB', 'Vanguard FTSE All-World UCITS ETF');
   t('buy', 'VWCE.DE', '2024-06-03', 1.2, 117.90);
@@ -1416,10 +1645,20 @@ function loadDemo() {
 
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
-  if (d.impcur) { UI.impCur = d.impcur; renderImport(); }
+  if (d.cash) openCashForm(d.cash);
+  else if (d.cashmv) { const [k, id] = d.cashmv.split(':');
+    if (k === 'cash') { const c = S.cash.find(x => x.id === id); if (c) openCashForm(c.type, c); }
+    else if (k === 'div') { const r = S.div.find(x => x.id === id); if (r) openTxForm('div', r); }
+    else { const r = S.tx.find(x => x.id === id); if (r) openTxForm(r.type, r); } }
+  else if ('cashcfg' in d) openCashCfg();
+  else if ('divref' in d) refreshDividends();
+  else if (d.divok) confirmDividend(d.divok);
+  else if (d.divother) openDivOther(d.divother);
+  else if (d.divskip) { (S.divDone ||= {})[d.divskip] = 'skip'; save(); render(); toast('Marcado como não recebido'); }
+  else if (d.impcur) { UI.impCur = d.impcur; renderImport(); }
   else if ('refresh' in d) refreshPrices();
   else if ('qset' in d) openQuoteSettings();
   else if (d.tab) go(d.tab);
@@ -1460,7 +1699,7 @@ $('#fxBtn').onclick = openFxModal;
 renderFx(); refreshFx();
 window.addEventListener('online', () => refreshFx());
 setInterval(() => refreshFx(), 30 * 60e3);
-go(['home', 'portfolio', 'tax', 'import'].includes(UI.tab) ? UI.tab : 'home');
+go(['home', 'portfolio', 'tax', 'import', 'cash', 'divs'].includes(UI.tab) ? UI.tab : 'home');
 
 </script>
 </body>
