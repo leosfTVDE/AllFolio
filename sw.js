@@ -1,5 +1,5 @@
 /* TaxFolio Portugal — Service Worker (offline) */
-const CACHE = 'taxfolio-v4';
+const CACHE = 'taxfolio-v5';
 const CORE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 const CDN = [
   'https://cdn.tailwindcss.com/3.4.17',
