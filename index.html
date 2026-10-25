@@ -26,7 +26,8 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
-  :root { box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); }
+  :root { box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); --logo-bar:#0A2A66; --ink:#0A2A66; --grid:#E6ECF5; }
+  html.dark { color-scheme: dark; --logo-bar:#FFFFFF; --ink:#E6EEFF; --grid:#22324F; }
   html { scroll-padding-top:calc(4rem + env(safe-area-inset-top,0px)); -webkit-tap-highlight-color:transparent; }
   body { background:#F4F7FC; }
   body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); background:#fff; z-index:40; }
@@ -47,7 +48,41 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
   @keyframes rise { from { transform:translateY(16px); opacity:0 } to { transform:none; opacity:1 } }
   .rise { animation: rise .22s ease-out; }
   @media (prefers-reduced-motion: reduce) { .rise { animation:none } }
+  /* ---------- Modo escuro ---------- */
+  html.dark body { background:#0B1530; color:#E6EEFF; }
+  html.dark body::before { background:#101D3D; }
+  html.dark .text-ink { color:#E6EEFF; }
+  html.dark .bg-white, html.dark .bg-white\/95 { background-color:#13224A; }
+  html.dark header.hdr, html.dark nav.navbar { background-color:#101D3D; }
+  html.dark .bg-brand-50, html.dark .hover\:bg-brand-50:hover, html.dark .hover\:bg-brand-50\/60:hover { background-color:#1A2C5C; }
+  html.dark .bg-brand-100, html.dark .hover\:bg-brand-100:hover { background-color:#22386F; }
+  html.dark .bg-brand-100\/70 { background-color:#0F1B3A; }
+  html.dark .bg-slate-100, html.dark .bg-slate-300 { background-color:#2A3B66; }
+  html.dark .border-brand-50, html.dark .border-brand-100, html.dark .border-brand-200 { border-color:#22386F; }
+  html.dark .divide-brand-50 > :not([hidden]) ~ :not([hidden]) { border-color:#1E3263; }
+  html.dark .text-slate-400 { color:#7E8DB0; }
+  html.dark .text-slate-500 { color:#9AA8C7; }
+  html.dark .text-slate-600, html.dark .text-slate-700 { color:#B8C4DE; }
+  html.dark .text-brand-700, html.dark .text-brand-600 { color:#8FB0FA; }
+  html.dark .bg-emerald-50 { background-color:#0E3B33; }
+  html.dark .text-emerald-800, html.dark .text-emerald-900 { color:#6EE7B7; }
+  html.dark .border-emerald-200 { border-color:#155E4F; }
+  html.dark .bg-amber-50 { background-color:#3A2A0C; }
+  html.dark .text-amber-900, html.dark .text-amber-800 { color:#FCD34D; }
+  html.dark .text-amber-700 { color:#FBBF24; }
+  html.dark .bg-loss\/5 { background-color:#3A1420; }
+  html.dark .text-loss { color:#FB7185; }
+  html.dark .text-gain { color:#34D399; }
+  html.dark .field { background:#0F1B3A; border-color:#2A3F78; color:#E6EEFF; }
+  html.dark .lbl { color:#9AA8C7; }
+  html.dark .tbl th { background:#1A2C5C; color:#B8CCFA; }
+  html.dark .tbl td, html.dark .tbl th { border-color:#22386F; }
+  html.dark #toast { background:#E6EEFF; color:#0A2A66; }
+  html.dark #modal [data-close] { background:rgba(0,0,0,.6); }
+  html.dark .shadow-sm { box-shadow:none; }
+  .only-print { display:none; }
   @media print {
+    .only-print { display:block !important; } .only-screen { display:none !important; }
     header, nav, #toast, .no-print { display:none !important; }
     body { background:#fff; } main { padding:0 !important; max-width:none !important; }
     [data-view]:not(#view-tax) { display:none !important; }
@@ -60,16 +95,21 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
 
 <header class="hdr sticky z-30 bg-white/95 backdrop-blur border-b border-brand-100">
   <div class="max-w-3xl mx-auto px-4 h-16 flex items-center gap-3">
-    <div class="w-10 h-10 rounded-2xl bg-ink grid place-items-center" aria-hidden="true">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="12" width="3.2" height="8" rx="1" fill="#7FA4F5"/><rect x="10.4" y="7" width="3.2" height="13" rx="1" fill="#B9CEF1"/><rect x="16.8" y="3" width="3.2" height="17" rx="1" fill="#fff"/></svg>
-    </div>
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true" class="shrink-0">
+      <rect x="8" y="30" width="8" height="12" rx="2" fill="var(--logo-bar)"/><rect x="19" y="24" width="8" height="18" rx="2" fill="var(--logo-bar)"/><rect x="30" y="18" width="8" height="24" rx="2" fill="var(--logo-bar)"/>
+      <path d="M6 23 L42 7" fill="none" stroke="#5B8DEF" stroke-width="3.4" stroke-linecap="round"/>
+      <path d="M34.3 4.8 L42 7 L38.5 14.2" fill="none" stroke="#5B8DEF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="3" y="15" font-size="14" font-weight="800" fill="#0F9D6E" font-family="system-ui, sans-serif">$</text></svg>
     <div class="flex-1 min-w-0">
-      <div class="font-extrabold tracking-tight leading-none text-[17px]">TaxFolio Portugal</div>
+      <div class="font-extrabold tracking-tight leading-none text-[17px]">TaxFolio <span class="font-semibold text-slate-500 text-sm">Portugal</span></div>
       <div class="flex items-center gap-1.5 text-xs text-slate-500 mt-1 whitespace-nowrap overflow-hidden">
         <span id="netDot" class="w-2 h-2 rounded-full bg-gain shrink-0"></span><span id="netTxt">Online</span><button id="fxBtn" class="hidden font-bold text-brand-700 num" aria-label="Ver câmbio do euro"></button><span id="pwaTxt"></span>
       </div>
     </div>
     <button id="btnInstall" class="hidden h-9 px-3 rounded-full border border-brand-200 text-brand-700 text-sm font-semibold">Instalar</button>
+    <button id="btnSettings" class="w-10 h-10 rounded-full bg-brand-50 text-brand-700 grid place-items-center shrink-0" aria-label="Configurações">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
     <button id="btnAdd" class="h-10 pl-3 pr-4 rounded-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold flex items-center gap-1.5 shadow-sm" aria-label="Nova transação">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       <span>Nova</span>
@@ -91,6 +131,8 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
   <section id="view-cash" data-view class="hidden"></section>
   <section id="view-divs" data-view class="hidden"></section>
   <section id="view-goals" data-view class="hidden"></section>
+  <section id="view-more" data-view class="hidden"></section>
+  <section id="view-settings" data-view class="hidden"></section>
 </main>
 
 <nav class="navbar fixed bottom-0 inset-x-0 z-30 bg-white border-t border-brand-100">
@@ -101,8 +143,8 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Carteira</button>
     <button data-tab="tax" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg>IRS</button>
-    <button data-tab="import" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Importar</button>
+    <button data-tab="more" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>Mais</button>
   </div>
 </nav>
 
@@ -704,11 +746,15 @@ async function convertImport(res) {
 }
 
 /* ---------- Navegação ---------- */
-function go(tab) {
+const NAV_TABS = ['home', 'portfolio', 'tax', 'more'];
+function go(tab, isBack = false) {
+  if (!isBack && UI.tab && UI.tab !== tab) { (UI.hist ||= []).push(UI.tab); if (UI.hist.length > 20) UI.hist.shift(); }
+  if (NAV_TABS.includes(tab)) UI.hist = [];
   UI.tab = tab; try { localStorage.setItem(KEY + '.tab', tab); } catch (e) {}
   document.querySelectorAll('[data-view]').forEach(v => v.classList.toggle('hidden', v.id !== 'view-' + tab));
+  const navOn = NAV_TABS.includes(tab) ? tab : 'more';
   document.querySelectorAll('.navbtn').forEach(b => {
-    const on = b.dataset.tab === tab;
+    const on = b.dataset.tab === navOn;
     b.classList.toggle('text-brand-600', on); b.classList.toggle('text-slate-400', !on);
     b.setAttribute('aria-current', on ? 'page' : 'false');
   });
@@ -716,7 +762,7 @@ function go(tab) {
 }
 function render() {
   const bar = $('#demoBar'); if (bar) bar.classList.toggle('hidden', !S.demo);
-  ({ home: renderHome, portfolio: renderPortfolio, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs, goals: renderGoals })[UI.tab]();
+  ({ home: renderHome, portfolio: renderPortfolio, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs, goals: renderGoals, more: renderMore, settings: renderSettings })[UI.tab]();
 }
 
 /* ---------- Componentes ---------- */
@@ -730,62 +776,54 @@ const btn = (label, attrs = '', variant = 'primary') => {
 };
 
 /* ================= INÍCIO ================= */
+const LOGO_SVG = (s = 34, dark = false) => `<svg width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true">
+  <rect x="8" y="30" width="8" height="12" rx="2" fill="${dark ? '#fff' : 'var(--logo-bar)'}"/><rect x="19" y="24" width="8" height="18" rx="2" fill="${dark ? '#fff' : 'var(--logo-bar)'}"/><rect x="30" y="18" width="8" height="24" rx="2" fill="${dark ? '#fff' : 'var(--logo-bar)'}"/>
+  <path d="M6 23 L42 7" fill="none" stroke="${dark ? '#7FA4F5' : '#5B8DEF'}" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M34.3 4.8 L42 7 L38.5 14.2" fill="none" stroke="${dark ? '#7FA4F5' : '#5B8DEF'}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="3" y="15" font-size="14" font-weight="800" fill="${dark ? '#34D399' : '#0F9D6E'}" font-family="system-ui, sans-serif">$</text></svg>`;
+
+function sparkline() {
+  const cd = compareData(); if (!cd || cd.rows.length < 3) return '';
+  const rows = cd.rows.slice(-26), vals = rows.map(r => r.G), lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+  const pts = vals.map((v, i) => `${(i / (vals.length - 1) * 120).toFixed(1)},${(40 - (v - lo) / span * 36).toFixed(1)}`).join(' ');
+  return `<svg width="120" height="44" viewBox="0 0 120 44" class="absolute right-5 bottom-5 opacity-90" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="#7FA4F5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
 function renderHome() {
   const F = TF.fifo(S.tx), pos = TF.positions(F.lots, S.assets);
-  const invested = pos.reduce((s, p) => s + p.cost, 0);
-  const realized = F.realized.reduce((s, r) => s + r.ganho, 0);
-  const divNet = S.div.reduce((s, d) => s + d.gross - (d.taxForeign || 0) - (d.taxPT || 0), 0);
-  const priced = pos.filter(p => p.value != null), unreal = priced.reduce((s, p) => s + p.value - p.cost, 0);
-  const pl = realized + divNet;
-  const pricedCost = priced.reduce((s, p) => s + p.cost, 0);
+  const invested = pos.reduce((s, p) => s + p.cost, 0), total = pos.reduce((s, p) => s + (p.value ?? p.cost), 0);
+  const priced = pos.filter(p => p.value != null), res = total - invested;
   const lastAt = Math.max(0, ...priced.map(p => S.assets[p.ticker]?.priceAt || 0));
   const yr = defaultYear(), rep = TF.yearReport(S, yr);
+  const divYear = S.div.filter(d => d.date.startsWith(yr)).reduce((s, d) => s + d.gross, 0);
   const empty = !S.tx.length && !S.div.length;
-
-  const bar = pos.length ? `<div class="lotbar mt-5 h-2.5 rounded-full overflow-hidden flex bg-white/15">${pos.slice(0, 8).map((p, i) =>
-    `<span style="width:${(p.cost / invested * 100).toFixed(2)}%;background:${PALETTE[i]}" title="${esc(p.ticker)}"></span>`).join('')}</div>
-    <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-brand-100">${pos.slice(0, 5).map((p, i) =>
-    `<span class="flex items-center gap-1.5"><i class="w-2 h-2 rounded-full" style="background:${PALETTE[i]}"></i>${esc(p.ticker)} ${fmtN(p.cost / invested * 100, 0)}%</span>`).join('')}</div>` : '';
+  const qa = (icon, label, attrs, primary = false) => `<button ${attrs} class="flex flex-col items-center gap-1.5 text-xs font-semibold">
+    <span class="w-12 h-12 rounded-2xl grid place-items-center ${primary ? 'bg-brand-600 text-white' : 'bg-white border border-brand-100 text-brand-600'}">${icon}</span>${label}</button>`;
+  const ic = d => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const cs = cashState(), gd = anyGoal() ? goalsData() : null;
+  const goalTile = gd ? (gd.port ? [`Meta ${gd.g.port.month.slice(0, 4)}`, `${fmtN(gd.port.pct, 0)}%`] : gd.monthly ? ['Aporte do mês', `${fmtN(gd.monthly.now / gd.g.monthly.amount * 100, 0)}%`] : gd.div ? ['Dividendos/mês', `${fmtN(gd.div.pct, 0)}%`] : ['Metas', 'Ver']) : ['Metas', 'Definir'];
+  const tile = (attrs, label, value, cls = '') => `<button ${attrs} class="text-left rounded-2xl bg-white border border-brand-100 p-3"><div class="text-xs font-semibold text-slate-500">${label}</div><div class="num text-lg font-extrabold ${cls}">${value}</div></button>`;
 
   $('#view-home').innerHTML = `
-  <div class="rounded-[28px] bg-ink text-white p-6 relative overflow-hidden">
-    <div class="text-sm text-brand-200 font-medium">Património investido</div>
-    <div class="num text-[40px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(invested)}</div>
-    <div class="text-sm text-brand-200 mt-1">Custo de aquisição de ${pos.length} ${pos.length === 1 ? 'posição aberta' : 'posições abertas'}</div>
-    ${bar}
+  <div class="rounded-[28px] text-white p-5 relative overflow-hidden" style="background:linear-gradient(135deg,#1D4ED8,#0A2A66)">
+    <div class="text-sm text-brand-100 font-medium">Património total</div>
+    <div class="num text-[36px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(total)}</div>
+    <div class="flex flex-wrap items-center gap-2 mt-2 text-xs">
+      ${priced.length ? `<span class="num px-2.5 py-1 rounded-full font-bold ${res >= 0 ? 'bg-emerald-400/20 text-emerald-200' : 'bg-rose-400/20 text-rose-200'}">${plus(res)} (${pctStr(res, invested) || '0%'})</span>` : ''}
+      <span class="text-brand-100 num">Investido ${fmtEUR(invested)}</span></div>
+    <div class="text-[11px] text-brand-200 mt-2">${pos.length ? (priced.length ? `${priced.length} de ${pos.length} posições com preço${lastAt ? ' · ' + ago(lastAt) : ''}` : 'Sem preços atuais: toque em Preços') : 'Sem posições abertas'}</div>
+    ${sparkline()}
   </div>
 
-  <div class="grid grid-cols-2 gap-3 mt-3">
-    ${card(`<div class="p-4"><div class="text-xs font-semibold text-slate-500">Lucro / prejuízo acumulado</div>
-      <div class="num text-xl font-extrabold mt-1 ${sgn(pl)}">${plus(pl)}</div>
-      <div class="text-[11px] text-slate-500 mt-1 leading-snug">Mais-valias realizadas ${plus(realized)} e dividendos líquidos ${fmtEUR(divNet)}</div></div>`)}
-    ${card(`<div class="p-4"><div class="text-xs font-semibold text-slate-500">Imposto estimado ${yr}</div>
-      <div class="num text-xl font-extrabold mt-1">${fmtEUR(rep.totals.total)}</div>
-      <div class="text-[11px] text-slate-500 mt-1 leading-snug">Saldo de mais-valias ${plus(rep.totals.saldo)} à taxa de 28%</div></div>`)}
+  <div class="grid grid-cols-4 gap-2 mt-4">
+    ${qa(ic('<path d="M12 5v14M5 12h14"/>'), 'Nova', 'data-add="buy"', true)}
+    ${qa(ic('<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>'), 'Importar', 'data-go="import"')}
+    ${qa(ic('<path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/>'), 'Preços', 'data-refresh')}
+    ${qa(ic('<path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/>'), 'Relatório', 'data-report')}
   </div>
-  ${pos.length ? card(`<div class="p-4">${jobBanner()}
-    ${priced.length ? `<div class="flex items-end justify-between gap-3">
-      <div><div class="text-xs font-semibold text-slate-500">Valor atual da carteira</div>
-        <div class="num text-2xl font-extrabold">${fmtEUR(priced.reduce((s, p) => s + p.value, 0))}</div></div>
-      <div class="num text-right"><div class="text-lg font-extrabold ${sgn(unreal)}">${plus(unreal)}</div>
-        <div class="text-xs font-bold ${sgn(unreal)}">${pctStr(unreal, pricedCost)} face ao preço médio</div></div></div>
-      <div class="text-xs text-slate-500 mt-2">${priced.length} de ${pos.length} posições com preço${lastAt ? ' · atualizado ' + ago(lastAt) : ''}</div>`
-    : '<div class="font-bold">Quanto vale hoje a sua carteira?</div><p class="text-sm text-slate-600 mt-1">Vá buscar os preços de mercado para comparar com o que pagou.</p>'}
-    <div class="flex gap-2 mt-3">${refreshBtn('bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-60')}
-      <button data-qset class="h-10 px-3 rounded-2xl text-sm font-bold bg-brand-50 text-brand-700">Chave</button></div></div>`, 'mt-3') : ''}
+  <div class="mt-3">${jobBanner()}</div>
 
-  ${empty ? '' : goalsCardHTML()}
-  ${cashCardHTML()}
-  ${divsCardHTML()}
-  <div class="mt-3 rounded-3xl bg-brand-50 border border-brand-100 p-4 flex gap-3">
-    <div class="shrink-0 w-11 h-11 rounded-2xl bg-white grid place-items-center">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#B9CEF1" stroke-width="3"/><path d="M12 3a9 9 0 0 1 8.5 6" stroke="#1D4ED8" stroke-width="3" stroke-linecap="round"/></svg>
-    </div>
-    <div><div class="font-bold">Suporte total a ações fracionadas</div>
-      <p class="text-sm text-slate-600 mt-0.5 leading-relaxed">Registe quantidades como 0,25 ou 0,003 (até 8 casas decimais). Em cada venda, o FIFO casa cada fração vendida com as frações compradas há mais tempo.</p></div>
-  </div>
-
-  ${F.issues.length ? `<div class="mt-3 rounded-3xl bg-loss/5 border border-loss/25 p-4 text-sm">
+  ${F.issues.length ? `<div class="mt-1 rounded-3xl bg-loss/5 border border-loss/25 p-4 text-sm">
     <div class="font-bold text-loss">Há vendas sem compras suficientes registadas</div>
     <ul class="mt-1 text-slate-700 space-y-0.5">${F.issues.slice(0, 4).map(i => `<li>${esc(i.ticker)}: faltam ${fmtQ(i.qty)} unidades na venda de ${fmtD(i.date)}</li>`).join('')}</ul>
     <p class="text-slate-500 mt-1">Importe ou registe as compras anteriores para o cálculo ficar correto.</p></div>` : ''}
@@ -793,11 +831,136 @@ function renderHome() {
   ${empty ? card(`<div class="p-6 text-center">
       <div class="font-bold text-lg">Comece pela sua corretora</div>
       <p class="text-sm text-slate-600 mt-1 mb-4">Importe o extrato da XTB, DEGIRO, Revolut ou Trading 212, ou registe a primeira compra à mão.</p>
-      <div class="flex flex-wrap justify-center gap-2">${btn('Importar extrato', 'data-go="import"')}${btn('Registar compra', 'data-add="buy"', 'ghost')}${btn('Ver com dados de exemplo', 'data-demo', 'ghost')}</div></div>`, 'mt-4')
-    : `<div class="flex items-center justify-between mt-6 mb-2"><h2 class="font-extrabold text-lg">Maiores posições</h2>
-       <span class="flex gap-3"><button data-charts class="text-sm font-bold text-brand-600">Gráficos</button><button data-go="portfolio" class="text-sm font-bold text-brand-600">Ver carteira</button></span></div>
-       ${card(pos.slice(0, 5).map(posRow).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}`}
-  <p class="text-[11px] text-slate-400 mt-6 leading-relaxed">Os dados ficam só neste dispositivo. As estimativas não substituem a validação no Portal das Finanças nem o aconselhamento de um contabilista certificado.</p>`;
+      <div class="flex flex-wrap justify-center gap-2">${btn('Importar extrato', 'data-go="import"')}${btn('Registar compra', 'data-add="buy"', 'ghost')}${btn('Ver com dados de exemplo', 'data-demo', 'ghost')}</div></div>`, 'mt-1')
+    : `${card(`<div class="p-4">
+      <div class="flex items-center justify-between mb-1"><h2 class="font-extrabold">Resumo de ${yr}</h2><button data-tab="tax" class="text-sm font-bold text-brand-600">IRS</button></div>
+      <div class="divide-y divide-brand-50 text-sm num">
+        <div class="flex justify-between py-2.5"><span>Saldo de mais-valias</span><b class="${sgn(rep.totals.saldo)}">${plus(rep.totals.saldo)}</b></div>
+        <div class="flex justify-between py-2.5"><span>Dividendos (bruto)</span><b>${fmtEUR(divYear)}</b></div>
+        <div class="flex justify-between py-2.5"><span>IRS estimado</span><b class="text-amber-700">${fmtEUR(rep.totals.total)}</b></div></div></div>`, 'mt-1')}
+    <div class="grid grid-cols-2 gap-2 mt-3">
+      ${tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cs.saldo), cs.saldo < 0 ? 'text-loss' : '')}
+      ${tile(gd ? 'data-go="goals"' : 'data-goalcfg', goalTile[0], goalTile[1])}
+    </div>
+    ${divsCardHTML()}
+    <div class="flex items-center justify-between mt-6 mb-2"><h2 class="font-extrabold text-lg">Maiores posições</h2>
+      <span class="flex gap-3"><button data-charts class="text-sm font-bold text-brand-600">Gráficos</button><button data-go="portfolio" class="text-sm font-bold text-brand-600">Ver carteira</button></span></div>
+    ${card(pos.slice(0, 5).map(posRow).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}`}
+
+  <div class="mt-4 rounded-2xl bg-brand-50 border border-brand-100 px-4 py-3 flex items-center gap-3 text-sm">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="shrink-0"><circle cx="12" cy="12" r="9" stroke="#B9CEF1" stroke-width="3"/><path d="M12 3a9 9 0 0 1 8.5 6" stroke="#1D4ED8" stroke-width="3" stroke-linecap="round"/></svg>
+    <span><b>Suporte total a ações fracionadas</b> <span class="text-slate-600">· até 8 casas decimais, FIFO por fração</span></span></div>
+  <p class="text-[11px] text-slate-400 mt-4 leading-relaxed">Os dados ficam só neste dispositivo. As estimativas não substituem a validação no Portal das Finanças nem o aconselhamento de um contabilista certificado.</p>`;
+}
+
+/* ================= MAIS ================= */
+function renderMore() {
+  const it = (attrs, icon, label, color = '#1D4ED8') => `<button ${attrs} class="rounded-2xl bg-white border border-brand-100 py-4 px-2 flex flex-col items-center gap-2 text-sm font-semibold">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>${label}</button>`;
+  $('#view-more').innerHTML = `<h1 class="text-2xl font-extrabold tracking-tight mb-4">Mais</h1>
+  <div class="grid grid-cols-3 gap-2">
+    ${it('data-go="import"', '<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>', 'Importar')}
+    ${it('data-go="cash"', '<path d="M4 11c0-3 3.6-5 8-5s8 2 8 5-3.6 6-8 6-8-3-8-6z"/><path d="M12 8v6M10 10h4"/>', 'Caixa', '#0F9D6E')}
+    ${it('data-go="divs"', '<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10.5c0-1 1.1-1.5 2.5-1.5s2.5.6 2.5 1.6-1.1 1.4-2.5 1.4-2.5.5-2.5 1.5 1.1 1.5 2.5 1.5 2.5-.5 2.5-1.5"/>', 'Dividendos', '#0F9D6E')}
+    ${it('data-go="goals"', '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>', 'Metas')}
+    ${it('data-charts', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', 'Gráficos')}
+    ${it('data-go="settings"', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', 'Configurações', '#1A3FAE')}
+  </div>`;
+}
+
+/* ================= CONFIGURAÇÕES ================= */
+const APP_VERSION = '2.0';
+function setTheme(t) {
+  S.settings.theme = t; save(); applyTheme(); render();
+}
+function applyTheme() {
+  const dark = S.settings?.theme === 'dark';
+  document.documentElement.classList.toggle('dark', dark);
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', dark ? '#0B1530' : '#0A2A66');
+}
+function renderSettings() {
+  const row = (attrs, icon, label, right = '', cls = '') => `<button ${attrs} class="w-full text-left flex items-center gap-3 px-4 py-3.5 ${cls}">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 ${cls ? '' : 'text-brand-600'}">${icon}</svg>
+    <span class="flex-1 font-semibold">${label}</span>${right ? `<span class="text-xs text-slate-500 text-right">${right}</span>` : ''}
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" class="text-slate-400 shrink-0"><path d="M9 6l6 6-6 6"/></svg></button>`;
+  const sec = t => `<div class="text-[11px] font-bold tracking-wider text-slate-500 mt-5 mb-2 px-1">${t}</div>`;
+  const g = goalsCfg(), nGoals = ['port', 'monthly', 'alloc', 'div'].filter(k => g[k].on).length, cc = cashCfg();
+  const gMap = { ...TF.ANEXO_G_DEFAULT, ...(S.settings.anexoG || {}) }, gList = Object.keys(gMap).filter(k => gMap[k]).map(bname);
+  const theme = S.settings.theme === 'dark' ? 'dark' : 'light';
+  const th = (k, l, prev) => `<button data-theme="${k}" class="rounded-2xl border-2 p-2 text-sm font-bold ${theme === k ? 'border-brand-600' : 'border-brand-100'}"><div class="h-12 rounded-xl mb-1.5" style="${prev}"></div>${l}</button>`;
+  $('#view-settings').innerHTML = `
+  <div class="flex items-center gap-2 mb-3"><button data-back class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <h1 class="text-2xl font-extrabold tracking-tight">Configurações</h1></div>
+  ${card(`<div class="p-4 flex items-center gap-3"><div class="w-11 h-11 rounded-full bg-brand-50 text-brand-600 grid place-items-center shrink-0">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></div>
+    <div class="flex-1"><div class="font-bold">Conta</div><div class="text-xs text-slate-500">Entrar e sincronizar entre aparelhos</div></div>
+    <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">Em breve</span></div>`)}
+  ${sec('APARÊNCIA')}
+  <div class="grid grid-cols-2 gap-2">${th('light', 'Claro', 'background:#F4F7FC;border:1px solid #DCE7F8')}${th('dark', 'Escuro', 'background:linear-gradient(135deg,#0B1530,#16295A)')}</div>
+  ${sec('INVESTIMENTOS')}
+  ${card(row('data-go="goals"', '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/>', 'Metas de investimento', nGoals ? `${nGoals} ativa${nGoals > 1 ? 's' : ''}` : 'nenhuma')
+    + row('data-cashcfg', '<path d="M4 11c0-3 3.6-5 8-5s8 2 8 5-3.6 6-8 6-8-3-8-6z"/>', 'Caixa de oportunidade', cc.goal ? 'meta ' + fmtEUR(cc.goal) : '')
+    + row('data-qset', '<path d="M3 17l6-6 4 4 8-8M14 7h7v7"/>', 'Preços e câmbio', S.settings.avKey ? `chave ativa · ${quotaToday()}/${AV_DAY} hoje` : 'sem chave'), 'divide-y divide-brand-50 overflow-hidden')}
+  ${sec('IRS')}
+  ${card(row('data-fiscalcfg', '<path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/>', 'Corretoras e anexos', gList.length ? gList.join(', ') + ' → Anexo G' : '')
+    + row('data-cdtcfg', '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>', 'Dupla tributação (dividendos)')
+    + row('data-holdercfg', '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.5"/><path d="M14 10h4M14 14h4"/>', 'Titular do relatório', esc(S.settings.holderName || '')), 'divide-y divide-brand-50 overflow-hidden')}
+  ${sec('DADOS')}
+  ${card(row('id="bkExport"', '<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>', 'Guardar cópia de segurança', S.settings.lastBackup ? 'última: ' + fmtD(S.settings.lastBackup) : '')
+    + `<label class="w-full flex items-center gap-3 px-4 py-3.5 cursor-pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="shrink-0 text-brand-600"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg><span class="flex-1 font-semibold">Restaurar cópia</span><input id="bkImport" type="file" accept=".json" class="sr-only"></label>`
+    + row(S.demo ? 'data-exitdemo' : 'data-demo', '<path d="M9 3h6M10 3v6L4 19a1.5 1.5 0 0 0 1.3 2h13.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/>', S.demo ? 'Sair dos dados de exemplo' : 'Ver com dados de exemplo')
+    + (S.demo ? '' : row('id="wipe"', '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', 'Apagar todos os dados', '', 'text-loss')), 'divide-y divide-brand-50 overflow-hidden')}
+  <p class="text-[11px] text-slate-500 mt-2 px-1">${S.tx.length} operações, ${S.div.length} dividendos e ${Object.keys(S.assets).length} ativos guardados neste aparelho. Faça cópias de segurança: limpar os dados do navegador apaga-os.</p>
+  <div class="text-center mt-8 text-slate-400">${LOGO_SVG(28)}<div class="text-xs mt-1">TaxFolio Portugal · versão ${APP_VERSION}</div><div class="text-[11px]">taxifolio.site</div></div>`;
+  $('#bkExport').onclick = exportBackup;
+  $('#bkImport').onchange = e => e.target.files[0] && importBackup(e.target.files[0]);
+  if ($('#wipe')) $('#wipe').onclick = () => { if (S.demo) return exitDemo();
+    if (!confirm('Apagar todas as operações, dividendos, caixa e ativos deste dispositivo?')) return;
+    S.tx = []; S.div = []; S.assets = {}; S.cash = []; S.divCal = {}; S.divDone = {}; S.hist = {}; S.settings.cashCfg = { goal: 0, divFrom: '', place: 'XTB' };
+    save(); UI.imp = null; render(); toast('Dados apagados'); };
+}
+
+function openFiscalCfg() {
+  openModal(`${modalHead('Corretoras e anexos')}
+  <form id="fcForm" class="space-y-4 text-sm">
+    <div><div class="lbl">Anexo onde a corretora comunica as vendas</div>
+      <div class="space-y-2">${Object.entries(TF.BROKERS).filter(([k]) => k !== 'OUTRA').map(([k, b]) => {
+        const g = (S.settings.anexoG || {})[k] ?? !!TF.ANEXO_G_DEFAULT[k];
+        return `<div class="flex items-center gap-2"><span class="w-24">${b.name}</span>
+          <label class="flex items-center gap-1.5"><input type="checkbox" data-ag="${k}" ${g ? 'checked' : ''} class="w-4 h-4 accent-[#1D4ED8]">Anexo G</label>
+          <input data-nif="${k}" class="field !py-1.5 num flex-1" inputmode="numeric" placeholder="NIF da entidade" value="${esc((S.settings.nif || {})[k] ?? TF.NIF_DEFAULT[k] ?? '')}"></div>`; }).join('')}</div>
+      <p class="text-[11px] text-slate-500 mt-1">Marque Anexo G quando as vendas já aparecem pré-preenchidas nesse anexo no Portal das Finanças. O NIF é o da coluna "NIF da entidade emitente".</p></div>
+    <div><div class="lbl">País da contraparte (código numérico)</div>
+      <div class="grid grid-cols-2 gap-2">${Object.entries(TF.BROKERS).filter(([k]) => k !== 'OUTRA').map(([k, b]) =>
+        `<label class="flex items-center gap-2"><span class="w-20 truncate">${b.name}</span><input data-cp="${k}" class="field !py-1.5 num" inputmode="numeric" value="${esc(S.settings.brokerCp[k] ?? TF.pad3(b.cp))}"></label>`).join('')}</div></div>
+    <button class="w-full h-12 rounded-2xl bg-brand-600 text-white font-bold">Guardar</button>
+  </form>`);
+  $('#fcForm').onsubmit = e => {
+    e.preventDefault(); S.settings.anexoG ||= {}; S.settings.nif ||= {};
+    document.querySelectorAll('[data-ag]').forEach(i => S.settings.anexoG[i.dataset.ag] = i.checked);
+    document.querySelectorAll('[data-nif]').forEach(i => S.settings.nif[i.dataset.nif] = i.value.trim());
+    document.querySelectorAll('[data-cp]').forEach(i => S.settings.brokerCp[i.dataset.cp] = i.value.trim());
+    save(); closeModal(); render(); toast('Definições guardadas');
+  };
+}
+function openCdtCfg() {
+  const cs = [...new Set([...Object.values(S.assets).map(a => Number(a.country)).filter(c => c && c !== 620), ...Object.keys(S.settings.cdt || {}).map(Number), 840])];
+  openModal(`${modalHead('Dupla tributação')}
+  <p class="text-sm text-slate-600 mb-3">Taxa máxima de retenção prevista na convenção de cada país com Portugal. É o limite do crédito que Portugal desconta no IRS dos dividendos.</p>
+  <form id="cdtForm" class="space-y-2 text-sm">${cs.map(c => `<label class="flex items-center gap-2"><span class="flex-1">${cname(c)}</span><input data-cdt="${c}" class="field !py-1.5 !w-20 num text-right" inputmode="decimal" value="${S.settings.cdt[c] ?? TF.CDT[c] ?? 15}"><span>%</span></label>`).join('')}
+    <p class="text-[11px] text-slate-500 pt-1">Valores de referência: confirme a convenção do país.</p>
+    <button class="w-full h-12 rounded-2xl bg-brand-600 text-white font-bold mt-2">Guardar</button></form>`);
+  $('#cdtForm').onsubmit = e => { e.preventDefault(); document.querySelectorAll('[data-cdt]').forEach(i => S.settings.cdt[i.dataset.cdt] = TF.num(i.value)); save(); closeModal(); render(); toast('Taxas guardadas'); };
+}
+function openHolderCfg() {
+  openModal(`${modalHead('Titular do relatório')}
+  <form id="hForm" class="space-y-3">
+    <div><label class="lbl" for="h2Name">Nome</label><input id="h2Name" class="field" value="${esc(S.settings.holderName || '')}"></div>
+    <div><label class="lbl" for="h2Nif">NIF</label><input id="h2Nif" class="field num" inputmode="numeric" value="${esc(S.settings.holderNif || '')}"></div>
+    <p class="text-[11px] text-slate-500">Aparecem no topo do relatório para a contabilista. Ficam só neste aparelho.</p>
+    <button class="w-full h-12 rounded-2xl bg-brand-600 text-white font-bold">Guardar</button></form>`);
+  $('#hForm').onsubmit = e => { e.preventDefault(); S.settings.holderName = $('#h2Name').value.trim(); S.settings.holderNif = $('#h2Nif').value.trim(); save(); closeModal(); render(); toast('Guardado'); };
 }
 
 function posRow(p) {
@@ -856,7 +1019,7 @@ function renderCash() {
   const c = cashState();
   const stat = (l, v, cls = '') => `<div class="rounded-2xl bg-brand-50 p-3"><div class="text-xs text-slate-500 font-semibold">${l}</div><div class="num font-extrabold ${cls}">${v}</div></div>`;
   $('#view-cash').innerHTML = `
-  <div class="flex items-center gap-2 mb-3"><button data-go="home" class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
+  <div class="flex items-center gap-2 mb-3"><button data-back class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
     <h1 class="text-2xl font-extrabold tracking-tight flex-1">Caixa de oportunidade</h1>
     <button data-cashcfg class="h-9 px-3 rounded-full bg-white border border-brand-100 text-sm font-bold text-brand-700">Definições</button></div>
@@ -1007,7 +1170,7 @@ function renderDivs() {
         <button data-divskip="${esc(x.key)}" class="mt-2 text-xs font-semibold text-slate-500">Não recebi este dividendo</button>` : ''}</div>`;
   };
   $('#view-divs').innerHTML = `
-  <div class="flex items-center gap-2 mb-3"><button data-go="cash" class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
+  <div class="flex items-center gap-2 mb-3"><button data-back class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
     <h1 class="text-2xl font-extrabold tracking-tight flex-1">Dividendos previstos</h1>
     <button data-divref class="h-9 px-3 rounded-full bg-white border border-brand-100 text-sm font-bold text-brand-700" ${UI.job ? 'disabled' : ''}>${UI.job ? 'A atualizar…' : 'Atualizar'}</button></div>
@@ -1181,7 +1344,7 @@ function chartSVG(series, labels) {
   const X = k => padL + (W - padL - padR) * (n > 1 ? k / (n - 1) : 0), Y = v => top + (H - top - bot) * (1 - (v - lo) / (hi - lo));
   const step = (() => { const raw = (hi - lo) / 4, m = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 5, 10].map(x => x * m).find(x => x >= raw) || raw; })();
   let ticks = ''; for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
-    ticks += `<line x1="0" x2="${W}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="#E6ECF5" ${Math.abs(v) < 1e-9 ? '' : 'stroke-dasharray="3 3"'}/>
+    ticks += `<line x1="0" x2="${W}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--grid)" ${Math.abs(v) < 1e-9 ? '' : 'stroke-dasharray="3 3"'}/>
       <text x="2" y="${(Y(v) - 3).toFixed(1)}" font-size="10" fill="#64748B">${v > 0 ? '+' : ''}${fmtN(v, step < 1 ? 1 : 0)}%</text>`;
   }
   const lines = series.slice().reverse().map(s => {
@@ -1207,7 +1370,7 @@ function donutHTML(pos) {
       <svg width="140" height="140" viewBox="0 0 140 140" class="shrink-0" role="img" aria-label="Distribuição da carteira">
         <g transform="rotate(-90 70 70)" fill="none" stroke-width="18">${arcs}</g>
         <text x="70" y="64" text-anchor="middle" font-size="11" fill="#64748B">${priced ? 'Vale hoje' : 'Valor'}</text>
-        <text x="70" y="82" text-anchor="middle" font-size="15" font-weight="800" fill="#0A2A66">${esc(fmtEUR(tot))}</text></svg>
+        <text x="70" y="82" text-anchor="middle" font-size="15" font-weight="800" fill="var(--ink)">${esc(fmtEUR(tot))}</text></svg>
       <div class="flex-1 min-w-0 space-y-1.5 text-sm">${top.map((x, i) => `<div class="flex items-center gap-2"><i class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${PALETTE[i % PALETTE.length]}"></i><span class="flex-1 truncate font-semibold">${esc(x.t.replace(/\.(US|DE|UK|LS|PT|NL|FR)$/, ''))}</span><span class="num">${fmtN(x.v / tot * 100, 0)}%</span></div>`).join('')}</div>
     </div>
     <div class="grid grid-cols-2 gap-2 mt-4 num">
@@ -1402,7 +1565,7 @@ function renderGoals() {
     <div class="mt-2">${bar(d.div.pct, '#0F9D6E')}</div>
     <p class="text-xs text-slate-500 mt-1.5">Média dos dividendos líquidos recebidos nos últimos 12 meses.</p></div>`, 'mt-3'));
   $('#view-goals').innerHTML = `
-  <div class="flex items-center gap-2 mb-3"><button data-go="home" class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
+  <div class="flex items-center gap-2 mb-3"><button data-back class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
     <h1 class="text-2xl font-extrabold tracking-tight flex-1">Metas</h1>
     <button data-goalcfg class="h-9 px-3 rounded-full bg-white border border-brand-100 text-sm font-bold text-brand-700">Configurar</button></div>
@@ -1467,9 +1630,13 @@ function renderPortfolio() {
   const F = TF.fifo(S.tx), pos = TF.positions(F.lots, S.assets);
   const seg = (k, l) => `<button data-ptab="${k}" class="flex-1 h-10 rounded-xl text-sm font-bold ${UI.ptab === k ? 'bg-white text-ink shadow-sm' : 'text-slate-500'}">${l}</button>`;
   let body;
+  const kf = UI.kfilter || 'all';
   if (UI.ptab === 'assets') {
     const closed = Object.keys(S.assets).filter(k => !pos.find(p => p.ticker === k));
-    body = (pos.length ? card(pos.map(posRow).join(''), 'divide-y divide-brand-50 overflow-hidden') : card('<div class="p-6 text-sm text-slate-500 text-center">Sem posições abertas.</div>'))
+    const fpos = kf === 'all' ? pos : pos.filter(p => (p.kind === 'etf' ? 'etf' : 'acao') === kf);
+    const kchip = (k, l) => `<button data-kf="${k}" class="h-8 px-3.5 rounded-full text-xs font-bold border ${kf === k ? 'bg-brand-600 text-white border-brand-600' : 'bg-white border-brand-100 text-slate-600'}">${l}</button>`;
+    body = `<div class="flex gap-2 mb-3">${kchip('all', 'Todos')}${kchip('acao', 'Ações')}${kchip('etf', 'ETFs')}</div>`
+      + (fpos.length ? card(fpos.map(posRow).join(''), 'divide-y divide-brand-50 overflow-hidden') : card('<div class="p-6 text-sm text-slate-500 text-center">Sem posições abertas.</div>'))
       + (closed.length ? `<h3 class="font-bold mt-6 mb-2 text-slate-600">Ativos sem posição</h3>${card(closed.map(k => `<button data-asset="${esc(k)}" class="w-full text-left px-4 py-3 flex justify-between hover:bg-brand-50/60"><span class="font-semibold">${esc(k)}</span><span class="text-xs text-slate-500">${esc(S.assets[k].name)}</span></button>`).join(''), 'divide-y divide-brand-50 overflow-hidden')}` : '');
   } else if (UI.ptab === 'charts') {
     body = renderChartsBody(pos);
@@ -1709,6 +1876,7 @@ function renderTax() {
   const stat = (l, v, cls = '') => `<div><div class="text-xs text-slate-500 font-semibold">${l}</div><div class="num font-extrabold ${cls}">${v}</div></div>`;
 
   const cdtCountries = rep.D.map(d => d.country);
+  const taxTab = UI.taxTab || (rep.G.length ? 'G' : rep.J.length ? 'J' : rep.D.length ? 'D' : 'G');
   $('#view-tax').innerHTML = `
   <div class="flex items-center justify-between gap-3 mb-3">
     <h1 class="text-2xl font-extrabold tracking-tight">IRS ${rep.year}</h1>
@@ -1732,14 +1900,18 @@ function renderTax() {
     ${stat('Dividendos brutos', fmtEUR(T.divGross))}${stat('Retido no estrangeiro', fmtEUR(T.divForeign))}
     ${stat('Crédito dupla tributação', fmtEUR(T.divCredit))}${stat('Retido em Portugal', fmtEUR(T.divPT))}</div>`, 'mt-3')}
 
-  ${rep.issues.length ? `<div class="mt-3 rounded-2xl bg-loss/5 border border-loss/25 p-3 text-sm text-loss font-semibold">Há ${rep.issues.length} venda(s) sem compras suficientes registadas. O relatório ficará incompleto até as registar.</div>` : ''}
+  ${rep.issues.length ? `<div class="mt-3 rounded-2xl bg-loss/5 border border-loss/25 p-3 text-sm text-loss font-semibold">Há ${rep.issues.length} venda(s) sem compras suficientes registadas. O relatório ficará incompleto até as registar.</div>`
+    : (rep.J.length || rep.G.length || rep.D.length) ? `<div class="mt-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 flex items-center gap-2"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg><span><b>Dados consolidados.</b> Todas as vendas têm compras correspondentes.</span></div>` : ''}
 
-  <div class="flex flex-wrap gap-2 mt-4 no-print">
-    <button id="btnPdf" class="h-11 px-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold">Relatório para a contabilista</button>
-    <button id="btnCopyAll" class="h-11 px-4 rounded-2xl bg-brand-50 hover:bg-brand-100 text-brand-700 text-sm font-bold">Copiar tabelas para Excel</button>
+  <div class="no-print mt-4 space-y-2">
+    <button id="btnPdf" class="w-full h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center justify-center gap-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/></svg>Relatório para a contabilista</button>
+    <button id="btnCopyAll" class="w-full h-11 rounded-2xl bg-brand-50 hover:bg-brand-100 text-brand-700 text-sm font-bold">Copiar tabelas para Excel</button>
   </div>
 
-  ${tbs.map(tableHTML).join('')}
+  <div class="no-print flex gap-1 p-1 rounded-2xl bg-brand-100/70 mt-4">${[['G', 'Anexo G', rep.G.length], ['J', 'Anexo J', rep.J.length], ['D', 'Dividendos', rep.D.length]].map(([k, l, n]) =>
+    `<button data-taxtab="${k}" class="flex-1 h-10 rounded-xl text-sm font-bold ${taxTab === k ? 'bg-white shadow-sm text-ink' : 'text-slate-500'}">${l}${n ? ` <span class="text-xs opacity-70">${n}</span>` : ''}</button>`).join('')}</div>
+  <div class="only-screen">${tableHTML(tbs.find(t => t.id === taxTab))}</div>
+  <div class="only-print hidden">${tbs.map(tableHTML).join('')}</div>
 
   ${rep.DPT.length ? `<p class="text-xs text-slate-500 mt-2">Dividendos de empresas portuguesas (${fmtEUR(rep.DPT.reduce((s, d) => s + d.gross, 0))}) ficam fora do Anexo J: com retenção liberatória de 28% em Portugal não precisam de ser declarados, salvo opção pelo englobamento (Anexo E).</p>` : ''}
 
@@ -1750,31 +1922,13 @@ function renderTax() {
       <p>Cada linha do Quadro 9.2A corresponde a um lote FIFO: uma venda casada com uma compra. O valor de realização e o de aquisição vão sem despesas; as comissões de compra e venda vão na coluna própria de despesas e encargos.</p>
       <p>O código G01 aplica-se a ações. Para ETFs a app sugere G20 (unidades de participação em fundos), mas confirme o código com as instruções do anexo do ano em causa; pode alterá-lo em cada ativo na Carteira.</p>
       <p>Valores em moeda estrangeira são convertidos para euros com o câmbio de referência da data de cada operação: o da compra para o valor de aquisição e o da venda para o valor de realização.</p>
-      <p>O país da fonte é o do emitente (ISIN), não o da bolsa. O país da contraparte é o da entidade da corretora; os valores sugeridos podem ser alterados abaixo.</p>
+      <p>O país da fonte é o do emitente (ISIN), não o da bolsa. O país da contraparte é o da entidade da corretora; os valores sugeridos podem ser alterados em Configurações.</p>
       <p>Se o saldo de títulos detidos menos de 365 dias for positivo e o seu rendimento coletável, somado a esse saldo, atingir o último escalão do IRS, o englobamento é obrigatório. Pode também optar por englobar para reportar perdas aos 5 anos seguintes.</p>
       <p>No crédito por dupla tributação conta apenas o imposto até à taxa prevista na convenção (ex.: 15% nos EUA com o formulário W-8BEN). O excesso retido só se recupera junto do país de origem.</p>
     </div>
   </details>
 
-  <details class="no-print mt-3 bg-white rounded-3xl border border-brand-100 p-4">
-    <summary class="font-bold cursor-pointer">Definições fiscais</summary>
-    <form id="setForm" class="mt-3 space-y-4 text-sm">
-      <div><div class="lbl">Anexo onde a corretora comunica as vendas</div>
-        <div class="space-y-2">${Object.entries(TF.BROKERS).filter(([k]) => k !== 'OUTRA').map(([k, b]) => {
-          const g = (S.settings.anexoG || {})[k] ?? !!TF.ANEXO_G_DEFAULT[k];
-          return `<div class="flex items-center gap-2"><span class="w-24 text-slate-600">${b.name}</span>
-            <label class="flex items-center gap-1.5"><input type="checkbox" data-ag="${k}" ${g ? 'checked' : ''} class="w-4 h-4 accent-[#1D4ED8]">Anexo G</label>
-            <input data-nif="${k}" class="field !py-1.5 num flex-1" inputmode="numeric" placeholder="NIF da entidade" value="${esc((S.settings.nif || {})[k] ?? TF.NIF_DEFAULT[k] ?? '')}"></div>`; }).join('')}</div>
-        <p class="text-[11px] text-slate-500 mt-1">Marque Anexo G quando as vendas já aparecem pré-preenchidas nesse anexo no Portal das Finanças (caso da XTB). O NIF é o que aparece na coluna "NIF da entidade emitente".</p></div>
-      <div><div class="lbl">País da contraparte por corretora (código numérico)</div>
-        <div class="grid grid-cols-2 gap-2">${Object.entries(TF.BROKERS).filter(([k]) => k !== 'OUTRA').map(([k, b]) =>
-          `<label class="flex items-center gap-2"><span class="w-24 text-slate-600">${b.name}</span><input data-cp="${k}" class="field !py-1.5 num" inputmode="numeric" value="${esc(S.settings.brokerCp[k] ?? TF.pad3(b.cp))}"></label>`).join('')}</div>
-        <p class="text-[11px] text-slate-500 mt-1">Confirme no contrato da sua corretora qual a entidade com quem tem conta.</p></div>
-      ${cdtCountries.length ? `<div><div class="lbl">Taxa máxima da convenção (CDT) para dividendos, em %</div><div class="grid grid-cols-2 gap-2">${cdtCountries.map(c =>
-        `<label class="flex items-center gap-2"><span class="w-24 text-slate-600 truncate">${cname(c)}</span><input data-cdt="${c}" class="field !py-1.5 num" inputmode="decimal" value="${S.settings.cdt[c] ?? TF.CDT[c] ?? 15}"></label>`).join('')}</div></div>` : ''}
-      <button class="h-10 px-4 rounded-xl bg-brand-600 text-white font-bold">Guardar definições</button>
-    </form>
-  </details>
+  <button data-go="settings" class="no-print mt-3 w-full h-11 rounded-2xl bg-white border border-brand-100 text-sm font-bold text-brand-700">Definições fiscais → Configurações</button>
   <p class="text-[11px] text-slate-400 mt-5 leading-relaxed">Estimativa informativa baseada nas regras gerais do CIRS. Confirme sempre os valores na simulação do Portal das Finanças.</p>`;
 
   $('#yearSel').onchange = e => { UI.year = e.target.value; renderTax(); };
@@ -1787,15 +1941,6 @@ function renderTax() {
     toast(await copyText(txt) ? 'Tabelas copiadas: cole no Excel' : 'Não foi possível copiar');
   };
   $('#btnPdf').onclick = () => openReportModal(rep);
-  $('#setForm').onsubmit = e => {
-    e.preventDefault();
-    document.querySelectorAll('[data-cp]').forEach(i => S.settings.brokerCp[i.dataset.cp] = i.value.trim());
-    S.settings.anexoG ||= {}; S.settings.nif ||= {};
-    document.querySelectorAll('[data-ag]').forEach(i => S.settings.anexoG[i.dataset.ag] = i.checked);
-    document.querySelectorAll('[data-nif]').forEach(i => S.settings.nif[i.dataset.nif] = i.value.trim());
-    document.querySelectorAll('[data-cdt]').forEach(i => S.settings.cdt[i.dataset.cdt] = TF.num(i.value));
-    save(); renderTax(); toast('Definições guardadas');
-  };
 }
 
 /* ---------- Relatório para a contabilista (PDF e Excel, partilháveis) ---------- */
@@ -1986,16 +2131,8 @@ function renderImport() {
   </details>
   ${preview}
 
-  <h2 class="font-extrabold text-lg mt-8 mb-2">Os seus dados</h2>
-  ${/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone() ? `<div class="mb-3 rounded-2xl bg-brand-50 border border-brand-100 p-3 text-sm">Para instalar no iPhone: abra no Safari, toque em Partilhar e depois em <b>Adicionar ao ecrã principal</b>.</div>` : ''}
-  ${card(`<div class="p-4 text-sm text-slate-600">${S.tx.length} operações, ${S.div.length} dividendos e ${Object.keys(S.assets).length} ativos guardados neste navegador. Faça cópias de segurança: limpar os dados do navegador apaga-os.</div>
-    <div class="px-4 pb-4 flex flex-wrap gap-2">
-      <button id="bkExport" class="h-10 px-4 rounded-xl bg-brand-50 text-brand-700 text-sm font-bold">Guardar cópia (JSON)</button>
-      <label class="h-10 px-4 rounded-xl bg-brand-50 text-brand-700 text-sm font-bold grid place-items-center cursor-pointer">Restaurar cópia<input id="bkImport" type="file" accept=".json" class="sr-only"></label>
-      <button data-go="goals" class="h-10 px-4 rounded-xl bg-brand-50 text-brand-700 text-sm font-bold">Metas de investimento</button>
-      <button data-demo class="h-10 px-4 rounded-xl bg-brand-50 text-brand-700 text-sm font-bold">Carregar dados de exemplo</button>
-      <button id="wipe" class="h-10 px-4 rounded-xl border border-loss/30 text-loss text-sm font-bold">${S.demo ? 'Sair do exemplo' : 'Apagar tudo'}</button>
-    </div>`)}`;
+  ${/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone() ? `<div class="mt-6 rounded-2xl bg-brand-50 border border-brand-100 p-3 text-sm">Para instalar no iPhone: abra no Safari, toque em Partilhar e depois em <b>Adicionar ao ecrã principal</b>.</div>` : ''}
+  <button data-go="settings" class="mt-6 w-full h-11 rounded-2xl bg-white border border-brand-100 text-sm font-bold text-brand-700">Cópias de segurança e dados → Configurações</button>`;
 
   const fileIn = $('#file'), drop = $('#drop');
   fileIn.onchange = () => fileIn.files[0] && handleFile(fileIn.files[0]);
@@ -2009,12 +2146,6 @@ function renderImport() {
     $('#impCancel').onclick = () => { UI.imp = null; renderImport(); };
     $('#impGo').onclick = commitImport;
   }
-  $('#bkExport').onclick = exportBackup;
-  $('#bkImport').onchange = e => e.target.files[0] && importBackup(e.target.files[0]);
-  $('#wipe').onclick = () => { if (S.demo) return exitDemo();
-    if (!confirm('Apagar todas as operações, dividendos, caixa e ativos deste dispositivo?')) return;
-    S.tx = []; S.div = []; S.assets = {}; S.cash = []; S.divCal = {}; S.divDone = {}; S.hist = {}; S.settings.cashCfg = { goal: 0, divFrom: '', place: 'XTB' };
-    save(); UI.imp = null; renderImport(); toast('Dados apagados'); };
 }
 
 async function handleFile(file) {
@@ -2056,7 +2187,7 @@ function download(name, text, type) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
-function exportBackup() { download(`taxfolio-backup-${today()}.json`, JSON.stringify({ app: 'TaxFolio Portugal', v: 1, ...S }, null, 2), 'application/json'); toast('Cópia guardada'); }
+function exportBackup() { S.settings.lastBackup = today(); save(); download(`taxfolio-backup-${today()}.json`, JSON.stringify({ app: 'TaxFolio Portugal', v: 1, ...S }, null, 2), 'application/json'); toast('Cópia guardada'); }
 async function importBackup(file) {
   try {
     const d = JSON.parse(await file.text()); if (!Array.isArray(d.tx) || !Array.isArray(d.div)) throw 0;
@@ -2094,13 +2225,13 @@ function loadDemo() {
 function exitDemo() {
   if (!confirm('Sair do exemplo? Os dados de exemplo são apagados e a app volta aos seus dados.')) return;
   let real = null; try { real = JSON.parse(localStorage.getItem(KEY + '.real') || 'null'); } catch (e) {}
-  const keep = { avKey: S.settings.avKey, fx: S.settings.fx, quota: S.settings.quota, goals: S.settings.goals };
+  const keep = { avKey: S.settings.avKey, fx: S.settings.fx, quota: S.settings.quota }, theme = S.settings.theme, goals = S.settings.goals;
   const market = { hist: S.hist, fxHist: S.fxHist, fxSeries: S.fxSeries };
   for (const k of Object.keys(S)) delete S[k];
   Object.assign(S, { tx: [], div: [], assets: {}, cash: [], divCal: {}, divDone: {}, settings: { brokerCp: {}, cdt: {} } }, real || {}, market);
   S.settings ||= {}; S.settings.brokerCp ||= {}; S.settings.cdt ||= {};
   for (const [k, v] of Object.entries(keep)) if (v != null && S.settings[k] == null) S.settings[k] = v;
-  S.demo = false;
+  S.demo = false; if (theme) S.settings.theme = theme; if (goals) S.settings.goals = goals;
   try { localStorage.removeItem(KEY + '.real'); } catch (e) {}
   UI.year = null; UI.imp = null; UI.ptab = 'assets';
   save(); go('home'); toast(S.tx.length || S.div.length ? 'De volta aos seus dados' : 'Pronto: pode começar a registar os seus dados');
@@ -2108,10 +2239,18 @@ function exitDemo() {
 
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
-  if ('goalcfg' in d) openGoalsCfg();
+  if ('back' in d) { const prev = (UI.hist || []).pop(); go(prev || 'home', true); }
+  else if (d.theme) setTheme(d.theme);
+  else if ('report' in d) { const y = defaultYear(); openReportModal(TF.yearReport(S, y)); }
+  else if ('fiscalcfg' in d) openFiscalCfg();
+  else if ('cdtcfg' in d) openCdtCfg();
+  else if ('holdercfg' in d) openHolderCfg();
+  else if (d.taxtab) { UI.taxTab = d.taxtab; renderTax(); }
+  else if (d.kf) { UI.kfilter = d.kf; renderPortfolio(); }
+  else if ('goalcfg' in d) openGoalsCfg();
   else if ('exitdemo' in d) exitDemo();
   else if ('charts' in d) { UI.ptab = 'charts'; go('portfolio'); }
   else if (d.bench) toggleBench(d.bench);
@@ -2144,6 +2283,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 $('#btnAdd').onclick = () => openTxForm('buy');
+$('#btnSettings').onclick = () => go('settings');
 
 function netStatus() {
   const on = navigator.onLine;
@@ -2163,13 +2303,13 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   }).catch(() => {}));
 }
 
-load(); netStatus();
+load(); applyTheme(); netStatus();
 if (standalone()) $('#pwaTxt').textContent = ' · App';
 $('#fxBtn').onclick = openFxModal;
 renderFx(); refreshFx();
 window.addEventListener('online', () => refreshFx());
 setInterval(() => refreshFx(), 30 * 60e3);
-go(['home', 'portfolio', 'tax', 'import', 'cash', 'divs', 'goals'].includes(UI.tab) ? UI.tab : 'home');
+go(['home', 'portfolio', 'tax', 'import', 'cash', 'divs', 'goals', 'more', 'settings'].includes(UI.tab) ? UI.tab : 'home');
 
 </script>
 </body>
