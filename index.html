@@ -786,13 +786,15 @@ function sparkline() {
   const cd = compareData(); if (!cd || cd.rows.length < 3) return '';
   const rows = cd.rows.slice(-26), vals = rows.map(r => r.G), lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
   const pts = vals.map((v, i) => `${(i / (vals.length - 1) * 120).toFixed(1)},${(40 - (v - lo) / span * 36).toFixed(1)}`).join(' ');
-  return `<svg width="120" height="44" viewBox="0 0 120 44" class="absolute right-5 bottom-5 opacity-90" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="#7FA4F5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return `<svg width="120" height="44" viewBox="0 0 120 44" class="absolute right-5 top-5 opacity-90" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="#7FA4F5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
 function renderHome() {
   const F = TF.fifo(S.tx), pos = TF.positions(F.lots, S.assets);
   const invested = pos.reduce((s, p) => s + p.cost, 0), total = pos.reduce((s, p) => s + (p.value ?? p.cost), 0);
   const priced = pos.filter(p => p.value != null), res = total - invested;
+  const csH = cashState(), cashV = csH.saldo, hasCash = (S.cash || []).length > 0 || Math.abs(cashV) > 0.004;
+  const grand = total + cashV, invPct = grand > 0 ? Math.max(0, Math.min(100, total / grand * 100)) : 0;
   const lastAt = Math.max(0, ...priced.map(p => S.assets[p.ticker]?.priceAt || 0));
   const yr = defaultYear(), rep = TF.yearReport(S, yr);
   const divYear = S.div.filter(d => d.date.startsWith(yr)).reduce((s, d) => s + d.gross, 0);
@@ -807,12 +809,16 @@ function renderHome() {
   $('#view-home').innerHTML = `
   <div class="rounded-[28px] text-white p-5 relative overflow-hidden" style="background:linear-gradient(135deg,#1D4ED8,#0A2A66)">
     <div class="text-sm text-brand-100 font-medium">Património total</div>
-    <div class="num text-[36px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(total)}</div>
-    <div class="flex flex-wrap items-center gap-2 mt-2 text-xs">
-      ${priced.length ? `<span class="num px-2.5 py-1 rounded-full font-bold ${res >= 0 ? 'bg-emerald-400/20 text-emerald-200' : 'bg-rose-400/20 text-rose-200'}">${plus(res)} (${pctStr(res, invested) || '0%'})</span>` : ''}
-      <span class="text-brand-100 num">Investido ${fmtEUR(invested)}</span></div>
-    <div class="text-[11px] text-brand-200 mt-2">${pos.length ? (priced.length ? `${priced.length} de ${pos.length} posições com preço${lastAt ? ' · ' + ago(lastAt) : ''}` : 'Sem preços atuais: toque em Preços') : 'Sem posições abertas'}</div>
+    <div class="num text-[36px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(hasCash ? grand : total)}</div>
+    ${priced.length ? `<div class="mt-1 text-xs"><span class="num px-2.5 py-1 rounded-full font-bold ${res >= 0 ? 'bg-emerald-400/20 text-emerald-200' : 'bg-rose-400/20 text-rose-200'}">${plus(res)} (${pctStr(res, invested) || '0%'}) nos investimentos</span></div>` : ''}
     ${sparkline()}
+    ${hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3 relative">
+      <button data-go="portfolio" class="text-left rounded-xl bg-white/10 px-3 py-2"><div class="text-[11px] text-brand-100">Investimentos</div><div class="num font-bold">${fmtEUR(total)}</div></button>
+      <button data-go="cash" class="text-left rounded-xl bg-white/10 px-3 py-2"><div class="text-[11px] text-brand-100">Caixa · ${esc(bname(csH.cfg.place))}</div><div class="num font-bold">${fmtEUR(cashV)}</div></button></div>
+    <div class="flex h-1.5 rounded-full overflow-hidden mt-3 bg-white/15"><span style="width:${invPct.toFixed(1)}%;background:#7FA4F5"></span><span style="width:${(100 - invPct).toFixed(1)}%;background:#34D399"></span></div>
+    <div class="text-[11px] text-brand-200 mt-2">${total > 0.004 ? `${fmtN(invPct, 0)}% investido · ${fmtN(100 - invPct, 0)}% em caixa` : '100% em caixa · pronto para investir'}${priced.length && lastAt ? ' · preços ' + ago(lastAt) : ''}</div>`
+    : `<div class="text-xs text-brand-100 num mt-2">Investido ${fmtEUR(invested)}</div>
+    <div class="text-[11px] text-brand-200 mt-1">${pos.length ? (priced.length ? `${priced.length} de ${pos.length} posições com preço${lastAt ? ' · ' + ago(lastAt) : ''}` : 'Sem preços atuais: toque em Preços') : 'Sem posições abertas'}</div>`}
   </div>
 
   <div class="grid grid-cols-4 gap-2 mt-4">
@@ -832,6 +838,7 @@ function renderHome() {
       <div class="font-bold text-lg">Comece pela sua corretora</div>
       <p class="text-sm text-slate-600 mt-1 mb-4">Importe o extrato da XTB, DEGIRO, Revolut ou Trading 212, ou registe a primeira compra à mão.</p>
       <div class="flex flex-wrap justify-center gap-2">${btn('Importar extrato', 'data-go="import"')}${btn('Registar compra', 'data-add="buy"', 'ghost')}${btn('Ver com dados de exemplo', 'data-demo', 'ghost')}</div></div>`, 'mt-1')
+      + (hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3">${tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cashV), cashV < 0 ? 'text-loss' : '')}${tile(gd ? 'data-go="goals"' : 'data-goalcfg', goalTile[0], goalTile[1])}</div>` : '')
     : `${card(`<div class="p-4">
       <div class="flex items-center justify-between mb-1"><h2 class="font-extrabold">Resumo de ${yr}</h2><button data-tab="tax" class="text-sm font-bold text-brand-600">IRS</button></div>
       <div class="divide-y divide-brand-50 text-sm num">
@@ -1038,9 +1045,13 @@ function renderCash() {
   <p class="text-[11px] text-slate-400 mt-3">Dividendos contam a partir de ${fmtD(c.from)}. Pode mudar a data em Definições.</p>`;
 }
 
-function openCashForm(type = 'dep', ex = null) {
+function openCashForm(type = 'dep', ex = null, fromNova = false) {
   const e = ex || {};
-  openModal(`${modalHead(ex ? 'Editar movimento' : type === 'dep' ? 'Adicionar à caixa' : 'Usar da caixa')}
+  const novaSeg = fromNova ? `<div class="flex gap-1 p-1 rounded-2xl bg-brand-50 mb-4">${[['buy', 'Compra'], ['sell', 'Venda'], ['div', 'Dividendo'], ['cash', 'Caixa']].map(([k, l]) =>
+    `<button type="button" data-novakind="${k}" class="flex-1 h-10 rounded-xl text-sm font-bold ${k === 'cash' ? 'bg-white shadow-sm text-ink' : 'text-slate-500'}">${l}</button>`).join('')}</div>
+    <div class="flex gap-2 mb-3">${[['dep', 'Depositar'], ['use', 'Retirar']].map(([k, l]) => `<button type="button" data-cashtype="${k}" class="h-8 px-3.5 rounded-full text-xs font-bold border ${type === k ? 'bg-gain text-white border-gain' : 'bg-white border-brand-100 text-slate-600'}">${l}</button>`).join('')}</div>` : '';
+  openModal(`${modalHead(ex ? 'Editar movimento' : fromNova ? 'Nova' : type === 'dep' ? 'Adicionar à caixa' : 'Usar da caixa')}${novaSeg}
+  ${S.demo && !ex ? '<div class="mb-3 rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs font-semibold text-amber-900">Está no modo exemplo: este registo é apagado quando sair do exemplo.</div>' : ''}
   ${!ex && type === 'use' ? `<button data-cashbuy class="w-full mb-3 h-11 rounded-2xl bg-brand-50 text-brand-700 text-sm font-bold">Registar uma compra paga com a caixa</button><p class="text-xs text-slate-500 mb-3">Ou retire um valor sem compra associada:</p>` : ''}
   <form id="cashForm" class="space-y-3">
     <div class="grid grid-cols-2 gap-3">
@@ -1052,6 +1063,8 @@ function openCashForm(type = 'dep', ex = null) {
       <button class="flex-1 h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold">${ex ? 'Guardar alterações' : type === 'dep' ? 'Adicionar' : 'Retirar'}</button></div>
   </form>`);
   const b = $('[data-cashbuy]'); if (b) b.onclick = () => openTxForm('buy', null, true);
+  document.querySelectorAll('[data-novakind]').forEach(x => x.onclick = () => x.dataset.novakind !== 'cash' && openTxForm(x.dataset.novakind));
+  document.querySelectorAll('[data-cashtype]').forEach(x => x.onclick = () => openCashForm(x.dataset.cashtype, null, true));
   const d = $('[data-cdel]'); if (d) d.onclick = () => { if (!confirm('Apagar este movimento?')) return; S.cash = S.cash.filter(x => x.id !== e.id); save(); closeModal(); render(); toast('Movimento apagado'); };
   $('#cashForm').onsubmit = ev => {
     ev.preventDefault();
@@ -1359,19 +1372,21 @@ function chartSVG(series, labels) {
 
 function donutHTML(pos) {
   const items = pos.map(p => ({ t: p.ticker, v: p.value ?? p.cost }));
-  const tot = items.reduce((s, x) => s + x.v, 0); if (!(tot > 0)) return '';
+  const invTot = items.reduce((s, x) => s + x.v, 0), cashV = Math.max(0, cashState().saldo);
+  const tot = invTot + cashV; if (!(tot > 0)) return '';
   const top = items.slice(0, 6); const rest = items.slice(6).reduce((s, x) => s + x.v, 0); if (rest > 0) top.push({ t: 'Outros', v: rest });
+  if (cashV > 0.004) top.push({ t: 'Caixa', v: cashV, color: '#34D399' });
   const C = 2 * Math.PI * 56; let off = 0;
-  const arcs = top.map((x, i) => { const len = x.v / tot * C, a = `<circle cx="70" cy="70" r="56" stroke="${PALETTE[i % PALETTE.length]}" stroke-dasharray="${Math.max(0, len - 1.5).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`; off += len; return a; }).join('');
-  const inv = pos.reduce((s, p) => s + p.cost, 0), priced = pos.every(p => p.value != null), res = tot - inv;
+  const arcs = top.map((x, i) => { const len = x.v / tot * C, a = `<circle cx="70" cy="70" r="56" stroke="${x.color || PALETTE[i % PALETTE.length]}" stroke-dasharray="${Math.max(0, len - 1.5).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`; off += len; return a; }).join('');
+  const inv = pos.reduce((s, p) => s + p.cost, 0), priced = pos.every(p => p.value != null), res = invTot - inv;
   return card(`<div class="p-4">
     <h2 class="font-extrabold mb-3">Distribuição da carteira</h2>
     <div class="flex items-center gap-4">
       <svg width="140" height="140" viewBox="0 0 140 140" class="shrink-0" role="img" aria-label="Distribuição da carteira">
         <g transform="rotate(-90 70 70)" fill="none" stroke-width="18">${arcs}</g>
-        <text x="70" y="64" text-anchor="middle" font-size="11" fill="#64748B">${priced ? 'Vale hoje' : 'Valor'}</text>
+        <text x="70" y="64" text-anchor="middle" font-size="11" fill="#64748B">${cashV > 0.004 ? 'Total' : priced ? 'Vale hoje' : 'Valor'}</text>
         <text x="70" y="82" text-anchor="middle" font-size="15" font-weight="800" fill="var(--ink)">${esc(fmtEUR(tot))}</text></svg>
-      <div class="flex-1 min-w-0 space-y-1.5 text-sm">${top.map((x, i) => `<div class="flex items-center gap-2"><i class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${PALETTE[i % PALETTE.length]}"></i><span class="flex-1 truncate font-semibold">${esc(x.t.replace(/\.(US|DE|UK|LS|PT|NL|FR)$/, ''))}</span><span class="num">${fmtN(x.v / tot * 100, 0)}%</span></div>`).join('')}</div>
+      <div class="flex-1 min-w-0 space-y-1.5 text-sm">${top.map((x, i) => `<div class="flex items-center gap-2"><i class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${x.color || PALETTE[i % PALETTE.length]}"></i><span class="flex-1 truncate font-semibold">${esc(x.t.replace(/\.(US|DE|UK|LS|PT|NL|FR)$/, ''))}</span><span class="num">${fmtN(x.v / tot * 100, 0)}%</span></div>`).join('')}</div>
     </div>
     <div class="grid grid-cols-2 gap-2 mt-4 num">
       <div class="rounded-2xl bg-brand-50 p-3"><div class="text-xs text-slate-500 font-semibold">Investido</div><div class="font-extrabold">${fmtEUR(inv)}</div></div>
@@ -1681,10 +1696,10 @@ const brokerOpts = sel => Object.entries(TF.BROKERS).map(([k, b]) => `<option va
 function openTxForm(kind = 'buy', existing = null, fromCash = false) {
   const e = existing || {}, isDiv = kind === 'div';
   const tickers = Object.keys(S.assets).sort().map(t => `<option value="${esc(t)}">`).join('');
-  const seg = existing ? '' : `<div class="flex gap-1 p-1 rounded-2xl bg-brand-50 mb-4">${[['buy', 'Compra'], ['sell', 'Venda'], ['div', 'Dividendo']].map(([k, l]) =>
+  const seg = existing ? '' : `<div class="flex gap-1 p-1 rounded-2xl bg-brand-50 mb-4">${[['buy', 'Compra'], ['sell', 'Venda'], ['div', 'Dividendo'], ['cash', 'Caixa']].map(([k, l]) =>
     `<button type="button" data-kind="${k}" class="flex-1 h-10 rounded-xl text-sm font-bold ${k === kind ? 'bg-white shadow-sm text-ink' : 'text-slate-500'}">${l}</button>`).join('')}</div>`;
   const cur = e.currency || 'EUR';
-  const title = (existing ? 'Editar ' : 'Nova ') + ({ buy: 'compra', sell: 'venda', div: 'dividendo' })[kind];
+  const title = existing ? 'Editar ' + ({ buy: 'compra', sell: 'venda', div: 'dividendo' })[kind] : ({ buy: 'Nova compra', sell: 'Nova venda', div: 'Novo dividendo' })[kind];
   openModal(`${modalHead(title)}${seg}
   ${S.demo ? '<div class="mb-3 rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs font-semibold text-amber-900">Está no modo exemplo: este registo é apagado quando sair do exemplo.</div>' : ''}
   <form id="txForm" class="space-y-3" novalidate>
@@ -1718,7 +1733,7 @@ function openTxForm(kind = 'buy', existing = null, fromCash = false) {
   </form>`);
 
   const f = $('#txForm');
-  f.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => openTxForm(b.dataset.kind, null, fromCash));
+  document.querySelectorAll('#modalBody [data-kind]').forEach(b => b.onclick = () => b.dataset.kind === 'cash' ? openCashForm('dep', null, true) : openTxForm(b.dataset.kind, null, fromCash));
   const preview = () => {
     const tk = $('#fTicker').value.trim().toUpperCase(), pv = $('#fPreview');
     if (isDiv) {
