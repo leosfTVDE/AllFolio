@@ -618,6 +618,7 @@ const bumpQuota = () => { S.settings.quota = { date: today(), n: quotaToday() + 
 async function refreshPrices() {
   if (UI.job) return toast('A atualização já está em curso');
   if (!navigator.onLine) return toast('Sem internet: ligue-se para atualizar os preços');
+  if (useWorker()) return refreshPricesWorker();
   const key = (S.settings.avKey || '').trim();
   if (!key) return openQuoteSettings(true);
   const pos = TF.positions(TF.fifo(S.tx).lots, S.assets);
@@ -661,26 +662,6 @@ function showPriceReport(errors, noSym, ok) {
     ${noSym.length ? `<div class="text-sm"><div class="font-bold mb-1">Sem símbolo de cotação</div>
       <p class="text-slate-600 mb-2">Toque num ativo para indicar o símbolo, ou introduza o preço à mão.</p>
       <div class="flex flex-wrap gap-2">${noSym.map(t => `<button data-asset="${esc(t)}" class="h-9 px-3 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs">${esc(t)}</button>`).join('')}</div></div>` : ''}`);
-}
-function openQuoteSettings(first = false) {
-  openModal(`${modalHead('Preços de mercado')}
-  ${first ? '<p class="text-sm text-ink font-semibold mb-2">Para ir buscar preços é preciso uma chave gratuita da Alpha Vantage. Só tem de fazer isto uma vez.</p>' : ''}
-  <ol class="text-sm text-slate-600 space-y-1 mb-3 list-decimal pl-5">
-    <li>Abra <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener" class="text-brand-600 font-bold underline">alphavantage.co/support</a> e preencha o formulário curto.</li>
-    <li>Copie a chave que aparece no ecrã e cole-a aqui.</li></ol>
-  <form id="qForm" class="space-y-3">
-    <div><label class="lbl" for="qKey">Chave Alpha Vantage</label><input id="qKey" class="field font-mono" autocomplete="off" autocapitalize="characters" value="${esc(S.settings.avKey || '')}" placeholder="ex.: A1B2C3D4E5F6G7H8"></div>
-    <div class="rounded-2xl bg-brand-50 p-3 text-xs text-slate-600 leading-relaxed">
-      Plano gratuito: ${AV_DAY} pedidos por dia, 1 por ativo, e no máximo 5 por minuto. Por isso a app espera cerca de 12 segundos entre ativos.
-      Os preços têm atraso (cerca de 15 minutos ou o fecho do dia anterior). Só é enviado o símbolo do ativo, nunca quantidades ou valores.
-      Pedidos usados hoje: <b>${quotaToday()} de ${AV_DAY}</b>.${S.settings.fx ? ` Câmbio BCE de ${fmtD(S.settings.fx.date)}.` : ''}</div>
-    <button class="w-full h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold">${first ? 'Guardar e atualizar preços' : 'Guardar chave'}</button>
-  </form>`);
-  $('#qForm').onsubmit = e => {
-    e.preventDefault(); S.settings.avKey = $('#qKey').value.trim(); save(); closeModal();
-    if (!S.settings.avKey) return toast('Chave removida');
-    toast('Chave guardada'); if (first) refreshPrices();
-  };
 }
 function jobBanner() {
   if (!UI.job) return '';
@@ -745,7 +726,128 @@ async function convertImport(res) {
   return res;
 }
 
+/* ---------- Servidor de preços próprio (Cloudflare Worker + Yahoo Finance) ---------- */
+const workerBase = () => (S.settings.workerUrl || '').trim().replace(/\/+$/, '');
+const useWorker = () => S.settings.priceProvider === 'worker' && /^https:\/\//.test(workerBase());
+const Y_SUFFIX = { US: '', DE: '.DE', DEX: '.DE', XETRA: '.DE', F: '.F', NL: '.AS', AS: '.AS', UK: '.L', L: '.L', LON: '.L', LN: '.L', FR: '.PA', PA: '.PA', ES: '.MC', MC: '.MC', IT: '.MI', MI: '.MI', PT: '.LS', LS: '.LS', CH: '.SW', SW: '.SW', BE: '.BR', BR: '.BR', DK: '.CO', CO: '.CO', SE: '.ST', ST: '.ST', FI: '.HE', HE: '.HE', NO: '.OL', OL: '.OL', PL: '.WA', WA: '.WA', AT: '.VI', VI: '.VI', IE: '.IR', IR: '.IR' };
+function yDefault(t) {
+  const m = String(t || '').toUpperCase().match(/^([A-Z0-9\-]{1,10})(?:\.([A-Z]{1,5}))?$/);
+  if (!m) return '';
+  const s = m[2] || '';
+  if (s && !(s in Y_SUFFIX)) return '';
+  return m[1] + (Y_SUFFIX[s] || '');
+}
+const ySymOf = tk => { const a = S.assets[tk] || {}; return a.ySym !== undefined ? a.ySym : yDefault(tk); };
+const normCur = c => c === 'GBp' || c === 'GBX' ? 'GBX' : String(c || 'EUR').toUpperCase();
+// chave do histórico de um ativo, conforme a fonte em uso
+const histKeyOf = tk => useWorker() ? (ySymOf(tk) ? 'Y:' + ySymOf(tk) : '') : (quoteOf(tk).sym || '');
+function priceWhen(a) {
+  if (!a || a.price == null) return '';
+  if (a.priceSrc === 'manual') return 'manual';
+  const t = a.priceTime || a.priceAt; if (!t) return '';
+  const d = new Date(t), now = new Date();
+  return d.toDateString() === now.toDateString() ? 'às ' + d.toTimeString().slice(0, 5) : 'em ' + fmtD(d.toISOString().slice(0, 10));
+}
+
+async function refreshPricesWorker() {
+  const pos = TF.positions(TF.fifo(S.tx).lots, S.assets);
+  if (!pos.length) return toast('Não há posições abertas para atualizar');
+  const list = pos.map(p => ({ tk: p.ticker, y: ySymOf(p.ticker) }));
+  const noSym = list.filter(x => !x.y).map(x => x.tk), todo = list.filter(x => x.y);
+  if (!todo.length) return showPriceReport([], noSym, 0);
+  UI.job = { done: 0, total: 1, cur: 'todos os ativos', what: 'preços' }; render();
+  const rates = await getFx();
+  let data = null;
+  try { const r = await fetch(`${workerBase()}/quote?symbols=${encodeURIComponent(todo.map(x => x.y).join(','))}`); if (r.ok) data = await r.json(); } catch (e) {}
+  if (!data) { UI.job = null; render(); return showPriceReport(['Não foi possível contactar o servidor de preços. Confirme o endereço em Configurações → Preços e câmbio.'], [], 0); }
+  const errors = []; let ok = 0;
+  for (const x of todo) {
+    const d = data[x.y];
+    if (!d || d.price == null) { errors.push(`${x.tk}: o símbolo ${x.y} não foi encontrado. Corrija-o no ativo.`); continue; }
+    const cur = normCur(d.currency), e = toEURq(d.price, cur, rates);
+    if (e == null) { errors.push(`${x.tk}: sem câmbio ${cur}/EUR disponível`); continue; }
+    const t = d.time ? d.time * 1000 : Date.now();
+    Object.assign(S.assets[x.tk], { price: e, priceRaw: d.price, priceCur: cur, priceAt: Date.now(), priceTime: t, priceSrc: 'auto', priceDay: new Date(t).toISOString().slice(0, 10) });
+    ok++;
+  }
+  UI.job = null; save(); render();
+  errors.length || noSym.length ? showPriceReport(errors, noSym, ok) : toast(`Preços atualizados: ${ok} ativo(s)`);
+}
+
+async function refreshHistoryWorker() {
+  if (!S.tx.length) return toast('Registe ou importe compras primeiro');
+  S.hist ||= {};
+  const first = S.tx.map(t => t.date).sort()[0], from = addDays(first, -21);
+  const yrs = (Date.now() - Date.parse(first)) / (365 * 864e5), range = yrs < 0.9 ? '1y' : yrs < 1.9 ? '2y' : yrs < 4.9 ? '5y' : '10y';
+  const want = new Set();
+  benchSel().forEach(id => { const b = benchInfo(id); if (b.ysym) want.add(b.ysym); });
+  [...new Set(S.tx.map(t => t.ticker))].forEach(tk => { const y = ySymOf(tk); if (y) want.add(y); });
+  const todo = [...want].filter(y => { const h = S.hist['Y:' + y]; return !h || Date.now() - h.at > 6 * 3600e3 || h.from > from; });
+  UI.job = { done: 0, total: Math.max(1, todo.length), cur: 'câmbio', what: 'histórico' }; render();
+  if (!S.fxSeries || S.fxSeries.from > from || Date.now() - S.fxSeries.at > 864e5) { await fetchFxSeries(from); save(); }
+  const errors = [];
+  for (let i = 0; i < todo.length; i += 4) {
+    await Promise.all(todo.slice(i, i + 4).map(async y => {
+      try {
+        const r = await fetch(`${workerBase()}/history?symbol=${encodeURIComponent(y)}&range=${range}`);
+        const j = r.ok ? await r.json() : null;
+        if (!j || !j.pts || !j.pts.length) errors.push(`${y}: sem histórico disponível.`);
+        else S.hist['Y:' + y] = { at: Date.now(), cur: normCur(j.currency), from, pts: j.pts.filter(p => p[0] >= from) };
+      } catch (e) { errors.push(`${y}: sem ligação ao servidor de preços.`); }
+      UI.job.done++; UI.job.cur = y;
+    }));
+    save(); render();
+  }
+  UI.job = null; save(); render();
+  errors.length ? showPriceReport(errors, [], todo.length - errors.length) : toast('Histórico atualizado');
+}
+
+async function testWorker(url) {
+  try { const r = await fetch(url.replace(/\/+$/, '') + '/quote?symbols=AAPL'); const j = await r.json(); return !!(j && j.AAPL && j.AAPL.price); } catch (e) { return false; }
+}
+
+function openQuoteSettings(first = false) {
+  const prov = S.settings.priceProvider === 'worker' ? 'worker' : 'av';
+  openModal(`${modalHead('Preços e câmbio')}
+  <div class="flex gap-1 p-1 rounded-2xl bg-brand-50 mb-4">${[['worker', 'Servidor próprio'], ['av', 'Alpha Vantage']].map(([k, l]) =>
+    `<button type="button" data-prov="${k}" class="flex-1 h-10 rounded-xl text-sm font-bold ${prov === k ? 'bg-white shadow-sm text-ink' : 'text-slate-500'}">${l}</button>`).join('')}</div>
+  <form id="qForm" class="space-y-3">
+    <div id="pvWorker" class="${prov === 'worker' ? '' : 'hidden'} space-y-3">
+      <p class="text-sm text-slate-600">Preços com cerca de 15 minutos de atraso para os EUA, Xetra, Amesterdão, Londres e Lisboa, todos de uma vez e sem limite diário. Recomendado.</p>
+      <div><label class="lbl" for="qUrl">Endereço do servidor (Cloudflare Worker)</label><input id="qUrl" class="field font-mono text-sm" autocomplete="off" autocapitalize="none" value="${esc(S.settings.workerUrl || '')}" placeholder="https://taxfolio-precos.….workers.dev"></div>
+      <button type="button" id="qTest" class="h-10 px-4 rounded-xl bg-brand-50 text-brand-700 text-sm font-bold">Testar ligação</button> <span id="qTestRes" class="text-sm font-semibold"></span>
+    </div>
+    <div id="pvAv" class="${prov === 'av' ? '' : 'hidden'}">
+      <p class="text-sm text-slate-600 mb-2">Gratuito com 25 pedidos por dia. Bom para os EUA; para a Europa os preços podem vir atrasados (fecho do dia anterior).</p>
+    </div>
+    <div><label class="lbl" for="qKey">Chave Alpha Vantage <span class="font-normal text-slate-400">(usada também nos dividendos previstos)</span></label>
+      <input id="qKey" class="field font-mono" autocomplete="off" autocapitalize="characters" value="${esc(S.settings.avKey || '')}" placeholder="opcional com servidor próprio">
+      <p class="text-[11px] text-slate-500 mt-1">Chave gratuita em <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener" class="text-brand-600 font-bold underline">alphavantage.co/support</a>. Pedidos usados hoje: ${quotaToday()} de ${AV_DAY}.${S.settings.fx ? ` Câmbio BCE de ${fmtD(S.settings.fx.date)}.` : ''}</p></div>
+    <button class="w-full h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold">Guardar</button>
+  </form>`);
+  let pv = prov;
+  document.querySelectorAll('[data-prov]').forEach(b => b.onclick = () => {
+    pv = b.dataset.prov; $('#pvWorker').classList.toggle('hidden', pv !== 'worker'); $('#pvAv').classList.toggle('hidden', pv !== 'av');
+    document.querySelectorAll('[data-prov]').forEach(x => x.className = 'flex-1 h-10 rounded-xl text-sm font-bold ' + (x.dataset.prov === pv ? 'bg-white shadow-sm text-ink' : 'text-slate-500')); });
+  $('#qTest').onclick = async () => {
+    const u = $('#qUrl').value.trim(), res = $('#qTestRes');
+    if (!/^https:\/\//.test(u)) { res.textContent = 'O endereço deve começar por https://'; res.className = 'text-sm font-semibold text-loss'; return; }
+    res.textContent = 'A testar…'; res.className = 'text-sm font-semibold text-slate-500';
+    const ok = await testWorker(u);
+    res.textContent = ok ? 'Ligação OK' : 'Sem resposta válida'; res.className = 'text-sm font-semibold ' + (ok ? 'text-gain' : 'text-loss');
+  };
+  $('#qForm').onsubmit = e => {
+    e.preventDefault();
+    const u = $('#qUrl').value.trim();
+    if (pv === 'worker' && !/^https:\/\//.test(u)) return toast('Indique o endereço do servidor (começa por https://)');
+    Object.assign(S.settings, { priceProvider: pv, workerUrl: u, avKey: $('#qKey').value.trim() });
+    save(); closeModal(); render(); toast('Definições guardadas');
+    if (first) refreshPrices();
+  };
+}
+
 /* ---------- Navegação ---------- */
+
 const NAV_TABS = ['home', 'portfolio', 'tax', 'more'];
 function go(tab, isBack = false) {
   if (!isBack && UI.tab && UI.tab !== tab) { (UI.hist ||= []).push(UI.tab); if (UI.hist.length > 20) UI.hist.shift(); }
@@ -795,7 +897,7 @@ function renderHome() {
   const priced = pos.filter(p => p.value != null), res = total - invested;
   const csH = cashState(), cashV = csH.saldo, hasCash = (S.cash || []).length > 0 || Math.abs(cashV) > 0.004;
   const grand = total + cashV, invPct = grand > 0 ? Math.max(0, Math.min(100, total / grand * 100)) : 0;
-  const lastAt = Math.max(0, ...priced.map(p => S.assets[p.ticker]?.priceAt || 0));
+  const lastAt = Math.max(0, ...priced.map(p => S.assets[p.ticker]?.priceSrc === 'auto' ? (S.assets[p.ticker].priceTime || S.assets[p.ticker].priceAt || 0) : 0));
   const yr = defaultYear(), rep = TF.yearReport(S, yr);
   const divYear = S.div.filter(d => d.date.startsWith(yr)).reduce((s, d) => s + d.gross, 0);
   const empty = !S.tx.length && !S.div.length;
@@ -816,7 +918,7 @@ function renderHome() {
       <button data-go="portfolio" class="text-left rounded-xl bg-white/10 px-3 py-2"><div class="text-[11px] text-brand-100">Investimentos</div><div class="num font-bold">${fmtEUR(total)}</div></button>
       <button data-go="cash" class="text-left rounded-xl bg-white/10 px-3 py-2"><div class="text-[11px] text-brand-100">Caixa · ${esc(bname(csH.cfg.place))}</div><div class="num font-bold">${fmtEUR(cashV)}</div></button></div>
     <div class="flex h-1.5 rounded-full overflow-hidden mt-3 bg-white/15"><span style="width:${invPct.toFixed(1)}%;background:#7FA4F5"></span><span style="width:${(100 - invPct).toFixed(1)}%;background:#34D399"></span></div>
-    <div class="text-[11px] text-brand-200 mt-2">${total > 0.004 ? `${fmtN(invPct, 0)}% investido · ${fmtN(100 - invPct, 0)}% em caixa` : '100% em caixa · pronto para investir'}${priced.length && lastAt ? ' · preços ' + ago(lastAt) : ''}</div>`
+    <div class="text-[11px] text-brand-200 mt-2">${total > 0.004 ? `${fmtN(invPct, 0)}% investido · ${fmtN(100 - invPct, 0)}% em caixa` : '100% em caixa · pronto para investir'}${priced.length && lastAt ? ' · cotação ' + ago(lastAt) : ''}</div>`
     : `<div class="text-xs text-brand-100 num mt-2">Investido ${fmtEUR(invested)}</div>
     <div class="text-[11px] text-brand-200 mt-1">${pos.length ? (priced.length ? `${priced.length} de ${pos.length} posições com preço${lastAt ? ' · ' + ago(lastAt) : ''}` : 'Sem preços atuais: toque em Preços') : 'Sem posições abertas'}</div>`}
   </div>
@@ -908,7 +1010,7 @@ function renderSettings() {
   ${sec('INVESTIMENTOS')}
   ${card(row('data-go="goals"', '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/>', 'Metas de investimento', nGoals ? `${nGoals} ativa${nGoals > 1 ? 's' : ''}` : 'nenhuma')
     + row('data-cashcfg', '<path d="M4 11c0-3 3.6-5 8-5s8 2 8 5-3.6 6-8 6-8-3-8-6z"/>', 'Caixa de oportunidade', cc.goal ? 'meta ' + fmtEUR(cc.goal) : '')
-    + row('data-qset', '<path d="M3 17l6-6 4 4 8-8M14 7h7v7"/>', 'Preços e câmbio', S.settings.avKey ? `chave ativa · ${quotaToday()}/${AV_DAY} hoje` : 'sem chave'), 'divide-y divide-brand-50 overflow-hidden')}
+    + row('data-qset', '<path d="M3 17l6-6 4 4 8-8M14 7h7v7"/>', 'Preços e câmbio', useWorker() ? 'servidor próprio' : S.settings.avKey ? `Alpha Vantage · ${quotaToday()}/${AV_DAY} hoje` : 'por configurar'), 'divide-y divide-brand-50 overflow-hidden')}
   ${sec('IRS')}
   ${card(row('data-fiscalcfg', '<path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/>', 'Corretoras e anexos', gList.length ? gList.join(', ') + ' → Anexo G' : '')
     + row('data-cdtcfg', '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>', 'Dupla tributação (dividendos)')
@@ -974,7 +1076,7 @@ function posRow(p) {
   return `<button data-asset="${esc(p.ticker)}" class="w-full text-left p-4 flex items-center gap-3 hover:bg-brand-50/60">
     <div class="w-10 h-10 rounded-2xl bg-brand-50 text-brand-700 grid place-items-center text-xs font-extrabold shrink-0">${esc(p.ticker.slice(0, 4))}</div>
     <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="font-bold truncate">${esc(p.ticker)}</span>${kindBadge(p.kind)}</div>
-      <div class="text-xs text-slate-500 truncate">${fmtQ(p.qty)} un. · PM ${fmtEUR(p.avg)}${p.value != null ? ' · hoje ' + fmtEUR(p.value / p.qty) : ''}</div></div>
+      <div class="text-xs text-slate-500 truncate">${fmtQ(p.qty)} un. · PM ${fmtEUR(p.avg)}${p.value != null ? ' · ' + fmtEUR(p.value / p.qty) + ' ' + priceWhen(S.assets[p.ticker]) : ''}</div></div>
     <div class="text-right num"><div class="font-bold">${fmtEUR(p.value ?? p.cost)}</div>
       ${p.value != null ? `<div class="text-xs font-bold ${sgn(p.value - p.cost)}">${plus(p.value - p.cost)} (${pctStr(p.value - p.cost, p.cost)})</div>`
         : '<div class="text-xs text-slate-400">sem preço atual</div>'}</div></button>`;
@@ -1234,14 +1336,16 @@ function divsCardHTML() {
 }
 
 /* ================= GRÁFICOS ================= */
-const BENCH = [{ id: 'SPY', label: 'S&P 500', sym: 'SPY', cur: 'USD' }, { id: 'VWCE.DEX', label: 'Mundo (VWCE)', sym: 'VWCE.DEX', cur: 'EUR' }, { id: 'QQQ', label: 'Nasdaq 100', sym: 'QQQ', cur: 'USD' }];
+const BENCH = [{ id: 'SPY', label: 'S&P 500', sym: 'SPY', ysym: 'SPY', cur: 'USD' }, { id: 'VWCE.DEX', label: 'Mundo (VWCE)', sym: 'VWCE.DEX', ysym: 'VWCE.DE', cur: 'EUR' }, { id: 'QQQ', label: 'Nasdaq 100', sym: 'QQQ', ysym: 'QQQ', cur: 'USD' }];
 const BCOL = ['#F2A93B', '#0F9D6E', '#8B5CF6'];
 const benchSel = () => (S.settings.bench ||= ['SPY']);
 const benchCustom = () => (S.settings.benchCustom ||= []);
 function benchInfo(id) {
-  const f = BENCH.find(x => x.id === id); if (f) return f;
-  const q = S.assets[id] ? quoteOf(id) : quoteDefault(id);
-  return { id, label: id.replace(/\.(DEX|LON|US)$/, ''), sym: q.sym, cur: q.cur };
+  const f = BENCH.find(x => x.id === id);
+  const b = f ? { ...f } : (() => { const q = S.assets[id] ? quoteOf(id) : quoteDefault(id);
+    return { id, label: id.replace(/\.(DEX|LON|US)$/, ''), sym: q.sym, cur: q.cur, ysym: S.assets[id] ? ySymOf(id) : yDefault(id) }; })();
+  b.hkey = useWorker() ? (b.ysym ? 'Y:' + b.ysym : '') : (b.sym || '');
+  return b;
 }
 function seriesAt(pts, date) {
   let lo = 0, hi = pts.length - 1, ans = -1;
@@ -1282,6 +1386,7 @@ async function fetchFxSeries(from) {
 async function refreshHistory() {
   if (UI.job) return toast('Já há uma atualização em curso');
   if (!navigator.onLine) return toast('Sem internet: ligue-se para atualizar');
+  if (useWorker()) return refreshHistoryWorker();
   const key = (S.settings.avKey || '').trim(); if (!key) return openQuoteSettings(false);
   if (!S.tx.length) return toast('Registe ou importe compras primeiro');
   S.hist ||= {};
@@ -1321,11 +1426,12 @@ function compareData() {
   if (!tx.length) return null;
   const first = tx[0].date, dset = new Set();
   Object.values(S.hist || {}).forEach(h => h.pts.forEach(p => { if (p[0] >= first) dset.add(p[0]); }));
+  const t0 = today(); if (t0 >= first) dset.add(t0);
   const grid = [...dset].sort(); if (grid.length < 2) return null;
   const tickers = [...new Set(tx.map(t => t.ticker))];
-  const info = Object.fromEntries(tickers.map(tk => { const q = quoteOf(tk); return [tk, { h: q.sym ? S.hist?.[q.sym] : null, cur: q.cur }]; }));
+  const info = Object.fromEntries(tickers.map(tk => { const k = histKeyOf(tk), h = k ? S.hist?.[k] : null; return [tk, { h, cur: h?.cur || quoteOf(tk).cur }]; }));
   const missing = tickers.filter(tk => !info[tk].h);
-  const bench = benchSel().map(id => { const b = benchInfo(id); return { ...b, h: b.sym ? S.hist?.[b.sym] : null, units: 0 }; });
+  const bench = benchSel().map(id => { const b = benchInfo(id), h = b.hkey ? S.hist?.[b.hkey] : null; return { ...b, h, cur: h?.cur || b.cur, units: 0 }; });
   const qty = {}, lastPx = {}, rows = [];
   let i = 0, V0 = 0, G = 1, inv = 0;
   for (const d of grid) {
@@ -1417,7 +1523,9 @@ function compareHTML() {
   const perChip = (k, l) => `<button data-period="${k}" class="h-8 rounded-xl text-xs font-bold border ${per === k ? 'bg-ink text-white border-ink' : 'bg-white border-brand-100 text-slate-600'}">${l}</button>`;
   const cd = compareData();
   let body = '';
-  if (!cd) body = `<div class="rounded-2xl bg-brand-50 p-4 text-sm text-slate-600 my-3">Ainda sem histórico de preços. Toque em <b>Atualizar histórico</b> para montar o gráfico. A primeira vez gasta um pedido por ativo e por índice.</div>`;
+  if (!cd) body = Object.keys(S.hist || {}).length && S.tx.length
+    ? `<div class="rounded-2xl bg-brand-50 p-4 text-sm text-slate-600 my-3">A sua carteira ainda é muito recente. O gráfico de comparação aparece quando houver pelo menos uma semana desde a primeira compra.</div>`
+    : `<div class="rounded-2xl bg-brand-50 p-4 text-sm text-slate-600 my-3">Ainda sem histórico de preços. Toque em <b>Atualizar histórico</b> para montar o gráfico.</div>`;
   else {
     const start = { '1M': addDays(today(), -31), '6M': addDays(today(), -183), '1A': addDays(today(), -365), 'ALL': '0000' }[per];
     const rows = cd.rows, k0 = Math.max(0, rows.findIndex(r => r.d >= start)), view = rows.slice(k0);
@@ -1457,24 +1565,24 @@ function toggleBench(id) {
   if (k > -1) { if (sel.length === 1) return toast('Mantenha pelo menos um termo de comparação'); sel.splice(k, 1); }
   else { if (sel.length >= 3) return toast('Pode comparar até 3 ao mesmo tempo'); sel.push(id); }
   save(); render();
-  const b = benchInfo(id); if (k === -1 && b.sym && !S.hist?.[b.sym]) toast('Toque em Atualizar histórico para carregar ' + b.label);
+  const b = benchInfo(id); if (k === -1 && b.hkey && !S.hist?.[b.hkey]) toast('Toque em Atualizar histórico para carregar ' + b.label);
 }
 function openBenchAdd() {
   const cust = benchCustom();
   openModal(`${modalHead('Comparar com outro ticker')}
   <form id="bForm" class="space-y-3">
     <div><label class="lbl" for="bTk">Ticker</label><input id="bTk" class="field uppercase" autocapitalize="characters" placeholder="ex.: AAPL, NVDA, SXR8.DE"></div>
-    <p class="text-xs text-slate-500">Ações e ETFs dos EUA sem sufixo (AAPL). Xetra com .DE (SXR8.DE) e Londres com .UK. A bolsa de Lisboa não está coberta.</p>
+    <p class="text-xs text-slate-500">Escreva como na XTB: EUA sem sufixo (AAPL), Xetra com .DE (SXR8.DE), Londres com .UK${useWorker() ? ', Amesterdão com .NL e Lisboa com .PT (NVG.PT)' : '. Com a Alpha Vantage, Lisboa e Amesterdão não estão cobertas'}.</p>
     <button class="w-full h-12 rounded-2xl bg-brand-600 text-white font-bold">Adicionar e comparar</button>
   </form>
   ${cust.length ? `<div class="mt-4"><div class="lbl">Os seus tickers</div><div class="divide-y divide-brand-50">${cust.map(c => `<div class="flex items-center justify-between py-2"><span class="font-semibold">${esc(c)}</span><button data-benchdel="${esc(c)}" class="text-sm font-bold text-loss">Remover</button></div>`).join('')}</div></div>` : ''}`);
   $('#bForm').onsubmit = ev => {
     ev.preventDefault();
     let id = $('#bTk').value.trim().toUpperCase().replace(/\s+/g, ''); if (!id) return toast('Escreva um ticker');
-    const b = benchInfo(id); if (!b.sym) return toast('Esta bolsa não está coberta pela fonte de dados');
+    const b = benchInfo(id); if (!b.hkey) return toast('Esta bolsa não está coberta pela fonte de dados');
     if (!BENCH.some(x => x.id === id) && !cust.includes(id)) cust.push(id);
     const sel = benchSel(); if (!sel.includes(id)) { if (sel.length >= 3) sel.shift(); sel.push(id); }
-    save(); closeModal(); render(); if (!S.hist?.[b.sym]) toast('Toque em Atualizar histórico para carregar ' + b.label);
+    save(); closeModal(); render(); if (!S.hist?.[b.hkey]) toast('Toque em Atualizar histórico para carregar ' + b.label);
   };
   document.querySelectorAll('[data-benchdel]').forEach(x => x.onclick = () => {
     const id = x.dataset.benchdel; S.settings.benchCustom = cust.filter(c => c !== id);
@@ -1825,12 +1933,14 @@ function openAsset(tk) {
         <datalist id="codes"><option value="G01">Ações e partes sociais</option><option value="G20">Unidades de participação em fundos (ETF)</option></datalist></div>
       <div><label class="lbl" for="aPrice">Preço atual (EUR)</label><input id="aPrice" class="field num" inputmode="decimal" value="${a.price != null ? TF.r2(a.price) : ''}" placeholder="opcional"></div>
     </div>
-    <p class="text-[11px] text-slate-500 -mt-1">${a.priceAt ? (a.priceSrc === 'auto' ? `Preço automático ${ago(a.priceAt)}: ${fmtN(a.priceRaw, 2)} ${a.priceCur}${a.priceDay ? ' (sessão de ' + fmtD(a.priceDay) + ')' : ''}.` : `Preço introduzido à mão ${ago(a.priceAt)}.`) : 'Ainda sem preço atual.'}</p>
-    <div class="grid grid-cols-3 gap-3">
+    <p class="text-[11px] text-slate-500 -mt-1">${a.priceAt ? (a.priceSrc === 'auto' ? `Preço automático: ${fmtN(a.priceRaw, 2)} ${a.priceCur === 'GBX' ? 'GBp' : a.priceCur}, cotação ${priceWhen(a)}${a.priceDay && a.priceDay !== today() ? ' (sessão de ' + fmtD(a.priceDay) + ')' : ''}. Atualizado ${ago(a.priceAt)}.` : `Preço introduzido à mão ${ago(a.priceAt)}.`) : 'Ainda sem preço atual.'}</p>
+    ${useWorker() ? `<div><label class="lbl" for="aYSym">Símbolo no servidor de preços</label><input id="aYSym" class="field uppercase" autocapitalize="characters" value="${esc(ySymOf(tk))}" placeholder="ex.: SEC0.DE, IBZL.AS, NVG.LS, AAPL"></div>
+    <p class="text-[11px] text-slate-500 -mt-1">Formato Yahoo Finance: EUA sem sufixo (AAPL), Xetra .DE, Amesterdão .AS, Londres .L, Lisboa .LS, Paris .PA. Atenção a zeros e letras O (ex.: SEC0 tem um zero). Deixe vazio para usar só o preço manual.</p>` : ''}
+    <div class="grid grid-cols-3 gap-3 ${useWorker() ? 'hidden' : ''}">
       <div class="col-span-2"><label class="lbl" for="aQSym">Símbolo de cotação</label><input id="aQSym" class="field uppercase" autocapitalize="characters" value="${esc(q.sym)}" placeholder="ex.: AAPL ou VWCE.DEX"></div>
       <div><label class="lbl" for="aQCur">Moeda</label><select id="aQCur" class="field">${['USD', 'EUR', 'GBP', 'GBX', 'CHF', 'CAD'].map(c => `<option value="${c}" ${c === q.cur ? 'selected' : ''}>${c === 'GBX' ? 'GBp' : c}</option>`).join('')}</select></div>
     </div>
-    <p class="text-[11px] text-slate-500 -mt-1">Formato Alpha Vantage: EUA sem sufixo (AAPL), Xetra com .DEX (VWCE.DEX), Londres com .LON (moeda GBp, em pence). Deixe vazio para usar só o preço manual.</p>
+    <p class="text-[11px] text-slate-500 -mt-1 ${useWorker() ? 'hidden' : ''}">Formato Alpha Vantage: EUA sem sufixo (AAPL), Xetra com .DEX (VWCE.DEX), Londres com .LON (moeda GBp, em pence). Deixe vazio para usar só o preço manual.</p>
     <button class="w-full h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold">Guardar ativo</button>
   </form>`);
   $('#aIsin').oninput = ev => { const c = TF.ISO2[ev.target.value.slice(0, 2).toUpperCase()]; if (c) $('#aCountry').value = String(c); };
@@ -1842,6 +1952,7 @@ function openAsset(tk) {
     Object.assign(a, { name: $('#aName').value.trim() || tk, kind: $('#aKind').value, isin: $('#aIsin').value.trim().toUpperCase(),
       country: Number($('#aCountry').value), code: $('#aCode').value.trim().toUpperCase() || TF.defaultCode($('#aKind').value),
       quoteSym: $('#aQSym').value.trim().toUpperCase(), quoteCur: $('#aQCur').value });
+    if ($('#aYSym')) { const y = $('#aYSym').value.trim().toUpperCase(); a.ySym = y === yDefault(tk) ? undefined : y; }
     save(); closeModal(); render(); toast('Ativo guardado');
   };
 }
