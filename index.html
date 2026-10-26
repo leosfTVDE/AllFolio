@@ -16,6 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="firebase-config.js"></script>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script>
 if (window.tailwind) tailwind.config = { theme: { extend: {
@@ -52,6 +53,7 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
   html.dark body { background:#0B1530; color:#E6EEFF; }
   html.dark body::before { background:#101D3D; }
   html.dark .text-ink { color:#E6EEFF; }
+  #authGate { background:#F4F7FC; } html.dark #authGate { background:#0B1530; }
   html.dark .bg-white, html.dark .bg-white\/95 { background-color:#13224A; }
   html.dark header.hdr, html.dark nav.navbar { background-color:#101D3D; }
   html.dark .bg-brand-50, html.dark .hover\:bg-brand-50:hover, html.dark .hover\:bg-brand-50\/60:hover { background-color:#1A2C5C; }
@@ -154,6 +156,7 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
     <div id="modalBody" class="sheet rise pointer-events-auto bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl p-5 max-h-[92vh] overflow-y-auto"></div>
   </div>
 </div>
+<div id="authGate" class="hidden fixed inset-0 z-[80] overflow-y-auto" style="padding-top:env(safe-area-inset-top,0px)"></div>
 <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] hidden bg-ink text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-lg max-w-[90vw] text-center"></div>
 
 <script>
@@ -574,9 +577,10 @@ function load() {
   S.settings ||= {}; S.settings.brokerCp ||= {}; S.settings.cdt ||= {};
   try { UI.tab = localStorage.getItem(KEY + '.tab') || 'home'; } catch (e) {}
 }
-function save() {
+function saveLocal() {
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Não foi possível guardar: armazenamento cheio ou bloqueado'); }
 }
+function save() { saveLocal(); if (typeof cloudDirty === 'function') cloudDirty(); }
 let toastT;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 2800); }
 
@@ -1001,10 +1005,7 @@ function renderSettings() {
   <div class="flex items-center gap-2 mb-3"><button data-back class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
     <h1 class="text-2xl font-extrabold tracking-tight">Configurações</h1></div>
-  ${card(`<div class="p-4 flex items-center gap-3"><div class="w-11 h-11 rounded-full bg-brand-50 text-brand-600 grid place-items-center shrink-0">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></div>
-    <div class="flex-1"><div class="font-bold">Conta</div><div class="text-xs text-slate-500">Entrar e sincronizar entre aparelhos</div></div>
-    <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">Em breve</span></div>`)}
+  ${accountCardHTML()}
   ${sec('APARÊNCIA')}
   <div class="grid grid-cols-2 gap-2">${th('light', 'Claro', 'background:#F4F7FC;border:1px solid #DCE7F8')}${th('dark', 'Escuro', 'background:linear-gradient(135deg,#0B1530,#16295A)')}</div>
   ${sec('INVESTIMENTOS')}
@@ -1020,12 +1021,12 @@ function renderSettings() {
     + `<label class="w-full flex items-center gap-3 px-4 py-3.5 cursor-pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="shrink-0 text-brand-600"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg><span class="flex-1 font-semibold">Restaurar cópia</span><input id="bkImport" type="file" accept=".json" class="sr-only"></label>`
     + row(S.demo ? 'data-exitdemo' : 'data-demo', '<path d="M9 3h6M10 3v6L4 19a1.5 1.5 0 0 0 1.3 2h13.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/>', S.demo ? 'Sair dos dados de exemplo' : 'Ver com dados de exemplo')
     + (S.demo ? '' : row('id="wipe"', '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', 'Apagar todos os dados', '', 'text-loss')), 'divide-y divide-brand-50 overflow-hidden')}
-  <p class="text-[11px] text-slate-500 mt-2 px-1">${S.tx.length} operações, ${S.div.length} dividendos e ${Object.keys(S.assets).length} ativos guardados neste aparelho. Faça cópias de segurança: limpar os dados do navegador apaga-os.</p>
+  <p class="text-[11px] text-slate-500 mt-2 px-1">${S.tx.length} operações, ${S.div.length} dividendos e ${Object.keys(S.assets).length} ativos${CLOUD.user ? ', guardados na sua conta e neste aparelho.' : ' guardados neste aparelho. Faça cópias de segurança: limpar os dados do navegador apaga-os.'}</p>
   <div class="text-center mt-8 text-slate-400">${LOGO_SVG(28)}<div class="text-xs mt-1">TaxFolio Portugal · versão ${APP_VERSION}</div><div class="text-[11px]">taxifolio.site</div></div>`;
   $('#bkExport').onclick = exportBackup;
   $('#bkImport').onchange = e => e.target.files[0] && importBackup(e.target.files[0]);
   if ($('#wipe')) $('#wipe').onclick = () => { if (S.demo) return exitDemo();
-    if (!confirm('Apagar todas as operações, dividendos, caixa e ativos deste dispositivo?')) return;
+    if (!confirm(CLOUD.user ? 'Apagar todas as operações, dividendos, caixa e ativos? Também são apagados da sua conta na nuvem.' : 'Apagar todas as operações, dividendos, caixa e ativos deste dispositivo?')) return;
     S.tx = []; S.div = []; S.assets = {}; S.cash = []; S.divCal = {}; S.divDone = {}; S.hist = {}; S.settings.cashCfg = { goal: 0, divFrom: '', place: 'XTB' };
     save(); UI.imp = null; render(); toast('Dados apagados'); };
 }
@@ -2363,12 +2364,249 @@ function exitDemo() {
   save(); go('home'); toast(S.tx.length || S.div.length ? 'De volta aos seus dados' : 'Pronto: pode começar a registar os seus dados');
 }
 
+/* ================= CONTA E SINCRONIZAÇÃO (Firebase) ================= */
+const FB_VER = '10.12.2';
+const FB_SCRIPTS = ['app', 'auth', 'firestore'].map(m => `https://www.gstatic.com/firebasejs/${FB_VER}/firebase-${m}-compat.js`);
+const SYNC_KEYS = ['tx', 'div', 'assets', 'cash', 'divDone'];
+const CLOUD = { mode: 'off', user: null, lastJson: null, applying: false, unsub: null, auth: null, db: null };
+const DEVICE = (() => { try { let d = localStorage.getItem(KEY + '.device'); if (!d) { d = uid(); localStorage.setItem(KEY + '.device', d); } return d; } catch (e) { return uid(); } })();
+const syncMeta = () => { try { return JSON.parse(localStorage.getItem(KEY + '.sync') || '{}'); } catch (e) { return {}; } };
+const setMeta = p => { try { localStorage.setItem(KEY + '.sync', JSON.stringify({ ...syncMeta(), ...p })); } catch (e) {} };
+const cfgValid = c => !!(c && c.apiKey && c.projectId && c.appId && !JSON.stringify(c).includes('COLE_AQUI'));
+
+function personalData() {
+  const o = {}; SYNC_KEYS.forEach(k => o[k] = S[k] ?? (k === 'assets' || k === 'divDone' ? {} : []));
+  const st = { ...(S.settings || {}) }; delete st.fx; delete st.quota; o.settings = st;
+  return o;
+}
+function applyPersonal(p) {
+  p = p || {};
+  SYNC_KEYS.forEach(k => S[k] = p[k] ?? (k === 'assets' || k === 'divDone' ? {} : []));
+  const fx = S.settings?.fx, quota = S.settings?.quota;
+  S.settings = { ...(p.settings || {}), fx, quota };
+  S.settings.brokerCp ||= {}; S.settings.cdt ||= {};
+  S.demo = false;
+}
+const hasLocalData = () => !!(S.tx.length || S.div.length || (S.cash || []).length);
+
+function loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+}
+
+/* ---------- Ecrã de entrada ---------- */
+const gate = () => $('#authGate');
+function showGate(view, extra = {}) {
+  const g = gate(); g.classList.remove('hidden'); document.body.style.overflow = 'hidden';
+  const logo = `<div class="flex flex-col items-center mb-6">${LOGO_SVG(64)}<div class="text-2xl font-extrabold tracking-tight mt-2">TaxFolio <span class="text-slate-500 font-semibold">Portugal</span></div>
+    <div class="text-sm text-slate-500 mt-1">Os seus investimentos e o IRS, num só sítio</div></div>`;
+  let body = '';
+  if (view === 'loading' || view === 'sync') body = `<div class="text-center text-slate-600 py-10"><div class="w-10 h-10 mx-auto rounded-full border-4 border-brand-100 border-t-brand-600 animate-spin"></div>
+    <p class="mt-4 font-semibold">${view === 'sync' ? 'A sincronizar os seus dados…' : 'A preparar…'}</p></div>`;
+  else if (view === 'offline') body = `<div class="text-center py-6"><p class="font-bold">Sem ligação à internet</p><p class="text-sm text-slate-600 mt-1">Ligue-se para entrar na sua conta pela primeira vez.</p>
+    <button id="gRetry" class="mt-4 h-11 px-5 rounded-2xl bg-brand-600 text-white font-bold">Tentar de novo</button></div>`;
+  else if (view === 'conflict') body = `<div class="space-y-3">
+    <p class="font-bold text-lg text-center">Há dados na conta e neste aparelho</p>
+    <p class="text-sm text-slate-600 text-center">Escolha quais quer manter. Os outros serão substituídos.</p>
+    <button data-gchoice="cloud" class="w-full text-left rounded-2xl border border-brand-100 bg-white p-4"><div class="font-bold">Manter os da conta</div><div class="text-xs text-slate-500 mt-0.5">${extra.cloud}</div></button>
+    <button data-gchoice="local" class="w-full text-left rounded-2xl border border-brand-100 bg-white p-4"><div class="font-bold">Manter os deste aparelho</div><div class="text-xs text-slate-500 mt-0.5">${extra.local}</div></button>
+    <p class="text-[11px] text-slate-500 text-center">Os dados da conta são os que vê nos seus outros aparelhos.</p></div>`;
+  else {
+    const signup = view === 'signup', reset = view === 'reset';
+    body = `<form id="gForm" class="space-y-3" novalidate>
+      <h1 class="text-xl font-extrabold text-center">${signup ? 'Criar conta' : reset ? 'Recuperar senha' : 'Entrar'}</h1>
+      <div><label class="lbl" for="gEmail">Email</label><input id="gEmail" type="email" autocomplete="email" class="field" value="${esc(extra.email || '')}" required></div>
+      ${reset ? '' : `<div><label class="lbl" for="gPass">Senha</label><input id="gPass" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}" class="field" required>
+        ${signup ? '<p class="text-[11px] text-slate-500 mt-1">Mínimo de 6 caracteres.</p>' : ''}</div>`}
+      <div id="gErr" class="text-sm font-semibold text-loss min-h-[1.25rem]">${esc(extra.error || '')}</div>
+      <button class="w-full h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold">${signup ? 'Criar conta' : reset ? 'Enviar email de recuperação' : 'Entrar'}</button>
+      ${reset ? '' : `<div class="flex items-center gap-3 text-xs text-slate-400"><span class="flex-1 h-px bg-brand-100"></span>ou<span class="flex-1 h-px bg-brand-100"></span></div>
+      <button type="button" id="gGoogle" class="w-full h-12 rounded-2xl bg-white border border-brand-100 font-bold flex items-center justify-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+        Continuar com Google</button>`}
+      <div class="text-center text-sm space-y-2 pt-2">
+        ${signup ? '<button type="button" data-gview="login" class="font-bold text-brand-600">Já tenho conta: entrar</button>'
+          : reset ? '<button type="button" data-gview="login" class="font-bold text-brand-600">Voltar a entrar</button>'
+          : '<button type="button" data-gview="signup" class="font-bold text-brand-600">Criar conta nova</button><br><button type="button" data-gview="reset" class="text-slate-500 font-semibold">Esqueci-me da senha</button>'}
+      </div></form>`;
+  }
+  g.innerHTML = `<div class="min-h-full flex items-center justify-center p-6"><div class="w-full max-w-sm">${logo}${body}
+    ${['login', 'signup', 'reset'].includes(view) ? '<p class="text-[11px] text-slate-400 text-center mt-6">Os seus dados ficam guardados na sua conta e só você os pode ver.</p>' : ''}</div></div>`;
+  bindGate(view);
+}
+function hideGate() { gate().classList.add('hidden'); gate().innerHTML = ''; document.body.style.overflow = ''; }
+
+const AUTH_ERR = {
+  'auth/invalid-email': 'Email inválido.', 'auth/missing-email': 'Escreva o seu email.', 'auth/user-not-found': 'Não existe conta com este email.',
+  'auth/wrong-password': 'Senha errada.', 'auth/invalid-credential': 'Email ou senha errados.', 'auth/invalid-login-credentials': 'Email ou senha errados.',
+  'auth/email-already-in-use': 'Já existe uma conta com este email. Escolha "Entrar".', 'auth/weak-password': 'A senha deve ter pelo menos 6 caracteres.',
+  'auth/missing-password': 'Escreva a senha.', 'auth/too-many-requests': 'Demasiadas tentativas. Espere uns minutos e tente de novo.',
+  'auth/network-request-failed': 'Sem ligação à internet.', 'auth/popup-closed-by-user': 'Janela do Google fechada antes de terminar.',
+  'auth/popup-blocked': 'O navegador bloqueou a janela do Google. Tente de novo.', 'auth/cancelled-popup-request': '',
+  'auth/unauthorized-domain': 'Domínio não autorizado: no Firebase, acrescente taxifolio.site em Authentication → Settings → Authorized domains.',
+  'auth/operation-not-allowed': 'Este método de entrada não está ativo no Firebase (Authentication → Sign-in method).',
+  'auth/requires-recent-login': 'Por segurança, termine sessão e entre de novo antes de fazer isto.'
+};
+const authMsg = e => AUTH_ERR[e?.code] ?? ('Erro: ' + (e?.code || e?.message || 'desconhecido'));
+
+function bindGate(view) {
+  document.querySelectorAll('[data-gview]').forEach(b => b.onclick = () => showGate(b.dataset.gview, { email: $('#gEmail')?.value }));
+  const retry = $('#gRetry'); if (retry) retry.onclick = () => location.reload();
+  const gg = $('#gGoogle');
+  if (gg) gg.onclick = async () => {
+    const p = new firebase.auth.GoogleAuthProvider();
+    try { standalone() ? await CLOUD.auth.signInWithRedirect(p) : await CLOUD.auth.signInWithPopup(p); }
+    catch (e) { const m = authMsg(e); if (m) $('#gErr').textContent = m; }
+  };
+  const f = $('#gForm'); if (!f) return;
+  f.onsubmit = async ev => {
+    ev.preventDefault();
+    const email = $('#gEmail').value.trim(), pass = $('#gPass')?.value || '', err = $('#gErr'), btn = f.querySelector('button:not([type=button])');
+    err.textContent = ''; btn.disabled = true; btn.style.opacity = '.6';
+    try {
+      if (view === 'signup') await CLOUD.auth.createUserWithEmailAndPassword(email, pass);
+      else if (view === 'reset') { await CLOUD.auth.sendPasswordResetEmail(email); err.className = 'text-sm font-semibold text-gain min-h-[1.25rem]'; err.textContent = 'Email enviado. Veja a sua caixa de correio (e o spam).'; }
+      else await CLOUD.auth.signInWithEmailAndPassword(email, pass);
+    } catch (e) { err.className = 'text-sm font-semibold text-loss min-h-[1.25rem]'; err.textContent = authMsg(e); }
+    btn.disabled = false; btn.style.opacity = '';
+  };
+}
+
+function askConflict(remote, rAt) {
+  const desc = (p, at) => `${(p.tx || []).length} operações, ${(p.div || []).length} dividendos${at ? ' · atualizado em ' + new Date(at).toLocaleString('pt-PT') : ''}`;
+  return new Promise(res => {
+    showGate('conflict', { cloud: desc(remote, rAt), local: desc(personalData()) });
+    document.querySelectorAll('[data-gchoice]').forEach(b => b.onclick = () => {
+      if (b.dataset.gchoice === 'local' || confirm('Os dados deste aparelho serão substituídos pelos da conta. Continuar?')) res(b.dataset.gchoice);
+    });
+  });
+}
+
+/* ---------- Sincronização ---------- */
+const userRef = () => CLOUD.db.collection('users').doc(CLOUD.user.uid);
+let pushTimer = null;
+function cloudDirty() {
+  if (CLOUD.applying || !CLOUD.user || S.demo) return;
+  const json = JSON.stringify(personalData());
+  if (json === CLOUD.lastJson) return;
+  setMeta({ dirty: true }); clearTimeout(pushTimer); pushTimer = setTimeout(() => cloudPush(), 1200);
+}
+async function cloudPush(force = false) {
+  if (!CLOUD.user || S.demo) return;
+  const json = JSON.stringify(personalData());
+  if (!force && json === CLOUD.lastJson) { setMeta({ dirty: false }); return; }
+  const at = Date.now(); CLOUD.lastJson = json;
+  try {
+    await userRef().set({ json, updatedAt: at, device: DEVICE, email: CLOUD.user.email || '', v: 1 });
+    setMeta({ dirty: false, lastSync: at, uid: CLOUD.user.uid }); refreshSyncInfo();
+  } catch (e) { setMeta({ dirty: true }); CLOUD.lastJson = null; }
+}
+async function initialSync(u) {
+  const meta = syncMeta();
+  if (S.demo) restoreRealSilently();
+  let snap;
+  try { snap = await userRef().get(); }
+  catch (e) { if (meta.uid === u.uid) return; throw e; }
+  if (!snap.exists) {
+    const had = hasLocalData();
+    if (meta.uid && meta.uid !== u.uid) applyPersonal({});
+    await cloudPush(true); saveLocal();
+    if (had && (!meta.uid || meta.uid === u.uid)) toast('Os seus dados foram guardados na sua conta');
+    return;
+  }
+  const r = snap.data(), remote = JSON.parse(r.json || '{}');
+  if (!hasLocalData() || (meta.uid === u.uid && !meta.dirty)) { CLOUD.applying = true; applyPersonal(remote); saveLocal(); CLOUD.applying = false; CLOUD.lastJson = r.json; }
+  else if (meta.uid === u.uid && meta.dirty) { await cloudPush(true); }
+  else if (JSON.stringify(personalData()) === r.json) { CLOUD.lastJson = r.json; }
+  else {
+    const choice = await askConflict(remote, r.updatedAt);
+    if (choice === 'cloud') { CLOUD.applying = true; applyPersonal(remote); saveLocal(); CLOUD.applying = false; CLOUD.lastJson = r.json; }
+    else await cloudPush(true);
+  }
+  setMeta({ uid: u.uid, dirty: false, lastSync: r.updatedAt || Date.now() });
+}
+function listenRemote() {
+  if (CLOUD.unsub) CLOUD.unsub();
+  CLOUD.unsub = userRef().onSnapshot(s => {
+    if (!s.exists || s.metadata.hasPendingWrites) return;
+    const r = s.data(); if (!r || r.json === CLOUD.lastJson || r.device === DEVICE && syncMeta().dirty) return;
+    if (syncMeta().dirty) return;
+    CLOUD.applying = true; applyPersonal(JSON.parse(r.json || '{}')); saveLocal(); CLOUD.applying = false;
+    CLOUD.lastJson = r.json; setMeta({ lastSync: r.updatedAt }); render(); toast('Dados atualizados a partir de outro aparelho');
+  }, () => {});
+}
+function restoreRealSilently() {
+  let real = null; try { real = JSON.parse(localStorage.getItem(KEY + '.real') || 'null'); } catch (e) {}
+  if (real) { const keep = { theme: S.settings.theme, goals: S.settings.goals }; Object.assign(S, real); S.settings = { ...(real.settings || {}), ...Object.fromEntries(Object.entries(keep).filter(([, v]) => v != null)) }; }
+  S.demo = false; try { localStorage.removeItem(KEY + '.real'); } catch (e) {}
+  saveLocal();
+}
+function refreshSyncInfo() { if (UI.tab === 'settings') renderSettings(); }
+
+async function cloudSignOut() {
+  if (!confirm('Terminar sessão? Os dados ficam guardados na sua conta e são retirados deste aparelho.')) return;
+  clearTimeout(pushTimer); if (syncMeta().dirty) await cloudPush(true);
+  if (CLOUD.unsub) CLOUD.unsub(); CLOUD.unsub = null;
+  CLOUD.applying = true; applyPersonal({}); S.hist = {}; S.divCal = {}; saveLocal(); CLOUD.applying = false; CLOUD.lastJson = null;
+  setMeta({ uid: null, dirty: false, lastSync: null });
+  await CLOUD.auth.signOut();
+}
+async function cloudDeleteAccount() {
+  if (!confirm('Apagar a conta e TODOS os dados guardados nela? Esta ação não pode ser desfeita.')) return;
+  if (prompt('Para confirmar, escreva APAGAR') !== 'APAGAR') return toast('Conta não apagada');
+  try {
+    clearTimeout(pushTimer); if (CLOUD.unsub) CLOUD.unsub(); CLOUD.unsub = null;
+    await userRef().delete(); await CLOUD.user.delete();
+    CLOUD.applying = true; applyPersonal({}); S.hist = {}; saveLocal(); CLOUD.applying = false; CLOUD.lastJson = null;
+    setMeta({ uid: null, dirty: false, lastSync: null }); toast('Conta apagada');
+  } catch (e) { toast(authMsg(e)); listenRemote(); }
+}
+
+async function cloudInit() {
+  const cfg = window.TAXFOLIO_FIREBASE;
+  if (!cfgValid(cfg)) { CLOUD.mode = 'off'; return; }
+  CLOUD.mode = 'on'; showGate('loading');
+  try { for (const s of FB_SCRIPTS) await loadScript(s); }
+  catch (e) {
+    if (syncMeta().uid) { CLOUD.mode = 'offline'; hideGate(); toast('Sem ligação: a usar os dados deste aparelho'); return; }
+    showGate('offline'); return;
+  }
+  firebase.initializeApp(cfg);
+  CLOUD.auth = firebase.auth(); CLOUD.auth.languageCode = 'pt';
+  CLOUD.db = firebase.firestore();
+  try { await CLOUD.db.enablePersistence({ synchronizeTabs: true }); } catch (e) {}
+  CLOUD.auth.getRedirectResult().catch(e => { const m = authMsg(e); if (m && $('#gErr')) $('#gErr').textContent = m; });
+  CLOUD.auth.onAuthStateChanged(async u => {
+    if (!u) { CLOUD.user = null; if (CLOUD.unsub) CLOUD.unsub(); CLOUD.unsub = null; render(); showGate('login'); return; }
+    CLOUD.user = u; showGate('sync');
+    try { await initialSync(u); } catch (e) { toast('Não foi possível sincronizar agora: a usar os dados deste aparelho'); }
+    hideGate(); listenRemote(); render();
+  });
+  window.addEventListener('online', () => { if (syncMeta().dirty) cloudPush(true); });
+}
+
+function accountCardHTML() {
+  if (CLOUD.mode === 'off') return card(`<div class="p-4 flex items-center gap-3"><div class="w-11 h-11 rounded-full bg-brand-50 text-brand-600 grid place-items-center shrink-0">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></div>
+    <div class="flex-1"><div class="font-bold">Conta</div><div class="text-xs text-slate-500">Login ainda não configurado (ficheiro firebase-config.js)</div></div>
+    <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">Local</span></div>`);
+  const m = syncMeta(), u = CLOUD.user;
+  const status = CLOUD.mode === 'offline' || !navigator.onLine ? 'Sem ligação: sincroniza quando voltar a internet'
+    : m.dirty ? 'A sincronizar…' : m.lastSync ? 'Sincronizado ' + ago(m.lastSync) : 'Sincronizado';
+  return card(`<div class="p-4 flex items-center gap-3"><div class="w-11 h-11 rounded-full bg-brand-600 text-white grid place-items-center shrink-0 font-extrabold">${esc((u?.email || '?')[0].toUpperCase())}</div>
+    <div class="flex-1 min-w-0"><div class="font-bold truncate">${esc(u?.email || 'Conta')}</div><div class="text-xs text-slate-500">${status}</div></div>
+    <span class="text-[11px] font-bold px-2.5 py-1 rounded-full ${m.dirty ? 'bg-amber-100 text-amber-900' : 'bg-emerald-50 text-emerald-800'}">${m.dirty ? 'Pendente' : 'Na nuvem'}</span></div>
+    ${u ? `<div class="grid grid-cols-2 gap-2 px-4 pb-4"><button data-signout class="h-10 rounded-xl bg-brand-50 text-brand-700 text-sm font-bold">Terminar sessão</button>
+      <button data-delacct class="h-10 rounded-xl border border-loss/30 text-loss text-sm font-bold">Apagar conta</button></div>` : ''}`);
+}
+
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
-  if ('back' in d) { const prev = (UI.hist || []).pop(); go(prev || 'home', true); }
+  if ('signout' in d) cloudSignOut();
+  else if ('delacct' in d) cloudDeleteAccount();
+  else if ('back' in d) { const prev = (UI.hist || []).pop(); go(prev || 'home', true); }
   else if (d.theme) setTheme(d.theme);
   else if ('report' in d) { const y = defaultYear(); openReportModal(TF.yearReport(S, y)); }
   else if ('fiscalcfg' in d) openFiscalCfg();
@@ -2436,6 +2674,7 @@ renderFx(); refreshFx();
 window.addEventListener('online', () => refreshFx());
 setInterval(() => refreshFx(), 30 * 60e3);
 go(['home', 'portfolio', 'tax', 'import', 'cash', 'divs', 'goals', 'more', 'settings'].includes(UI.tab) ? UI.tab : 'home');
+cloudInit();
 
 </script>
 </body>
