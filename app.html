@@ -1027,7 +1027,7 @@ function renderSettings() {
     + row(S.demo ? 'data-exitdemo' : 'data-demo', '<path d="M9 3h6M10 3v6L4 19a1.5 1.5 0 0 0 1.3 2h13.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/>', S.demo ? 'Sair dos dados de exemplo' : 'Ver com dados de exemplo')
     + (S.demo ? '' : row('id="wipe"', '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', 'Apagar todos os dados', '', 'text-loss')), 'divide-y divide-brand-50 overflow-hidden')}
   <p class="text-[11px] text-slate-500 mt-2 px-1">${S.tx.length} operações, ${S.div.length} dividendos e ${Object.keys(S.assets).length} ativos${CLOUD.user ? ', guardados na sua conta e neste aparelho.' : ' guardados neste aparelho. Faça cópias de segurança: limpar os dados do navegador apaga-os.'}</p>
-  <div class="text-center mt-8 text-slate-400">${LOGO_SVG(28)}<div class="text-xs mt-1">TaxFolio Portugal · versão ${APP_VERSION}</div><a href="./" class="text-[11px] underline">taxifolio.site</a></div>`;
+  <div class="text-center mt-8 text-slate-400">${LOGO_SVG(28)}<div class="text-xs mt-1">TaxFolio Portugal · versão ${APP_VERSION}</div><a href="./" class="text-[11px] underline">taxifolio.site</a><div class="text-[11px] mt-1"><a href="privacidade.html" target="_blank" rel="noopener" class="underline">Política de privacidade</a> · <a href="termos.html" target="_blank" rel="noopener" class="underline">Termos de utilização</a></div></div>`;
   $('#bkExport').onclick = exportBackup;
   $('#bkImport').onchange = e => e.target.files[0] && importBackup(e.target.files[0]);
   if ($('#wipe')) $('#wipe').onclick = () => { if (S.demo) return exitDemo();
@@ -2435,7 +2435,7 @@ function showGate(view, extra = {}) {
       </div></form>`;
   }
   g.innerHTML = `<div class="min-h-full flex items-center justify-center p-6"><div class="w-full max-w-sm">${logo}${body}
-    ${['login', 'signup', 'reset'].includes(view) ? '<p class="text-[11px] text-slate-400 text-center mt-6">Os seus dados ficam guardados na sua conta e só você os pode ver.</p>' : ''}</div></div>`;
+    ${['login', 'signup', 'reset'].includes(view) ? `<p class="text-[11px] text-slate-500 text-center mt-6">${view === 'signup' ? 'Ao criar conta, aceita os <a href="termos.html" target="_blank" rel="noopener" class="underline">Termos de utilização</a> e a <a href="privacidade.html" target="_blank" rel="noopener" class="underline">Política de privacidade</a>.' : 'Os seus dados ficam guardados na sua conta e só você os pode ver. <a href="privacidade.html" target="_blank" rel="noopener" class="underline">Privacidade</a> · <a href="termos.html" target="_blank" rel="noopener" class="underline">Termos</a>'}</p>` : ''}</div></div>`;
   bindGate(view);
 }
 function hideGate() { gate().classList.add('hidden'); gate().innerHTML = ''; document.body.style.overflow = ''; }
