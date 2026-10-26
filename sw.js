@@ -1,11 +1,14 @@
 /* TaxFolio Portugal — Service Worker (offline) */
-const CACHE = 'taxfolio-v12';
+const CACHE = 'taxfolio-v13';
 const CORE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 const CDN = [
   'https://cdn.tailwindcss.com/3.4.17',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'
 ];
 
 self.addEventListener('install', e => {
@@ -27,9 +30,9 @@ self.addEventListener('fetch', e => {
   // Cotações e câmbio: sempre da rede, nunca da cache
   if (url.origin !== location.origin && !CDN.includes(req.url) && !/fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) return;
   // Páginas: rede primeiro (para receber atualizações), cache se offline
-  if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(r => { const cp = r.clone(); caches.open(CACHE).then(c => c.put('./index.html', cp)); return r; })
-      .catch(() => caches.match('./index.html')));
+  if (req.mode === 'navigate' || url.pathname.endsWith('/firebase-config.js')) {
+    e.respondWith(fetch(req).then(r => { const cp = r.clone(); caches.open(CACHE).then(c => c.put(req.mode === 'navigate' ? './index.html' : req, cp)); return r; })
+      .catch(() => caches.match(req.mode === 'navigate' ? './index.html' : req)));
     return;
   }
   // Restante: cache primeiro, depois rede (e guarda para a próxima vez)
