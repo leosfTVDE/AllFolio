@@ -7,3 +7,6 @@ window.TAXFOLIO_FIREBASE = {
   messagingSenderId: "430172686850",
   appId: "1:430172686850:web:80da9e4ca04d2ec978751b"
 };
+
+// Botão "Apoiar" (donativos). Cole aqui o link (ex.: Ko-fi, Buy Me a Coffee, PayPal). Vazio = botão escondido.
+window.TAXFOLIO_SUPPORT_URL = "";
