@@ -519,6 +519,24 @@ const TF = (() => {
     return out;
   }
 
+  // Confirmação diária de ordens da XTB (PDF "Confirmação das ordens executadas"), em texto
+  function parseXTBDaily(text) {
+    const t = String(text || '').replace(/\s+/g, ' ');
+    const re = /(\d{8,12})\s+([A-Z0-9][A-Z0-9\-]{0,9}\.[A-Z]{2,4})\s+(.*?)\s(Buy|Sell|Compra|Venda)\s+(-?[\d.,]+)\s+(\d{2}[\/.]\d{2}[\/.]\d{4})(?:\s+(\d{2}:\d{2}(?::\d{2})?))?\s+(?:[^\s]+\s+){0,2}?(?:market|limit|stop|mercado|limite)\s+([\d.,]+)\s+([\d.,]+)\s+(\S+)\s+([A-Z]{3})\s+([\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)/gi;
+    const out = []; let m; const hits = [];
+    while ((m = re.exec(t))) hits.push({ m, end: re.lastIndex, start: m.index });
+    hits.forEach((h, i) => {
+      const m = h.m, qty = Math.abs(num(m[5])); if (!(qty > 0)) return;
+      const after = t.slice(h.end, i + 1 < hits.length ? hits[i + 1].start : h.end + 80);
+      const time = m[7] || (after.match(/\b(\d{2}:\d{2}:\d{2})\b/) || [])[1] || '';
+      const price = num(m[8]), cur = m[11].toUpperCase(), conv = Math.abs(num(m[13])), comm = Math.abs(num(m[14])), tot = Math.abs(num(m[15]));
+      const isBuy = /buy|compra/i.test(m[4]);
+      out.push({ kind: isBuy ? 'buy' : 'sell', date: parseDate(m[6]), time, ticker: T(m[2]), name: '',
+        qty: r8(qty), price, priceOrig: price, currency: cur, xtbFx: num(m[12]), fees: r2(tot || conv + comm), broker: 'XTB', orderId: m[1] });
+    });
+    return out.filter(r => r.date);
+  }
+
   const PARSERS = { XTB: parseXTB, T212: parseT212, REVOLUT: parseRevolut, DEGIRO: parseDEGIRO, GENERIC: parseGeneric };
 
   function parseSheets(sheets, hint = 'AUTO', rawText = '') {
@@ -537,6 +555,7 @@ const TF = (() => {
       if (done) continue;
     }
     if (!all.length && rawText) { const x = parseXTBText(rawText); if (x.length) { all.push(...x); broker = 'XTB'; } }
+    if (!all.length && rawText) { const x = parseXTBDaily(rawText); if (x.length) { all.push(...x); broker = 'XTB'; } }
     all.sort((a, b) => a.date.localeCompare(b.date));
     return { rows: all, warn, broker };
   }
@@ -548,7 +567,7 @@ const TF = (() => {
   }
 
   return { COUNTRIES, ISO2, CDT, BROKERS, ANEXO_G_DEFAULT, NIF_DEFAULT, EPS, r2, r8, pad3, num, parseDate, norm, daysBetween, guessKind, guessCountry, defaultCode,
-    ensureAsset, fifo, positions, yearReport, years, parseCSV, parseSheets, parseXTBText, fingerprint };
+    ensureAsset, fifo, positions, yearReport, years, parseCSV, parseSheets, parseXTBText, parseXTBDaily, fingerprint };
 })();
 if (typeof module !== 'undefined') module.exports = TF;
 
@@ -2262,24 +2281,26 @@ function renderImport() {
     const n = imp.rows.filter(r => r.sel).length;
     preview = `<div id="impPrev" class="mt-4">${card(`<div class="p-4 flex items-center justify-between gap-2">
       <div><div class="font-bold">${imp.rows.length} registos encontrados${imp.broker ? ' · ' + bname(imp.broker === 'GENERIC' ? 'OUTRA' : imp.broker) : ''}</div>
-      <div class="text-xs text-slate-500">${imp.rows.filter(r => r.dup).length} já existem e ficaram desmarcados</div></div>
+      <div class="text-xs text-slate-500">${['fix', 'new', 'same'].map(s => { const c = imp.rows.filter(r => r.st === s).length; return c ? `${c} ${({ fix: 'a corrigir', new: 'nova(s)', same: 'já iguais' })[s]}` : ''; }).filter(Boolean).join(' · ')}</div>
+      <div class="text-[11px] text-slate-400 mt-0.5">As operações da app que não estão neste ficheiro não são alteradas.</div></div>
       <button id="impAll" class="text-sm font-bold text-brand-600">Marcar todos</button></div>
       ${imp.warn.length ? `<div class="mx-4 mb-3 rounded-xl bg-amber-50 text-amber-900 text-xs p-3 space-y-1">${imp.warn.map(w => `<div>${esc(w)}</div>`).join('')}</div>` : ''}
       <div class="max-h-[50vh] overflow-y-auto divide-y divide-brand-50 border-t border-brand-50">${imp.rows.map((r, i) => `
-        <label class="flex items-center gap-3 px-4 py-3 ${r.dup ? 'opacity-60' : ''}">
+        <label class="flex items-center gap-3 px-4 py-3 ${r.st === 'same' ? 'opacity-60' : ''}">
           <input type="checkbox" data-sel="${i}" ${r.sel ? 'checked' : ''} class="w-5 h-5 accent-[#1D4ED8]">
-          <div class="flex-1 min-w-0"><div class="font-bold text-sm">${({ buy: 'Compra', sell: 'Venda', div: 'Dividendo' })[r.kind]} · ${esc(r.ticker)}</div>
-            <div class="text-xs text-slate-500">${fmtD(r.date)}${r.dup ? ' · duplicado' : ''}${r.note ? ` · <span class="text-amber-700">${esc(r.note)}</span>` : ''}</div></div>
+          <div class="flex-1 min-w-0"><div class="font-bold text-sm flex items-center gap-1.5 flex-wrap">${({ fix: '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">CORRIGIR</span>', new: '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-100 text-brand-700">NOVA</span>', same: '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">IGUAL</span>' })[r.st] || ''}${({ buy: 'Compra', sell: 'Venda', div: 'Dividendo' })[r.kind]} · ${esc(r.ticker)}</div>
+            <div class="text-xs text-slate-500">${fmtD(r.date)}${r.time ? ' ' + esc(r.time.slice(0, 5)) : ''}${r.note ? ` · <span class="text-amber-700">${esc(r.note)}</span>` : ''}</div>
+            ${r.st === 'fix' && r.before ? `<div class="text-[11px] text-amber-800 mt-0.5 num">Na app: ${r.kind === 'div' ? fmtEUR(r.before.gross) : `${esc(r.before.ticker)} · ${fmtQ(r.before.qty)} × ${fmtEUR(r.before.price)}${r.before.fees ? ' + ' + fmtEUR(r.before.fees) : ''}`}${r.before.date !== r.date ? ' · ' + fmtD(r.before.date) : ''}</div>` : ''}</div>
           <div class="text-right num text-sm">${r.kind === 'div' ? `<div class="font-bold">${fmtEUR(r.gross)}</div><div class="text-xs text-slate-500">retido ${fmtEUR(r.taxForeign)}</div>`
-            : `<div class="font-bold">${fmtEUR(r.qty * r.price)}</div><div class="text-xs text-slate-500">${fmtQ(r.qty)} × ${fmtEUR(r.price)}</div>`}</div></label>`).join('')}</div>
+            : `<div class="font-bold">${fmtEUR(r.qty * r.price)}</div><div class="text-xs text-slate-500">${fmtQ(r.qty)} × ${fmtEUR(r.price)}${r.fees ? ' + ' + fmtEUR(r.fees) : ''}</div>`}</div></label>`).join('')}</div>
       <div class="p-4 flex gap-2 border-t border-brand-50"><button id="impCancel" class="h-12 px-4 rounded-2xl bg-brand-50 text-brand-700 font-bold">Cancelar</button>
-        <button id="impGo" class="flex-1 h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold" ${n ? '' : 'disabled'}>Importar ${n} registos</button></div>`, 'overflow-hidden')}</div>`;
+        <button id="impGo" class="flex-1 h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold" ${n ? '' : 'disabled'}>${imp.rows.some(r => r.st === 'fix') ? 'Aplicar' : 'Importar'} ${n} registos</button></div>`, 'overflow-hidden')}</div>`;
   }
 
   $('#view-import').innerHTML = `<h1 class="text-2xl font-extrabold tracking-tight mb-1">Importar extrato</h1>
   <p class="text-sm text-slate-600 mb-4">O ficheiro é lido no seu dispositivo e nunca é enviado para nenhum servidor.</p>
   <div class="flex flex-wrap gap-2 mb-3">${chip('AUTO', 'Automático')}${chip('XTB', 'XTB')}${chip('DEGIRO', 'DEGIRO')}${chip('REVOLUT', 'Revolut')}${chip('T212', 'Trading 212')}${chip('GENERIC', 'Outro CSV')}</div>
-  <p class="text-xs text-slate-500 mb-3 leading-relaxed">${BROKER_TIPS[UI.broker]}</p>
+  <p class="text-xs text-slate-500 mb-3 leading-relaxed">${BROKER_TIPS[UI.broker]}${['AUTO', 'XTB'].includes(UI.broker) ? ' Também aceita o PDF diário "Confirmação das ordens executadas": as operações que já registou à mão são corrigidas com os valores da XTB.' : ''}</p>
   ${['AUTO', 'XTB'].includes(UI.broker) ? `<div class="mb-3 rounded-2xl bg-white border border-brand-100 p-3">
     <div class="flex items-center gap-2"><span class="text-sm font-bold flex-1">Moeda da conta XTB</span>
       ${['EUR', 'USD'].map(c => `<button data-impcur="${c}" class="h-8 px-3 rounded-full text-xs font-bold border ${UI.impCur === c ? 'bg-ink text-white border-ink' : 'bg-white border-brand-100 text-slate-600'}">${c}</button>`).join('')}</div>
@@ -2306,9 +2327,9 @@ function renderImport() {
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('border-brand-500'); };
   drop.ondragleave = () => drop.classList.remove('border-brand-500');
   drop.ondrop = e => { e.preventDefault(); drop.classList.remove('border-brand-500'); e.dataTransfer.files[0] && handleFile(e.dataTransfer.files[0]); };
-  $('#btnPaste').onclick = () => { const t = $('#paste').value; if (!t.trim()) return toast('Cole primeiro o texto do extrato'); convertImport(TF.parseSheets([TF.parseCSV(t)], UI.broker, t)).then(showPreview); };
+  $('#btnPaste').onclick = () => { const t = $('#paste').value; if (!t.trim()) return toast('Cole primeiro o texto do extrato'); convertImport(TF.parseSheets([TF.parseCSV(t)], UI.broker, t)).then(resolveXtbFx).then(showPreview); };
   if (imp) {
-    document.querySelectorAll('[data-sel]').forEach(c => c.onchange = () => { imp.rows[c.dataset.sel].sel = c.checked; const n = imp.rows.filter(r => r.sel).length; const g = $('#impGo'); g.textContent = `Importar ${n} registos`; g.disabled = !n; });
+    document.querySelectorAll('[data-sel]').forEach(c => c.onchange = () => { imp.rows[c.dataset.sel].sel = c.checked; const n = imp.rows.filter(r => r.sel).length; const g = $('#impGo'); g.textContent = `${imp.rows.some(r => r.st === 'fix') ? 'Aplicar' : 'Importar'} ${n} registos`; g.disabled = !n; });
     $('#impAll').onclick = () => { imp.rows.forEach(r => r.sel = true); renderImport(); };
     $('#impCancel').onclick = () => { UI.imp = null; renderImport(); };
     $('#impGo').onclick = commitImport;
@@ -2319,37 +2340,120 @@ async function handleFile(file) {
   const name = file.name.toLowerCase();
   try {
     let sheets = [], raw = '';
-    if (/\.pdf$/.test(name)) return toast('PDF: abra o extrato, copie o texto e use "Colar texto"');
+    if (/\.pdf$/.test(name)) {
+      toast('A ler o PDF…');
+      const text = await pdfText(file);
+      if (text == null) return toast('Leitor de PDF indisponível sem internet. Tente com ligação.');
+      let rows = TF.parseXTBDaily(text);
+      if (!rows.length) rows = TF.parseXTBText(text);
+      if (!rows.length) return toast('Não reconheci este PDF. Use a confirmação diária de ordens da XTB ou o Excel das operações de caixa.');
+      return showPreview(await resolveXtbFx({ rows, warn: [], broker: 'XTB' }));
+    }
     if (/\.xlsx?$/.test(name)) {
       if (!window.XLSX) return toast('Leitor de Excel indisponível offline: exporte em CSV');
       const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
       sheets = wb.SheetNames.map(n => XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }));
     } else { raw = await file.text(); sheets = [TF.parseCSV(raw)]; }
-    showPreview(await convertImport(TF.parseSheets(sheets, UI.broker, raw)));
+    showPreview(await resolveXtbFx(await convertImport(TF.parseSheets(sheets, UI.broker, raw))));
   } catch (e) { console.error(e); toast('Não foi possível ler o ficheiro: confirme o formato'); }
 }
 
+/* ---------- Leitura de PDF e reconciliação com a corretora ---------- */
+async function pdfText(file) {
+  try {
+    if (!window.pdfjsLib) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    const lines = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const items = (await (await pdf.getPage(p)).getTextContent()).items.filter(it => it.str && it.str.trim());
+      const rows = new Map();
+      items.forEach(it => { const y = Math.round(it.transform[5] / 3); (rows.get(y) || rows.set(y, []).get(y)).push(it); });
+      [...rows.entries()].sort((x, y) => y[0] - x[0]).forEach(([, its]) => lines.push(its.sort((x, y) => x.transform[4] - y.transform[4]).map(it => it.str.trim()).join(' ')));
+    }
+    return lines.join('\n');
+  } catch (e) { console.error(e); return null; }
+}
+// Ordens noutra moeda na confirmação diária: escolhe o sentido do câmbio com a ajuda da taxa do BCE do dia
+async function resolveXtbFx(res) {
+  for (const r of res.rows) {
+    if (r.kind === 'div' || !r.currency || r.currency === 'EUR' || r.xtbFx == null) continue;
+    const bce = navigator.onLine ? (await fetchFxDate(r.date))?.[r.currency] : S.settings.fx?.rates?.[r.currency];
+    const a1 = r.priceOrig / r.xtbFx, a2 = r.priceOrig * r.xtbFx;
+    const ref = bce ? r.priceOrig / bce : null;
+    r.price = ref ? (Math.abs(a1 - ref) <= Math.abs(a2 - ref) ? a1 : a2) : (r.xtbFx >= 1 ? a1 : a2);
+    r.fx = r.priceOrig / r.price;
+  }
+  return res;
+}
+const tkKey = t => (yDefault(t) || String(t || '').toUpperCase()).replace(/O/g, '0');
+function reconcile(rows) {
+  const used = new Set(), seen = new Set();
+  for (const r of rows) {
+    r.ticker = String(r.ticker || '').toUpperCase();
+    if (r.kind === 'div') {
+      const m = S.div.filter(d => !used.has(d.id) && tkKey(d.ticker) === tkKey(r.ticker) && Math.abs(TF.daysBetween(d.date, r.date)) <= 5)
+        .sort((x, y) => Math.abs(TF.daysBetween(x.date, r.date)) - Math.abs(TF.daysBetween(y.date, r.date)))[0];
+      if (!m) { const f = TF.fingerprint(r); r.st = seen.has(f) ? 'same' : 'new'; seen.add(f); r.sel = r.st === 'new'; continue; }
+      used.add(m.id); r.matchId = m.id; r.before = { gross: m.gross, taxForeign: m.taxForeign || 0, date: m.date, ticker: m.ticker };
+      r.st = Math.abs(m.gross - r.gross) < 0.005 && Math.abs((m.taxForeign || 0) - (r.taxForeign || 0)) < 0.005 ? 'same' : 'fix';
+      r.sel = r.st === 'fix'; continue;
+    }
+    const c = S.tx.filter(t => !used.has(t.id) && t.type === r.kind && tkKey(t.ticker) === tkKey(r.ticker)
+      && Math.abs(TF.daysBetween(t.date, r.date)) <= 1 && Math.abs(t.qty - r.qty) <= Math.max(1e-6, r.qty * 0.02));
+    if (!c.length) { const f = TF.fingerprint(r); r.st = seen.has(f) ? 'same' : 'new'; seen.add(f); r.sel = r.st === 'new'; continue; }
+    const score = t => Math.abs(TF.daysBetween(t.date, r.date)) * 10 + Math.abs(t.qty - r.qty) / r.qty * 100 + Math.abs(t.price - r.price) / (r.price || 1);
+    const m = c.sort((x, y) => score(x) - score(y))[0];
+    used.add(m.id); r.matchId = m.id; r.before = { qty: m.qty, price: m.price, fees: m.fees || 0, date: m.date, ticker: m.ticker };
+    r.st = m.ticker === r.ticker && m.date === r.date && Math.abs(m.qty - r.qty) < 1e-8 && Math.abs(m.qty * m.price - r.qty * r.price) < 0.005 && Math.abs((m.fees || 0) - (r.fees || 0)) < 0.005 ? 'same' : 'fix';
+    r.sel = r.st === 'fix';
+  }
+}
 function showPreview(res) {
   if (!res.rows.length) { UI.imp = null; renderImport(); return toast('Nenhuma operação reconhecida. Escolha a corretora certa ou use "Outro CSV"'); }
-  const existing = new Set([...S.tx.map(t => TF.fingerprint({ kind: t.type, ...t })), ...S.div.map(d => TF.fingerprint({ kind: 'div', ...d }))]);
-  const seen = new Set();
-  const nearDiv = r => r.kind === 'div' && S.div.some(d => d.ticker === r.ticker.toUpperCase() && Math.abs(TF.daysBetween(d.date, r.date)) <= 5);
-  res.rows.forEach(r => { const f = TF.fingerprint(r); r.dup = existing.has(f) || seen.has(f) || nearDiv(r); r.sel = !r.dup; seen.add(f); });
+  reconcile(res.rows);
   UI.imp = res; renderImport();
   setTimeout(() => $('#impPrev')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
-
-function commitImport() {
-  const sel = UI.imp.rows.filter(r => r.sel); let t0 = Date.now();
-  for (const r of sel) {
-    TF.ensureAsset(S, { ticker: r.ticker, name: r.name, isin: r.isin });
-    const ticker = r.ticker.toUpperCase();
-    if (r.kind === 'div') S.div.push({ id: uid(), created: t0++, date: r.date, ticker, gross: r.gross, taxForeign: r.taxForeign || 0, taxPT: r.taxPT || 0, broker: r.broker });
-    else S.tx.push({ id: uid(), created: t0++, type: r.kind, ticker, date: r.date, qty: r.qty, price: r.price, priceOrig: r.priceOrig ?? r.price, currency: r.currency || 'EUR', fx: r.fx ?? null, fees: r.fees || 0, broker: r.broker, src: 'import' });
-  }
-  save(); UI.imp = null; toast(`${sel.length} registos importados`); go('portfolio');
+function renameTicker(oldT, newT) {
+  if (!oldT || oldT === newT) return 0;
+  let n = 0;
+  S.tx.forEach(t => { if (t.ticker === oldT) { t.ticker = newT; n++; } });
+  S.div.forEach(d => { if (d.ticker === oldT) { d.ticker = newT; n++; } });
+  const oa = S.assets[oldT];
+  if (oa) { if (!S.assets[newT]) S.assets[newT] = { ...oa, name: oa.name === oldT ? newT : oa.name, ySym: undefined, quoteSym: undefined }; delete S.assets[oldT]; }
+  return n;
 }
-
+function commitImport() {
+  const sel = UI.imp.rows.filter(r => r.sel); let t0 = Date.now(), nNew = 0, nFix = 0; const renames = new Map();
+  for (const r of sel) {
+    const ticker = r.ticker.toUpperCase();
+    if (!(r.st === 'fix' && r.matchId)) TF.ensureAsset(S, { ticker, name: r.name, isin: r.isin });
+    if (r.st === 'fix' && r.matchId) {
+      if (r.kind === 'div') {
+        const d = S.div.find(x => x.id === r.matchId); if (!d) continue;
+        if (d.ticker !== ticker) renames.set(d.ticker, ticker);
+        Object.assign(d, { date: r.date, gross: r.gross, taxForeign: r.taxForeign || 0, taxPT: r.taxPT || 0, broker: r.broker || d.broker });
+      } else {
+        const t = S.tx.find(x => x.id === r.matchId); if (!t) continue;
+        if (t.ticker !== ticker) renames.set(t.ticker, ticker);
+        Object.assign(t, { date: r.date, qty: r.qty, price: r.price, priceOrig: r.priceOrig ?? r.price, currency: r.currency || 'EUR', fx: r.fx ?? null, fees: r.fees || 0, broker: r.broker || t.broker, src: 'reconciliado' });
+      }
+      nFix++;
+    } else {
+      if (r.kind === 'div') S.div.push({ id: uid(), created: t0++, date: r.date, ticker, gross: r.gross, taxForeign: r.taxForeign || 0, taxPT: r.taxPT || 0, broker: r.broker });
+      else S.tx.push({ id: uid(), created: t0++, type: r.kind, ticker, date: r.date, qty: r.qty, price: r.price, priceOrig: r.priceOrig ?? r.price, currency: r.currency || 'EUR', fx: r.fx ?? null, fees: r.fees || 0, broker: r.broker, src: 'import' });
+      nNew++;
+    }
+  }
+  const renamed = [...renames].map(([o, n]) => `${o} → ${n} (${renameTicker(o, n)})`);
+  sel.forEach(r => TF.ensureAsset(S, { ticker: r.ticker.toUpperCase(), name: r.name, isin: r.isin }));
+  save(); UI.imp = null;
+  toast([nFix ? `${nFix} corrigida(s)` : '', nNew ? `${nNew} nova(s)` : '', renamed.length ? 'ticker corrigido: ' + renamed.join(', ') : ''].filter(Boolean).join(' · ') || 'Nada a alterar');
+  go('portfolio');
+}
 function download(name, text, type) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
