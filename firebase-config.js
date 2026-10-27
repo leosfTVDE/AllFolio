@@ -1,4 +1,4 @@
-// TaxFolio – configuração do Firebase (projeto taxfolio-cd926)
+// AllFolio.pt – configuração do Firebase (projeto taxfolio-cd926)
 window.TAXFOLIO_FIREBASE = {
   apiKey: "AIzaSyDCrTwPrfyHwK9zp4UlXv_9Lf3wIesnmE0",
   authDomain: "taxfolio-cd926.firebaseapp.com",
