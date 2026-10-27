@@ -9,4 +9,4 @@ window.TAXFOLIO_FIREBASE = {
 };
 
 // Botão "Apoiar" (donativos). Cole aqui o link (ex.: Ko-fi, Buy Me a Coffee, PayPal). Vazio = botão escondido.
-window.TAXFOLIO_SUPPORT_URL = "https://ko-fi.com/taxfolio";
+window.TAXFOLIO_SUPPORT_URL = "https://ko-fi.com/allfolio";
