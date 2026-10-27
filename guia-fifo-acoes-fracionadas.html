@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mais-valias com FIFO e ações fracionadas: exemplo passo a passo – AllFolio.pt</title>
+<meta name="description" content="Como calcular as mais-valias pelo método FIFO quando compra o mesmo ETF várias vezes e em frações, com um exemplo completo e as linhas a declarar no IRS.">
+<link rel="canonical" href="https://allfolio.pt/guia-fifo-acoes-fracionadas">
+<meta name="theme-color" content="#0A2A66">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="pt_PT">
+<meta property="og:site_name" content="AllFolio.pt">
+<meta property="og:title" content="Mais-valias com FIFO e ações fracionadas: exemplo passo a passo – AllFolio.pt">
+<meta property="og:description" content="Como calcular as mais-valias pelo método FIFO quando compra o mesmo ETF várias vezes e em frações, com um exemplo completo e as linhas a declarar no IRS.">
+<meta property="og:url" content="https://allfolio.pt/guia-fifo-acoes-fracionadas">
+<meta property="og:image" content="https://allfolio.pt/icon-512.png">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Mais-valias com FIFO e ações fracionadas: exemplo passo a passo", "description": "Como calcular as mais-valias pelo método FIFO quando compra o mesmo ETF várias vezes e em frações, com um exemplo completo e as linhas a declarar no IRS.", "inLanguage": "pt-PT", "datePublished": "2026-10-27", "dateModified": "2026-10-27", "author": {"@type": "Organization", "name": "AllFolio.pt"}, "publisher": {"@type": "Organization", "name": "AllFolio.pt", "logo": {"@type": "ImageObject", "url": "https://allfolio.pt/icon-512.png"}}, "mainEntityOfPage": "https://allfolio.pt/guia-fifo-acoes-fracionadas"}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Início", "item": "https://allfolio.pt/"}, {"@type": "ListItem", "position": 2, "name": "Guias", "item": "https://allfolio.pt/guias"}, {"@type": "ListItem", "position": 3, "name": "FIFO e frações", "item": "https://allfolio.pt/guia-fifo-acoes-fracionadas"}]}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html{scroll-padding-top:80px}
+  body{margin:0;font-family:Manrope,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0A2A66;background:#F4F7FC;-webkit-font-smoothing:antialiased}
+  a{color:#1D4ED8}a:hover{color:#0A2A66}
+  :focus-visible{outline:3px solid #5B8DEF;outline-offset:2px;border-radius:8px}
+  header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.97);border-bottom:1px solid #DCE7F8;padding-top:env(safe-area-inset-top,0px)}
+  .bar{max-width:820px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:#0A2A66;font-weight:800;font-size:19px;margin-right:auto}
+  .brand small{font-size:inherit;font-weight:600;color:#475569}
+  .nav a{font-weight:600;font-size:15px;text-decoration:none;color:#334155;margin-left:14px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 20px;border-radius:14px;font-weight:700;text-decoration:none;background:#1D4ED8;color:#fff}
+  .btn:hover{background:#1A3FAE;color:#fff}
+  main{max-width:760px;margin:0 auto;padding:28px 20px 56px}
+  .crumbs{font-size:13px;color:#475569;margin:0 0 10px}.crumbs a{color:#475569}
+  h1{font-size:clamp(28px,6vw,40px);line-height:1.15;margin:0;letter-spacing:-.02em}
+  .meta{color:#475569;font-size:14px;margin:10px 0 0}
+  h2{font-size:23px;margin:34px 0 8px;letter-spacing:-.01em}
+  h3{font-size:18px;margin:22px 0 6px}
+  p,li{font-size:17px;line-height:1.75;color:#1E293B}
+  ul,ol{padding-left:22px}
+  .summary{background:#E6EEFC;border:1px solid #CFDDF8;border-radius:18px;padding:16px 20px;margin:22px 0 6px}
+  .summary p,.summary li{color:#0A2A66;margin:6px 0}
+  .note{background:#FFF7E6;border:1px solid #F5DDAE;border-radius:16px;padding:14px 18px;margin:18px 0}
+  .note p{margin:0;color:#5C3D04;font-size:16px}
+  .tbl{overflow-x:auto;border:1px solid #DCE7F8;border-radius:14px;background:#fff;margin:14px 0}
+  table{width:100%;border-collapse:collapse;font-size:15px;min-width:520px}
+  caption{text-align:left;padding:12px 14px 4px;font-weight:800}
+  th{background:#EEF3FB;color:#1A3FAE;padding:9px 12px;text-align:right;font-size:14px}
+  td{padding:10px 12px;border-top:1px solid #E6ECF5;text-align:right;font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  .cta{background:#0A2A66;color:#fff;border-radius:22px;padding:24px;margin:36px 0 10px}
+  .cta h2{color:#fff;margin:0 0 6px;font-size:22px}.cta p{color:#DCE7F8;margin:0 0 16px}
+  .cta .btn{background:#fff;color:#0A2A66}
+  .cards{display:grid;gap:14px;margin-top:20px}
+  .card{display:block;background:#fff;border:1px solid #DCE7F8;border-radius:18px;padding:18px 20px;text-decoration:none}
+  .card h2{margin:0 0 6px;font-size:20px;color:#0A2A66}.card p{margin:0;font-size:16px;color:#334155}
+  .card span{display:inline-block;margin-top:10px;font-weight:700;color:#1D4ED8}
+  .disc{font-size:14px;color:#475569;border-top:1px solid #DCE7F8;margin-top:30px;padding-top:14px}
+  footer{border-top:1px solid #DCE7F8;background:#fff;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .foot{max-width:820px;margin:0 auto;padding:20px;display:flex;flex-wrap:wrap;gap:10px 20px;font-size:14px}
+  .foot a{color:#475569}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <a class="brand" href="./"><svg width="32" height="32" viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="30" width="8" height="12" rx="2" fill="#0A2A66"/><rect x="19" y="24" width="8" height="18" rx="2" fill="#0A2A66"/><rect x="30" y="18" width="8" height="24" rx="2" fill="#0A2A66"/><path d="M6 23 L42 7" fill="none" stroke="#5B8DEF" stroke-width="3.4" stroke-linecap="round"/><path d="M34.3 4.8 L42 7 L38.5 14.2" fill="none" stroke="#5B8DEF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><text x="3" y="15" font-size="14" font-weight="800" fill="#0F9D6E" font-family="system-ui, sans-serif">$</text></svg><span>AllFolio<small>.pt</small></span></a>
+  <nav class="nav" aria-label="Principal"><a href="guias">Guias</a><a href="app">Abrir a app</a></nav>
+</div></header>
+<main>
+<p class="crumbs"><a href="./">Início</a> › <a href="guias">Guias</a> › FIFO e frações</p>
+<h1>Mais-valias com FIFO e ações fracionadas: exemplo passo a passo</h1>
+<p class="meta">Atualizado em 27 de outubro de 2026 · 6 min de leitura</p>
+
+<div class="summary">
+  <p><strong>Em resumo</strong></p>
+  <ul>
+    <li>Quando vende parte de um ativo que comprou várias vezes, considera-se que vendeu <strong>primeiro o que comprou primeiro</strong> (FIFO).</li>
+    <li>Uma venda pode usar várias compras, e cada uma dá uma <strong>linha própria</strong> na declaração.</li>
+    <li>As frações seguem exatamente a mesma regra, casa decimal a casa decimal.</li>
+  </ul>
+</div>
+
+<h2>O que diz a lei</h2>
+<p>O Código do IRS (artigo 43.º, n.º 6, alínea d) determina que, tratando-se de valores mobiliários da mesma natureza e que confiram idênticos direitos, os alienados são os <strong>adquiridos há mais tempo</strong>. Na prática, é o método FIFO: <em>first in, first out</em>.</p>
+<p>Não pode escolher vender as unidades mais caras para mostrar menos ganho, nem usar o preço médio que a corretora mostra na app. O preço médio serve para acompanhar a carteira, não para o IRS.</p>
+
+<h2>O exemplo</h2>
+<p>A Ana investe todos os meses no mesmo ETF e compra frações. Em 2025 fez estas compras:</p>
+<div class="tbl"><table>
+  <caption>Compras</caption>
+  <thead><tr><th scope="col">Data</th><th scope="col">Quantidade</th><th scope="col">Preço</th><th scope="col">Total</th></tr></thead>
+  <tbody>
+    <tr><td>10/01/2025</td><td>2,50</td><td>80,00 €</td><td>200,00 €</td></tr>
+    <tr><td>15/03/2025</td><td>1,25</td><td>88,00 €</td><td>110,00 €</td></tr>
+    <tr><td>02/06/2025</td><td>0,75</td><td>92,00 €</td><td>69,00 €</td></tr>
+  </tbody>
+</table></div>
+<p>Em 20/09/2025 vendeu <strong>3,00 unidades a 95,00 €</strong>, ou seja 285,00 €, e pagou 1,00 € de comissão.</p>
+
+<h2>Passo 1: que compras foram vendidas?</h2>
+<p>Pelo FIFO, as 3,00 unidades saem das compras mais antigas:</p>
+<ol>
+  <li><strong>2,50</strong> unidades da compra de 10/01 (esgota esta compra);</li>
+  <li><strong>0,50</strong> unidades da compra de 15/03 (que fica com 0,75).</li>
+</ol>
+<p>A compra de 02/06 não é tocada.</p>
+
+<h2>Passo 2: valor de aquisição de cada parte</h2>
+<ul>
+  <li>Parte 1: 2,50 × 80,00 € = <strong>200,00 €</strong></li>
+  <li>Parte 2: 0,50 × 88,00 € = <strong>44,00 €</strong></li>
+</ul>
+
+<h2>Passo 3: dividir a venda e as despesas</h2>
+<p>O valor da venda e a comissão dividem-se na mesma proporção das unidades:</p>
+<ul>
+  <li>Parte 1: 2,50 × 95,00 € = <strong>237,50 €</strong> de venda e 1,00 € × 2,50/3,00 = <strong>0,83 €</strong> de despesas;</li>
+  <li>Parte 2: 0,50 × 95,00 € = <strong>47,50 €</strong> de venda e 1,00 € × 0,50/3,00 = <strong>0,17 €</strong> de despesas.</li>
+</ul>
+
+<h2>Passo 4: as linhas a declarar</h2>
+<div class="tbl"><table>
+  <caption>O que vai para o quadro de mais-valias</caption>
+  <thead><tr><th scope="col">Linha</th><th scope="col">Realização</th><th scope="col">Aquisição</th><th scope="col">Despesas</th><th scope="col">Resultado</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>20/09/2025 · 237,50 €</td><td>10/01/2025 · 200,00 €</td><td>0,83 €</td><td>+36,67 €</td></tr>
+    <tr><td>2</td><td>20/09/2025 · 47,50 €</td><td>15/03/2025 · 44,00 €</td><td>0,17 €</td><td>+3,33 €</td></tr>
+  </tbody>
+</table></div>
+<p>A mais-valia total é de <strong>40,00 €</strong>. Se a Ana não englobar e não tiver outras vendas no ano, paga 28%: <strong>11,20 €</strong> de imposto.</p>
+<p>Na carteira continuam 0,75 unidades compradas a 88,00 € e 0,75 a 92,00 €. Na próxima venda, o FIFO começa pelas de 15/03.</p>
+
+<h2>E se a conta for em dólares?</h2>
+<p>Cada valor converte-se para euros com o câmbio da data da respetiva operação: a compra com o câmbio do dia da compra e a venda com o câmbio do dia da venda. Por isso pode haver ganho ou perda só por causa do câmbio, mesmo que o preço em dólares não tenha mudado.</p>
+
+<h2>Cuidados com as frações</h2>
+<ul>
+  <li><strong>Não arredonde</strong> as quantidades: use todas as casas decimais que a corretora mostra.</li>
+  <li>Em algumas corretoras, as frações são um <strong>direito sobre a ação</strong> e não a ação em si. O tipo de título e o código podem mudar: confirme no relatório anual da corretora.</li>
+  <li>Faça o FIFO <strong>por corretora</strong>: compras na XTB e na Trading 212 do mesmo ETF não se misturam.</li>
+</ul>
+<section class="cta" aria-labelledby="cta-t">
+  <h2 id="cta-t">Faça isto em poucos minutos</h2>
+  <p>Importe o extrato da XTB, DEGIRO, Trading 212 ou Revolut e o AllFolio aplica o FIFO, converte o câmbio e prepara as tabelas dos Anexos G e J. Gratuito.</p>
+  <a class="btn" href="app">Experimentar o AllFolio grátis</a>
+</section>
+<p class="disc">Este guia é informação geral e foi atualizado em 27 de outubro de 2026. Não substitui o aconselhamento de um contabilista certificado nem as instruções oficiais da Autoridade Tributária, que podem mudar de ano para ano.</p>
+</main>
+<footer><div class="foot">
+  <a href="./">Início</a><a href="guias">Guias</a><a href="privacidade.html">Política de privacidade</a><a href="termos.html">Termos de utilização</a><a href="mailto:taxfolio.suporte@gmail.com">Contacto</a>
+</div></footer>
+</body>
+</html>
