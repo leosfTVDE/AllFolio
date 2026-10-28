@@ -785,7 +785,7 @@ async function refreshPricesWorker() {
   UI.job = { done: 0, total: 1, cur: 'todos os ativos', what: 'preços' }; render();
   const rates = await getFx();
   let data = null;
-  const hb = benchInfo(homeBenchId()).ysym, syms = [...new Set([...todo.map(x => x.y), ...(hb ? [hb] : [])])];
+  const hb = homeBenchOn() ? benchInfo(homeBenchId()).ysym : '', syms = [...new Set([...todo.map(x => x.y), ...(hb ? [hb] : [])])];
   try { const r = await fetch(`${workerBase()}/quote?symbols=${encodeURIComponent(syms.join(','))}`); if (r.ok) data = await r.json(); } catch (e) {}
   if (data && hb) storeBenchQuote(hb, data[hb]);
   if (!data) { UI.job = null; render(); return showPriceReport(['Não foi possível contactar o servidor de preços. Confirme o endereço em Configurações → Preços e câmbio.'], [], 0); }
@@ -810,7 +810,7 @@ async function refreshHistoryWorker() {
   const first = S.tx.map(t => t.date).sort()[0], from = addDays(first, -21);
   const yrs = (Date.now() - Date.parse(first)) / (365 * 864e5), range = yrs < 0.9 ? '1y' : yrs < 1.9 ? '2y' : yrs < 4.9 ? '5y' : '10y';
   const want = new Set();
-  [...benchSel(), homeBenchId()].forEach(id => { const b = benchInfo(id); if (b.ysym) want.add(b.ysym); });
+  [...benchSel(), ...(homeBenchOn() ? [homeBenchId()] : [])].forEach(id => { const b = benchInfo(id); if (b.ysym) want.add(b.ysym); });
   [...new Set(S.tx.map(t => t.ticker))].forEach(tk => { const y = ySymOf(tk); if (y) want.add(y); });
   const todo = [...want].filter(y => { const h = S.hist['Y:' + y]; return !h || Date.now() - h.at > 6 * 3600e3 || h.from > from; });
   UI.job = { done: 0, total: Math.max(1, todo.length), cur: 'câmbio', what: 'histórico' }; render();
@@ -918,6 +918,7 @@ const LOGO_SVG = (s = 34, dark = false) => `<svg width="${s}" height="${s}" view
 const HP = { d: { l: '1 dia', w: 'no último dia', days: 1 }, w: { l: 'Semana', w: 'esta semana', days: 7 }, m: { l: 'Mês', w: 'este mês', days: 30 }, y: { l: 'Ano', w: 'num ano', days: 365 } };
 const homePer = () => HP[S.settings.homePer] ? S.settings.homePer : 'w';
 const homeBenchId = () => S.settings.homeBench || 'SPY';
+const homeBenchOn = () => !S.settings.homeBenchOff;
 const fmtPct = v => (v >= 0 ? '+' : '−') + fmtN(Math.abs(v), 1) + '%';
 function storeBenchQuote(ysym, d) {
   if (!ysym || !d || d.price == null) return;
@@ -973,7 +974,7 @@ async function ensureHomeData() {
   homeLoadAt = Date.now(); S.hist ||= {};
   const first = S.tx.map(t => t.date).sort()[0], from = addDays(first, -21);
   const yrs = (Date.now() - Date.parse(first)) / (365 * 864e5), range = yrs < 0.9 ? '1y' : yrs < 1.9 ? '2y' : yrs < 4.9 ? '5y' : '10y';
-  const hb = benchInfo(homeBenchId()).ysym, want = new Set(pos.map(p => ySymOf(p.ticker)).filter(Boolean)); if (hb) want.add(hb);
+  const hb = homeBenchOn() ? benchInfo(homeBenchId()).ysym : '', want = new Set(pos.map(p => ySymOf(p.ticker)).filter(Boolean)); if (hb) want.add(hb);
   const todo = [...want].filter(y => { const h = S.hist['Y:' + y]; return !h || Date.now() - h.at > 12 * 3600e3 || h.from > from; });
   let changed = false;
   try {
@@ -988,9 +989,9 @@ async function ensureHomeData() {
   if (changed) { save(); if (UI.tab === 'home') renderHome(); }
 }
 function openHomeBench() {
-  const cur = homeBenchId(), ids = [...BENCH.map(b => b.id), ...benchCustom()];
+  const cur = homeBenchOn() ? homeBenchId() : '__off', ids = ['__off', ...BENCH.map(b => b.id), ...benchCustom()];
   openModal(`${modalHead('Comparar com')}
-  <div class="divide-y divide-brand-50">${ids.map(id => `<button data-hbsel="${esc(id)}" class="w-full text-left py-3 flex items-center justify-between font-semibold">${esc(benchInfo(id).label)}${id === cur ? '<span class="text-brand-600">✓</span>' : ''}</button>`).join('')}</div>
+  <div class="divide-y divide-brand-50">${ids.map(id => `<button data-hbsel="${esc(id)}" class="w-full text-left py-3 flex items-center justify-between font-semibold ${id === '__off' ? 'text-slate-500' : ''}">${id === '__off' ? 'Sem comparação (esconder)' : esc(benchInfo(id).label)}${id === cur ? '<span class="text-brand-600">✓</span>' : ''}</button>`).join('')}</div>
   <button data-benchadd data-home="1" class="mt-3 w-full h-11 rounded-2xl border border-dashed border-brand-200 text-brand-700 font-bold text-sm">+ Outro índice ou ETF</button>
   <p class="text-[11px] text-slate-500 mt-3">As variações são calculadas em euros, com o câmbio do BCE, para a comparação ser justa.</p>`);
 }
@@ -1019,11 +1020,11 @@ function renderHome() {
   const goalTile = gd ? (gd.port ? [`Meta ${gd.g.port.month.slice(0, 4)}`, `${fmtN(gd.port.pct, 0)}%`] : gd.monthly ? ['Aporte do mês', `${fmtN(gd.monthly.now / gd.g.monthly.amount * 100, 0)}%`] : gd.div ? ['Dividendos/mês', `${fmtN(gd.div.pct, 0)}%`] : ['Metas', 'Ver']) : ['Metas', 'Definir'];
   const tile = (attrs, label, value, cls = '') => `<button ${attrs} class="text-left rounded-2xl bg-white border border-brand-100 p-3"><div class="text-xs font-semibold text-slate-500">${label}</div><div class="num text-lg font-extrabold ${cls}">${value}</div></button>`;
 
-  const per = homePer(), hv = pos.length ? homeVariation(per) : null, hbv = hv?.ok ? benchVariation(per, homeBenchId(), hv.grid) : null;
+  const per = homePer(), hv = pos.length ? homeVariation(per) : null, hbv = hv?.ok && homeBenchOn() ? benchVariation(per, homeBenchId(), hv.grid) : null;
   $('#view-home').innerHTML = `
   <div class="rounded-[28px] text-white p-5 relative overflow-hidden" style="background:linear-gradient(135deg,#1D4ED8,#0A2A66)">
     <div class="flex items-start justify-between gap-2"><div class="text-sm text-brand-100 font-medium">Património total</div>
-      ${pos.length ? `<button data-hbench class="shrink-0 h-8 px-3 rounded-full bg-white/15 text-xs font-bold">vs ${esc(benchInfo(homeBenchId()).label)} ▾</button>` : ''}</div>
+      ${pos.length ? `<button data-hbench class="shrink-0 h-8 px-3 rounded-full bg-white/15 text-xs font-bold">${homeBenchOn() ? `vs ${esc(benchInfo(homeBenchId()).label)} ▾` : 'Comparar ▾'}</button>` : ''}</div>
     <div class="num text-[36px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(hasCash ? grand : total)}</div>
     ${pos.length ? homeVarHTML(hv, hbv, per, priced.length, res, invested) : ''}
     ${hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3 relative">
@@ -1034,6 +1035,8 @@ function renderHome() {
     : `<div class="text-xs text-brand-100 num mt-2">Investido ${fmtEUR(invested)}</div>
     <div class="text-[11px] text-brand-200 mt-1">${pos.length ? (priced.length ? `${priced.length} de ${pos.length} posições com preço${lastAt ? ' · ' + ago(lastAt) : ''}` : 'Sem preços atuais: toque em Preços') : 'Sem posições abertas'}</div>`}
   </div>
+
+  ${pos.length ? `<div class="grid grid-cols-2 gap-2 mt-3">${goalTileHTML(gd)}${divsTileHTML()}</div>` : ''}
 
   <div class="grid grid-cols-4 gap-2 mt-4">
     ${qa(ic('<path d="M12 5v14M5 12h14"/>'), 'Nova', 'data-add="buy"', true)}
@@ -1062,11 +1065,7 @@ function renderHome() {
         <div class="flex justify-between py-2.5"><span>Saldo de mais-valias</span><b class="${sgn(rep.totals.saldo)}">${plus(rep.totals.saldo)}</b></div>
         <div class="flex justify-between py-2.5"><span>Dividendos (bruto)</span><b>${fmtEUR(divYear)}</b></div>
         <div class="flex justify-between py-2.5"><span>IRS estimado</span><b class="text-amber-700">${fmtEUR(rep.totals.total)}</b></div></div></div>`, 'mt-6')}
-    <div class="grid ${hasCash ? 'grid-cols-1' : 'grid-cols-2'} gap-2 mt-3">
-      ${hasCash ? '' : tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cs.saldo), cs.saldo < 0 ? 'text-loss' : '')}
-      ${tile(gd ? 'data-go="goals"' : 'data-goalcfg', goalTile[0], goalTile[1])}
-    </div>
-    ${divsCardHTML()}`}
+    ${hasCash ? '' : `<div class="grid grid-cols-1 gap-2 mt-3">${tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cs.saldo), cs.saldo < 0 ? 'text-loss' : '')}</div>`}`}
 
   ${supportCardHTML()}
   <div class="mt-4 rounded-2xl bg-brand-50 border border-brand-100 px-4 py-3 flex items-center gap-3 text-sm">
@@ -1500,6 +1499,26 @@ function openDivOther(key) {
   $('#dvForm').onsubmit = ev => { ev.preventDefault(); const n = TF.num($('#dvNet').value); if (!(n > 0)) return toast('Indique o valor recebido'); confirmDividend(key, n); };
 }
 
+const fmtEUR0 = v => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v || 0);
+function goalTileHTML(gd) {
+  const bar = p => `<div class="h-1.5 rounded-full bg-brand-50 mt-2 overflow-hidden"><div class="h-full rounded-full bg-brand-600" style="width:${Math.max(2, Math.min(100, p)).toFixed(1)}%"></div></div>`;
+  let label = 'Metas', value = 'Definir', sub = 'objetivos e aportes ›', pct = null;
+  if (gd?.port) { label = `Meta ${gd.g.port.month.slice(0, 4)}`; pct = gd.port.pct; value = `${fmtN(pct, 0)}%`; sub = `${fmtEUR0(gd.total)} de ${fmtEUR0(gd.g.port.target)}`; }
+  else if (gd?.monthly) { label = 'Aporte do mês'; pct = gd.monthly.now / gd.g.monthly.amount * 100; value = `${fmtN(pct, 0)}%`; sub = `${fmtEUR0(gd.monthly.now)} de ${fmtEUR0(gd.g.monthly.amount)}`; }
+  else if (gd?.div) { label = 'Dividendos/mês'; pct = gd.div.pct; value = `${fmtN(pct, 0)}%`; sub = 'da meta mensal'; }
+  else if (gd) { value = 'Ver'; sub = 'as suas metas ›'; }
+  return `<button ${gd ? 'data-go="goals"' : 'data-goalcfg'} class="text-left rounded-2xl bg-white border border-brand-100 p-3 min-w-0">
+    <div class="text-xs font-semibold text-slate-500 truncate">${label}</div><div class="num text-xl font-extrabold">${value}</div>
+    ${pct != null ? bar(pct) : ''}<div class="text-[11px] text-slate-500 mt-1.5 num truncate">${sub}</div></button>`;
+}
+function divsTileHTML() {
+  const list = forecastList(), t0 = today(), due = list.filter(x => x.pay <= t0), fut = list.filter(x => x.pay >= t0);
+  const loaded = S.divCal && Object.keys(S.divCal).length;
+  return `<button data-go="divs" class="text-left rounded-2xl border p-3 min-w-0 ${due.length ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-brand-100'}">
+    <div class="text-xs font-semibold truncate ${due.length ? 'text-emerald-800' : 'text-slate-500'}">Dividendos previstos</div>
+    <div class="num text-xl font-extrabold ${due.length ? 'text-emerald-800' : ''}">${due.length ? due.length + ' a confirmar' : loaded ? fmtEUR(fut.reduce((s, x) => s + x.net, 0)) : 'Ver'}</div>
+    <div class="text-[11px] mt-1.5 truncate ${due.length ? 'text-emerald-800' : 'text-slate-500'}">${due.length ? 'toque para confirmar ›' : loaded ? 'próximos 90 dias ›' : 'quanto vai receber ›'}</div></button>`;
+}
 function divsCardHTML() {
   const list = forecastList(), t0 = today(), due = list.filter(x => x.pay <= t0), fut = list.filter(x => x.pay >= t0);
   if (!TF.positions(TF.fifo(S.tx).lots, S.assets).length) return '';
@@ -1755,7 +1774,7 @@ function openBenchAdd() {
     let id = $('#bTk').value.trim().toUpperCase().replace(/\s+/g, ''); if (!id) return toast('Escreva um ticker');
     const b = benchInfo(id); if (!b.hkey) return toast('Esta bolsa não está coberta pela fonte de dados');
     if (!BENCH.some(x => x.id === id) && !cust.includes(id)) cust.push(id);
-    if (UI.benchHome) { UI.benchHome = false; S.settings.homeBench = id; homeLoadAt = 0; save(); closeModal(); render(); return; }
+    if (UI.benchHome) { UI.benchHome = false; S.settings.homeBench = id; S.settings.homeBenchOff = false; homeLoadAt = 0; save(); closeModal(); render(); return; }
     const sel = benchSel(); if (!sel.includes(id)) { if (sel.length >= 3) sel.shift(); sel.push(id); }
     save(); closeModal(); render(); if (!S.hist?.[b.hkey]) toast('Toque em Atualizar histórico para carregar ' + b.label);
   };
@@ -2900,7 +2919,7 @@ document.addEventListener('click', e => {
   const d = el.dataset;
   if (d.hper) { S.settings.homePer = d.hper; save(); renderHome(); return; }
   if ('hbench' in d) { openHomeBench(); return; }
-  if (d.hbsel) { S.settings.homeBench = d.hbsel; homeLoadAt = 0; save(); closeModal(); renderHome(); return; }
+  if (d.hbsel) { if (d.hbsel === '__off') S.settings.homeBenchOff = true; else { S.settings.homeBench = d.hbsel; S.settings.homeBenchOff = false; homeLoadAt = 0; } save(); closeModal(); renderHome(); return; }
   if ('benchadd' in d && d.home) { UI.benchHome = true; }
   if ('supporthide' in d) { try { localStorage.setItem(KEY + '.supportHide', String(Date.now() + 30 * 864e5)); } catch (e) {} renderHome(); toast('Escondido durante 30 dias'); }
   else if ('signout' in d) cloudSignOut();
