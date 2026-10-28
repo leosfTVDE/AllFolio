@@ -36,6 +36,20 @@
    "status": "pub",
    "cta": true,
    "min": 5
+  },
+  {
+   "slug": "acoes-ou-cfds-a-diferenca-que-pode-custar-caro-e-o-que-muda-no-irs",
+   "type": "guia",
+   "title": "Ações ou CFDs? A diferença que pode custar caro (e o que muda no IRS)",
+   "desc": "O que é uma ação, uma ação fracionada e um CFD, porque a alavancagem multiplica perdas, as regras europeias e como cada um se declara no IRS.",
+   "teaser": "Parecem iguais na app da corretora, mas um é seu e o outro é uma aposta com alavancagem. Saiba distinguir.",
+   "tag": "Investir",
+   "date": "2026-10-28",
+   "updated": "",
+   "featured": false,
+   "cta": true,
+   "min": 4,
+   "status": "pub"
   }
  ]
 }
