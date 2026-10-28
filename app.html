@@ -785,7 +785,9 @@ async function refreshPricesWorker() {
   UI.job = { done: 0, total: 1, cur: 'todos os ativos', what: 'preços' }; render();
   const rates = await getFx();
   let data = null;
-  try { const r = await fetch(`${workerBase()}/quote?symbols=${encodeURIComponent(todo.map(x => x.y).join(','))}`); if (r.ok) data = await r.json(); } catch (e) {}
+  const hb = benchInfo(homeBenchId()).ysym, syms = [...new Set([...todo.map(x => x.y), ...(hb ? [hb] : [])])];
+  try { const r = await fetch(`${workerBase()}/quote?symbols=${encodeURIComponent(syms.join(','))}`); if (r.ok) data = await r.json(); } catch (e) {}
+  if (data && hb) storeBenchQuote(hb, data[hb]);
   if (!data) { UI.job = null; render(); return showPriceReport(['Não foi possível contactar o servidor de preços. Confirme o endereço em Configurações → Preços e câmbio.'], [], 0); }
   const errors = []; let ok = 0;
   for (const x of todo) {
@@ -794,7 +796,8 @@ async function refreshPricesWorker() {
     const cur = normCur(d.currency), e = toEURq(d.price, cur, rates);
     if (e == null) { errors.push(`${x.tk}: sem câmbio ${cur}/EUR disponível`); continue; }
     const t = d.time ? d.time * 1000 : Date.now();
-    Object.assign(S.assets[x.tk], { price: e, priceRaw: d.price, priceCur: cur, priceAt: Date.now(), priceTime: t, priceSrc: 'auto', priceDay: new Date(t).toISOString().slice(0, 10) });
+    Object.assign(S.assets[x.tk], { price: e, priceRaw: d.price, priceCur: cur, priceAt: Date.now(), priceTime: t, priceSrc: 'auto', priceDay: new Date(t).toISOString().slice(0, 10),
+      pricePrev: d.prev != null ? toEURq(d.prev, cur, rates) : null });
     ok++;
   }
   UI.job = null; save(); render();
@@ -807,7 +810,7 @@ async function refreshHistoryWorker() {
   const first = S.tx.map(t => t.date).sort()[0], from = addDays(first, -21);
   const yrs = (Date.now() - Date.parse(first)) / (365 * 864e5), range = yrs < 0.9 ? '1y' : yrs < 1.9 ? '2y' : yrs < 4.9 ? '5y' : '10y';
   const want = new Set();
-  benchSel().forEach(id => { const b = benchInfo(id); if (b.ysym) want.add(b.ysym); });
+  [...benchSel(), homeBenchId()].forEach(id => { const b = benchInfo(id); if (b.ysym) want.add(b.ysym); });
   [...new Set(S.tx.map(t => t.ticker))].forEach(tk => { const y = ySymOf(tk); if (y) want.add(y); });
   const todo = [...want].filter(y => { const h = S.hist['Y:' + y]; return !h || Date.now() - h.at > 6 * 3600e3 || h.from > from; });
   UI.job = { done: 0, total: Math.max(1, todo.length), cur: 'câmbio', what: 'histórico' }; render();
@@ -911,6 +914,87 @@ const LOGO_SVG = (s = 34, dark = false) => `<svg width="${s}" height="${s}" view
   <path d="M34.3 4.8 L42 7 L38.5 14.2" fill="none" stroke="${dark ? '#7FA4F5' : '#5B8DEF'}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="3" y="15" font-size="14" font-weight="800" fill="${dark ? '#34D399' : '#0F9D6E'}" font-family="system-ui, sans-serif">$</text></svg>`;
 
+/* ---------- Variação da carteira e comparação no Início ---------- */
+const HP = { d: { l: '1 dia', w: 'no último dia', days: 1 }, w: { l: 'Semana', w: 'esta semana', days: 7 }, m: { l: 'Mês', w: 'este mês', days: 30 }, y: { l: 'Ano', w: 'num ano', days: 365 } };
+const homePer = () => HP[S.settings.homePer] ? S.settings.homePer : 'w';
+const homeBenchId = () => S.settings.homeBench || 'SPY';
+const fmtPct = v => (v >= 0 ? '+' : '−') + fmtN(Math.abs(v), 1) + '%';
+function storeBenchQuote(ysym, d) {
+  if (!ysym || !d || d.price == null) return;
+  S.benchQ = { ...(S.benchQ || {}), [ysym]: { price: d.price, prev: d.prev ?? null, cur: normCur(d.currency), at: Date.now() } };
+}
+function homeVariation(per) {
+  const pos = TF.positions(TF.fifo(S.tx).lots, S.assets), t0 = today(), s = addDays(t0, -HP[per].days);
+  const missing = [], items = [];
+  for (const p of pos) {
+    const a = S.assets[p.ticker] || {}, now = a.price;
+    if (now == null) { missing.push(p.ticker); continue; }
+    const h = useWorker() || histKeyOf(p.ticker) ? S.hist?.[histKeyOf(p.ticker)] : null, cur = h?.cur || quoteOf(p.ticker).cur;
+    const cut = per === 'd' ? (a.priceDay || t0) : s;
+    const startOld = per === 'd' ? a.pricePrev : pxEUR(h, cur, s);
+    const lots = p.lots.map(l => ({ date: l.date, q: l.qty, st: l.date >= cut || (per !== 'd' && l.date > s) ? l.unit : startOld }));
+    if (lots.some(l => l.st == null)) { missing.push(p.ticker); continue; }
+    const base = lots.reduce((x, l) => x + l.q * l.st, 0), gain = lots.reduce((x, l) => x + l.q * (now - l.st), 0);
+    items.push({ tk: p.ticker, lots, h, cur, now, base, gain, pct: base > 0 ? gain / base * 100 : 0 });
+  }
+  const base = items.reduce((x, i) => x + i.base, 0), gain = items.reduce((x, i) => x + i.gain, 0);
+  let grid = [s, t0];
+  if (per !== 'd') { const ds = new Set([s, t0]); items.forEach(i => (i.h?.pts || []).forEach(pt => { if (pt[0] > s && pt[0] < t0) ds.add(pt[0]); })); grid = [...ds].sort(); }
+  const pts = grid.map(t => { let num = 0, den = 0;
+    for (const i of items) { const px = t === t0 ? i.now : per === 'd' ? null : pxEUR(i.h, i.cur, t);
+      for (const l of i.lots) { if (l.date > t && t !== t0) continue; const v = px ?? l.st; num += l.q * (v - l.st); den += l.q * l.st; } }
+    return den > 0 ? num / den * 100 : 0; });
+  const ranked = items.filter(i => i.base > 0).sort((x, y) => y.pct - x.pct);
+  return { ok: items.length > 0 && base > 0, gain, pct: base > 0 ? gain / base * 100 : 0, grid, pts, missing,
+    byTk: Object.fromEntries(items.map(i => [i.tk, i.pct])), best: ranked[0], worst: ranked.length > 1 ? ranked[ranked.length - 1] : null };
+}
+function benchVariation(per, id, grid) {
+  const b = benchInfo(id), h = b.hkey ? S.hist?.[b.hkey] : null, cur = h?.cur || b.cur, t0 = today(), s = grid[0];
+  const q = b.ysym ? S.benchQ?.[b.ysym] : null, qf = q ? fxFactor(t0, q.cur) : null;
+  const now = q && qf != null && Date.now() - q.at < 3 * 864e5 ? q.price * qf : pxEUR(h, cur, t0);
+  const start = per === 'd' ? (q?.prev != null && qf != null ? q.prev * qf : null) : pxEUR(h, cur, s);
+  if (now == null || !start) return { label: b.label, ok: false };
+  const pts = grid.map(t => { const px = t === t0 ? now : per === 'd' ? start : pxEUR(h, cur, t); return px ? (px / start - 1) * 100 : null; });
+  return { label: b.label, ok: true, pct: (now / start - 1) * 100, pts };
+}
+function homeChart(p, bpts) {
+  const all = [0, ...p, ...(bpts || []).filter(v => v != null)], lo = Math.min(...all), hi = Math.max(...all), span = (hi - lo) || 1;
+  const W = 300, H = 84, Y = v => (6 + (H - 12) * (1 - (v - lo) / span)).toFixed(1), X = (k, n) => (n > 1 ? k / (n - 1) * W : 0).toFixed(1);
+  const line = arr => arr.map((v, k) => v == null ? null : `${X(k, arr.length)},${Y(v)}`).filter(Boolean).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" class="mt-3 block" role="img" aria-label="Variação da carteira${bpts ? ' e do índice' : ''}">
+    <line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="rgba(255,255,255,.28)" stroke-dasharray="2 4"/>
+    ${bpts ? `<polyline points="${line(bpts)}" fill="none" stroke="#FCD34D" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+    <polyline points="${line(p)}" fill="none" stroke="#A7F3D0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+let homeLoadAt = 0;
+async function ensureHomeData() {
+  if (!useWorker() || !navigator.onLine || UI.job || Date.now() - homeLoadAt < 30 * 60e3) return;
+  const pos = TF.positions(TF.fifo(S.tx).lots, S.assets); if (!pos.length) return;
+  homeLoadAt = Date.now(); S.hist ||= {};
+  const first = S.tx.map(t => t.date).sort()[0], from = addDays(first, -21);
+  const yrs = (Date.now() - Date.parse(first)) / (365 * 864e5), range = yrs < 0.9 ? '1y' : yrs < 1.9 ? '2y' : yrs < 4.9 ? '5y' : '10y';
+  const hb = benchInfo(homeBenchId()).ysym, want = new Set(pos.map(p => ySymOf(p.ticker)).filter(Boolean)); if (hb) want.add(hb);
+  const todo = [...want].filter(y => { const h = S.hist['Y:' + y]; return !h || Date.now() - h.at > 12 * 3600e3 || h.from > from; });
+  let changed = false;
+  try {
+    if (!S.fxSeries || S.fxSeries.from > from || Date.now() - S.fxSeries.at > 864e5) changed = await fetchFxSeries(from) || changed;
+    await Promise.all(todo.slice(0, 12).map(async y => { try {
+      const r = await fetch(`${workerBase()}/history?symbol=${encodeURIComponent(y)}&range=${range}`), j = r.ok ? await r.json() : null;
+      if (j?.pts?.length) { S.hist['Y:' + y] = { at: Date.now(), cur: normCur(j.currency), from, pts: j.pts.filter(p => p[0] >= from) }; changed = true; } } catch (e) {} }));
+    if (hb && (!S.benchQ?.[hb] || Date.now() - S.benchQ[hb].at > 30 * 60e3)) {
+      const r = await fetch(`${workerBase()}/quote?symbols=${encodeURIComponent(hb)}`), j = r.ok ? await r.json() : null;
+      if (j?.[hb]) { storeBenchQuote(hb, j[hb]); changed = true; } }
+  } catch (e) {}
+  if (changed) { save(); if (UI.tab === 'home') renderHome(); }
+}
+function openHomeBench() {
+  const cur = homeBenchId(), ids = [...BENCH.map(b => b.id), ...benchCustom()];
+  openModal(`${modalHead('Comparar com')}
+  <div class="divide-y divide-brand-50">${ids.map(id => `<button data-hbsel="${esc(id)}" class="w-full text-left py-3 flex items-center justify-between font-semibold">${esc(benchInfo(id).label)}${id === cur ? '<span class="text-brand-600">✓</span>' : ''}</button>`).join('')}</div>
+  <button data-benchadd data-home="1" class="mt-3 w-full h-11 rounded-2xl border border-dashed border-brand-200 text-brand-700 font-bold text-sm">+ Outro índice ou ETF</button>
+  <p class="text-[11px] text-slate-500 mt-3">As variações são calculadas em euros, com o câmbio do BCE, para a comparação ser justa.</p>`);
+}
+
 function sparkline() {
   const cd = compareData(); if (!cd || cd.rows.length < 3) return '';
   const rows = cd.rows.slice(-26), vals = rows.map(r => r.G), lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
@@ -935,12 +1019,13 @@ function renderHome() {
   const goalTile = gd ? (gd.port ? [`Meta ${gd.g.port.month.slice(0, 4)}`, `${fmtN(gd.port.pct, 0)}%`] : gd.monthly ? ['Aporte do mês', `${fmtN(gd.monthly.now / gd.g.monthly.amount * 100, 0)}%`] : gd.div ? ['Dividendos/mês', `${fmtN(gd.div.pct, 0)}%`] : ['Metas', 'Ver']) : ['Metas', 'Definir'];
   const tile = (attrs, label, value, cls = '') => `<button ${attrs} class="text-left rounded-2xl bg-white border border-brand-100 p-3"><div class="text-xs font-semibold text-slate-500">${label}</div><div class="num text-lg font-extrabold ${cls}">${value}</div></button>`;
 
+  const per = homePer(), hv = pos.length ? homeVariation(per) : null, hbv = hv?.ok ? benchVariation(per, homeBenchId(), hv.grid) : null;
   $('#view-home').innerHTML = `
   <div class="rounded-[28px] text-white p-5 relative overflow-hidden" style="background:linear-gradient(135deg,#1D4ED8,#0A2A66)">
-    <div class="text-sm text-brand-100 font-medium">Património total</div>
+    <div class="flex items-start justify-between gap-2"><div class="text-sm text-brand-100 font-medium">Património total</div>
+      ${pos.length ? `<button data-hbench class="shrink-0 h-8 px-3 rounded-full bg-white/15 text-xs font-bold">vs ${esc(benchInfo(homeBenchId()).label)} ▾</button>` : ''}</div>
     <div class="num text-[36px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(hasCash ? grand : total)}</div>
-    ${priced.length ? `<div class="mt-1 text-xs"><span class="num px-2.5 py-1 rounded-full font-bold ${res >= 0 ? 'bg-emerald-400/20 text-emerald-200' : 'bg-rose-400/20 text-rose-200'}">${plus(res)} (${pctStr(res, invested) || '0%'}) nos investimentos</span></div>` : ''}
-    ${sparkline()}
+    ${pos.length ? homeVarHTML(hv, hbv, per, priced.length, res, invested) : ''}
     ${hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3 relative">
       <button data-go="portfolio" class="text-left rounded-xl bg-white/10 px-3 py-2"><div class="text-[11px] text-brand-100">Investimentos</div><div class="num font-bold">${fmtEUR(total)}</div></button>
       <button data-go="cash" class="text-left rounded-xl bg-white/10 px-3 py-2"><div class="text-[11px] text-brand-100">Caixa · ${esc(bname(csH.cfg.place))}</div><div class="num font-bold">${fmtEUR(cashV)}</div></button></div>
@@ -968,26 +1053,43 @@ function renderHome() {
       <p class="text-sm text-slate-600 mt-1 mb-4">Importe o extrato da XTB, DEGIRO, Revolut ou Trading 212, ou registe a primeira compra à mão.</p>
       <div class="flex flex-wrap justify-center gap-2">${btn('Importar extrato', 'data-go="import"')}${btn('Registar compra', 'data-add="buy"', 'ghost')}${btn('Ver com dados de exemplo', 'data-demo', 'ghost')}</div></div>`, 'mt-1')
       + (hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3">${tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cashV), cashV < 0 ? 'text-loss' : '')}${tile(gd ? 'data-go="goals"' : 'data-goalcfg', goalTile[0], goalTile[1])}</div>` : '')
-    : `${card(`<div class="p-4">
+    : `<div class="flex items-center justify-between mt-3 mb-2"><h2 class="font-extrabold text-lg">Maiores posições</h2>
+      <span class="flex gap-3"><button data-charts class="text-sm font-bold text-brand-600">Gráficos</button><button data-go="portfolio" class="text-sm font-bold text-brand-600">Ver carteira</button></span></div>
+    ${card(pos.slice(0, 5).map(p => posRow(p, hv?.ok ? (hv.byTk[p.ticker] ?? null) : undefined)).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}
+    ${card(`<div class="p-4">
       <div class="flex items-center justify-between mb-1"><h2 class="font-extrabold">Resumo de ${yr}</h2><button data-tab="tax" class="text-sm font-bold text-brand-600">IRS</button></div>
       <div class="divide-y divide-brand-50 text-sm num">
         <div class="flex justify-between py-2.5"><span>Saldo de mais-valias</span><b class="${sgn(rep.totals.saldo)}">${plus(rep.totals.saldo)}</b></div>
         <div class="flex justify-between py-2.5"><span>Dividendos (bruto)</span><b>${fmtEUR(divYear)}</b></div>
-        <div class="flex justify-between py-2.5"><span>IRS estimado</span><b class="text-amber-700">${fmtEUR(rep.totals.total)}</b></div></div></div>`, 'mt-1')}
-    <div class="grid grid-cols-2 gap-2 mt-3">
-      ${tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cs.saldo), cs.saldo < 0 ? 'text-loss' : '')}
+        <div class="flex justify-between py-2.5"><span>IRS estimado</span><b class="text-amber-700">${fmtEUR(rep.totals.total)}</b></div></div></div>`, 'mt-6')}
+    <div class="grid ${hasCash ? 'grid-cols-1' : 'grid-cols-2'} gap-2 mt-3">
+      ${hasCash ? '' : tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cs.saldo), cs.saldo < 0 ? 'text-loss' : '')}
       ${tile(gd ? 'data-go="goals"' : 'data-goalcfg', goalTile[0], goalTile[1])}
     </div>
-    ${divsCardHTML()}
-    <div class="flex items-center justify-between mt-6 mb-2"><h2 class="font-extrabold text-lg">Maiores posições</h2>
-      <span class="flex gap-3"><button data-charts class="text-sm font-bold text-brand-600">Gráficos</button><button data-go="portfolio" class="text-sm font-bold text-brand-600">Ver carteira</button></span></div>
-    ${card(pos.slice(0, 5).map(posRow).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}`}
+    ${divsCardHTML()}`}
 
   ${supportCardHTML()}
   <div class="mt-4 rounded-2xl bg-brand-50 border border-brand-100 px-4 py-3 flex items-center gap-3 text-sm">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="shrink-0"><circle cx="12" cy="12" r="9" stroke="#B9CEF1" stroke-width="3"/><path d="M12 3a9 9 0 0 1 8.5 6" stroke="#1D4ED8" stroke-width="3" stroke-linecap="round"/></svg>
     <span><b>Suporte total a ações fracionadas</b> <span class="text-slate-600">· até 8 casas decimais, FIFO por fração</span></span></div>
-  <p class="text-[11px] text-slate-400 mt-4 leading-relaxed">Os dados ficam só neste dispositivo. As estimativas não substituem a validação no Portal das Finanças nem o aconselhamento de um contabilista certificado.</p>`;
+  <p class="text-[11px] text-slate-400 mt-4 leading-relaxed">As estimativas não substituem a validação no Portal das Finanças nem o aconselhamento de um contabilista certificado.</p>`;
+  if (pos.length) setTimeout(ensureHomeData, 0);
+}
+function homeVarHTML(hv, hbv, per, nPriced, res, invested) {
+  const col = v => v >= 0 ? 'text-emerald-200' : 'text-rose-200';
+  let top;
+  if (hv.ok) top = `<div class="num text-sm font-bold mt-1 ${col(hv.gain)}">${plus(hv.gain)} (${fmtPct(hv.pct)}) ${HP[per].w}</div>`;
+  else top = `<div class="text-xs text-brand-100 mt-1">${per === 'd' ? 'Toque em Preços para ver a variação do último dia.' : useWorker() ? 'A carregar o histórico de preços…' : 'Toque em Preços e depois em Gráficos → Atualizar histórico.'}</div>`;
+  const chart = hv.ok ? homeChart(hv.pts, hbv?.ok ? hbv.pts : null) : '';
+  const legend = hv.ok ? `<div class="flex flex-wrap gap-x-4 gap-y-1 text-xs mt-1 num">
+      <span><i class="inline-block w-3.5 h-[3px] rounded align-middle" style="background:#A7F3D0"></i> Carteira <b>${fmtPct(hv.pct)}</b></span>
+      ${hbv?.ok ? `<span><i class="inline-block w-3.5 align-middle" style="border-top:2px dashed #FCD34D"></i> ${esc(hbv.label)} <b>${fmtPct(hbv.pct)}</b></span>` : hbv ? `<span class="text-brand-200">${esc(hbv.label)}: ${per === 'd' ? 'toque em Preços' : 'a carregar…'}</span>` : ''}</div>` : '';
+  const d = hv.ok && hbv?.ok ? hv.pct - hbv.pct : null;
+  const diff = d != null ? `<div class="mt-2 text-xs rounded-xl bg-white/10 px-3 py-2">A sua carteira está <b>${fmtN(Math.abs(d), 1)} pontos ${d >= 0 ? 'acima' : 'abaixo'}</b> do ${esc(hbv.label)} ${HP[per].w}</div>` : '';
+  const bw = hv.ok && hv.best && hv.worst ? `<div class="text-[11px] text-brand-100 mt-2 num">Melhor: ${esc(hv.best.tk.replace(/\.[A-Z]+$/, ''))} ${fmtPct(hv.best.pct)} · Pior: ${esc(hv.worst.tk.replace(/\.[A-Z]+$/, ''))} ${fmtPct(hv.worst.pct)}</div>` : '';
+  const pb = k => `<button data-hper="${k}" class="h-8 rounded-xl text-xs font-bold ${per === k ? 'bg-white text-brand-700' : 'bg-white/12 text-white'}" style="${per === k ? '' : 'background:rgba(255,255,255,.12)'}">${HP[k].l}</button>`;
+  const total = nPriced ? `<div class="text-[11px] text-brand-200 mt-2 num">Desde a compra: ${plus(res)} (${pctStr(res, invested) || '0%'})${hv.missing.length ? ` · sem dados: ${esc(hv.missing.map(t => t.replace(/\.[A-Z]+$/, '')).join(', '))}` : ''}</div>` : '';
+  return `${top}${chart}${legend}${diff}<div class="grid grid-cols-4 gap-1.5 mt-3">${pb('d')}${pb('w')}${pb('m')}${pb('y')}</div>${bw}${total}`;
 }
 
 /* ================= APOIAR ================= */
@@ -1143,13 +1245,14 @@ function infoTags(a) {
   return (chips.length ? `<div class="flex flex-wrap gap-1 mt-1">${chips.join('')}</div>` : '')
     + (a.note ? `<div class="text-xs text-slate-500 mt-1 truncate"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="inline -mt-0.5 mr-0.5" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>${esc(a.note)}</div>` : '');
 }
-function posRow(p) {
+function posRow(p, pv) {
   return `<button data-asset="${esc(p.ticker)}" class="w-full text-left p-4 flex items-center gap-3 hover:bg-brand-50/60">
     <div class="w-10 h-10 rounded-2xl bg-brand-50 text-brand-700 grid place-items-center text-xs font-extrabold shrink-0">${esc(p.ticker.slice(0, 4))}</div>
     <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="font-bold truncate">${esc(p.ticker)}</span>${kindBadge(p.kind)}</div>
       <div class="text-xs text-slate-500 truncate">${fmtQ(p.qty)} un. · PM ${fmtEUR(p.avg)}${p.value != null ? ' · ' + fmtEUR(p.value / p.qty) + ' ' + priceWhen(S.assets[p.ticker]) : ''}</div>${infoTags(S.assets[p.ticker])}</div>
     <div class="text-right num"><div class="font-bold">${fmtEUR(p.value ?? p.cost)}</div>
-      ${p.value != null ? `<div class="text-xs font-bold ${sgn(p.value - p.cost)}">${plus(p.value - p.cost)} (${pctStr(p.value - p.cost, p.cost)})</div>`
+      ${pv !== undefined ? (pv != null ? `<div class="text-xs font-bold ${pv >= 0 ? 'text-gain' : 'text-loss'}">${fmtPct(pv)}</div>` : '<div class="text-xs text-slate-400">—</div>')
+        : p.value != null ? `<div class="text-xs font-bold ${sgn(p.value - p.cost)}">${plus(p.value - p.cost)} (${pctStr(p.value - p.cost, p.cost)})</div>`
         : '<div class="text-xs text-slate-400">sem preço atual</div>'}</div></button>`;
 }
 
@@ -1407,7 +1510,7 @@ function divsCardHTML() {
 }
 
 /* ================= GRÁFICOS ================= */
-const BENCH = [{ id: 'SPY', label: 'S&P 500', sym: 'SPY', ysym: 'SPY', cur: 'USD' }, { id: 'VWCE.DEX', label: 'Mundo (VWCE)', sym: 'VWCE.DEX', ysym: 'VWCE.DE', cur: 'EUR' }, { id: 'QQQ', label: 'Nasdaq 100', sym: 'QQQ', ysym: 'QQQ', cur: 'USD' }];
+const BENCH = [{ id: 'SPY', label: 'S&P 500', sym: 'SPY', ysym: 'SPY', cur: 'USD' }, { id: 'VWCE.DEX', label: 'Mundo (VWCE)', sym: 'VWCE.DEX', ysym: 'VWCE.DE', cur: 'EUR' }, { id: 'QQQ', label: 'Nasdaq 100', sym: 'QQQ', ysym: 'QQQ', cur: 'USD' }, { id: 'EXSA.DEX', label: 'Europa (Stoxx 600)', sym: 'EXSA.DEX', ysym: 'EXSA.DE', cur: 'EUR' }];
 const BCOL = ['#F2A93B', '#0F9D6E', '#8B5CF6'];
 const benchSel = () => (S.settings.bench ||= ['SPY']);
 const benchCustom = () => (S.settings.benchCustom ||= []);
@@ -1652,6 +1755,7 @@ function openBenchAdd() {
     let id = $('#bTk').value.trim().toUpperCase().replace(/\s+/g, ''); if (!id) return toast('Escreva um ticker');
     const b = benchInfo(id); if (!b.hkey) return toast('Esta bolsa não está coberta pela fonte de dados');
     if (!BENCH.some(x => x.id === id) && !cust.includes(id)) cust.push(id);
+    if (UI.benchHome) { UI.benchHome = false; S.settings.homeBench = id; homeLoadAt = 0; save(); closeModal(); render(); return; }
     const sel = benchSel(); if (!sel.includes(id)) { if (sel.length >= 3) sel.shift(); sel.push(id); }
     save(); closeModal(); render(); if (!S.hist?.[b.hkey]) toast('Toque em Atualizar histórico para carregar ' + b.label);
   };
@@ -2791,9 +2895,13 @@ function accountCardHTML() {
 
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
+  if (d.hper) { S.settings.homePer = d.hper; save(); renderHome(); return; }
+  if ('hbench' in d) { openHomeBench(); return; }
+  if (d.hbsel) { S.settings.homeBench = d.hbsel; homeLoadAt = 0; save(); closeModal(); renderHome(); return; }
+  if ('benchadd' in d && d.home) { UI.benchHome = true; }
   if ('supporthide' in d) { try { localStorage.setItem(KEY + '.supportHide', String(Date.now() + 30 * 864e5)); } catch (e) {} renderHome(); toast('Escondido durante 30 dias'); }
   else if ('signout' in d) cloudSignOut();
   else if ('delacct' in d) cloudDeleteAccount();
