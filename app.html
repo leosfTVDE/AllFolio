@@ -1056,9 +1056,10 @@ function renderHome() {
       <p class="text-sm text-slate-600 mt-1 mb-4">Importe o extrato da XTB, DEGIRO, Revolut ou Trading 212, ou registe a primeira compra à mão.</p>
       <div class="flex flex-wrap justify-center gap-2">${btn('Importar extrato', 'data-go="import"')}${btn('Registar compra', 'data-add="buy"', 'ghost')}${btn('Ver com dados de exemplo', 'data-demo', 'ghost')}</div></div>`, 'mt-1')
       + (hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3">${tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cashV), cashV < 0 ? 'text-loss' : '')}${tile(gd ? 'data-go="goals"' : 'data-goalcfg', goalTile[0], goalTile[1])}</div>` : '')
-    : `<div class="flex items-center justify-between mt-3 mb-2"><h2 class="font-extrabold text-lg">Maiores posições</h2>
+    : `<div class="flex items-center justify-between mt-3 mb-2"><h2 class="font-extrabold text-lg">As suas posições <span class="text-slate-500 font-semibold">(${pos.length})</span></h2>
       <span class="flex gap-3"><button data-charts class="text-sm font-bold text-brand-600">Gráficos</button><button data-go="portfolio" class="text-sm font-bold text-brand-600">Ver carteira</button></span></div>
-    ${card(pos.slice(0, 5).map(p => posRow(p, hv?.ok ? (hv.byTk[p.ticker] ?? null) : undefined)).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}
+    ${card(pos.slice(0, S.settings.homeAllPos ? pos.length : 5).map(p => posRow(p, hv?.ok ? (hv.byTk[p.ticker] ?? null) : undefined)).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}
+    ${pos.length > 5 ? `<button data-hmore class="mt-2 w-full h-11 rounded-2xl bg-white border border-brand-100 text-sm font-bold text-brand-700">${S.settings.homeAllPos ? 'Mostrar menos ▴' : `Mostrar todas (mais ${pos.length - 5}) ▾`}</button>` : ''}
     ${card(`<div class="p-4">
       <div class="flex items-center justify-between mb-1"><h2 class="font-extrabold">Resumo de ${yr}</h2><button data-tab="tax" class="text-sm font-bold text-brand-600">IRS</button></div>
       <div class="divide-y divide-brand-50 text-sm num">
@@ -2914,9 +2915,10 @@ function accountCardHTML() {
 
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
+  if ('hmore' in d) { S.settings.homeAllPos = !S.settings.homeAllPos; save(); renderHome(); return; }
   if (d.hper) { S.settings.homePer = d.hper; save(); renderHome(); return; }
   if ('hbench' in d) { openHomeBench(); return; }
   if (d.hbsel) { if (d.hbsel === '__off') S.settings.homeBenchOff = true; else { S.settings.homeBench = d.hbsel; S.settings.homeBenchOff = false; homeLoadAt = 0; } save(); closeModal(); renderHome(); return; }
