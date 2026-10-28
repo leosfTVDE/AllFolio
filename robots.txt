@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /app
+Disallow: /admin
+Disallow: /cms
 Sitemap: https://allfolio.pt/sitemap.xml

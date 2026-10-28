@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Painel · AllFolio.pt</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{--ink:#0A2A66;--blue:#1D4ED8;--bg:#F4F7FC;--card:#fff;--line:#DCE7F8;--muted:#475569;--soft:#E6EEFC;--green:#0B7A55;--greenbg:#E7F6EF;--red:#B42318;color-scheme:light}
+  @media (prefers-color-scheme:dark){:root{--ink:#E2E8F0;--bg:#0B1220;--card:#111A2E;--line:#22304D;--muted:#94A3B8;--soft:#1A2744;--greenbg:#0E3B33;--green:#6EE7B7;--red:#FCA5A5;color-scheme:dark}}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom,0px)}
+  header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;display:flex;align-items:center;gap:10px}
+  header h1{font-size:17px;margin:0;flex:1}
+  header .st{font-size:12px;color:var(--green)}
+  main{max-width:760px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}
+  label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:12px 0 6px}
+  input[type=text],input[type=password],input[type=date],textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+  textarea{min-height:70px;resize:vertical}
+  .hint{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.5}
+  button,.btn{font:inherit;font-weight:700;border-radius:12px;min-height:44px;padding:0 16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+  .primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .full{width:100%}
+  .row{display:flex;gap:8px}.row>*{flex:1}
+  .tabs{display:flex;gap:6px;margin:14px 0 6px;flex-wrap:wrap}
+  .tabs button{min-height:34px;border-radius:999px;font-size:13px;padding:0 12px}
+  .tabs button.on{background:var(--soft);color:var(--blue);border-color:var(--soft)}
+  .item{padding:12px 0;border-top:1px solid var(--line)}.item:first-child{border-top:0}
+  .item .t{font-weight:700;line-height:1.35}
+  .item .m{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--muted)}
+  .item .acts{display:flex;gap:14px}
+  .link{background:none;border:0;min-height:30px;padding:0;color:var(--blue);font-weight:700;font-size:13px}
+  .link.red{color:var(--red)}.link.grey{color:var(--muted)}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .seg button{min-height:40px;font-size:14px}.seg button.on{background:var(--soft);color:var(--blue);border-color:var(--blue)}
+  .tools{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border:1px solid var(--line);border-bottom:0;border-radius:12px 12px 0 0;background:var(--bg);position:sticky;top:58px;z-index:3}
+  .tools button{min-height:34px;padding:0 10px;font-size:13px;border-radius:9px}
+  #ed{min-height:300px;border:1px solid var(--line);border-radius:0 0 12px 12px;padding:12px 14px;background:var(--card);font-size:16px;line-height:1.65;outline:none;overflow-wrap:anywhere}
+  #ed:empty:before{content:"Escreva ou cole aqui o texto do artigo…";color:var(--muted)}
+  #ed h2{font-size:21px;margin:18px 0 6px}#ed h3{font-size:18px;margin:14px 0 4px}
+  #ed .note{background:#FFF7E6;color:#5C3D04;border:1px solid #F5DDAE;border-radius:12px;padding:10px 12px;margin:10px 0}
+  #ed .summary{background:var(--soft);border-radius:12px;padding:10px 12px;margin:10px 0}
+  #ed table{border-collapse:collapse;width:100%;font-size:14px}#ed td,#ed th{border:1px solid var(--line);padding:6px}
+  .check{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:14px}
+  .check input{width:22px;height:22px}
+  .banner{background:var(--soft);border-radius:14px;padding:14px;margin:12px 0;font-size:14px;line-height:1.5}
+  #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#0A2A66;color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;max-width:92vw;display:none;z-index:20}
+  #busy{position:fixed;inset:0;background:rgba(10,42,102,.35);display:none;place-items:center;z-index:15}
+  #busy div{background:var(--card);border-radius:16px;padding:18px 22px;font-weight:700}
+  #pv{position:fixed;inset:0;background:var(--bg);z-index:12;display:none;flex-direction:column}
+  #pv iframe{flex:1;border:0;width:100%;background:#fff}
+  .ok{width:58px;height:58px;border-radius:50%;background:var(--greenbg);color:var(--green);display:grid;place-items:center;font-size:28px;margin:6px auto 10px}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<header><h1>Painel · AllFolio.pt</h1><span id="hst" class="st"></span></header>
+<main>
+
+<section id="vSetup" class="hidden">
+  <div class="card">
+    <h2 style="margin:0 0 6px;font-size:19px">Ligar ao GitHub</h2>
+    <p class="hint" style="font-size:14px">O painel publica diretamente no repositório do site. A chave fica guardada só neste aparelho.</p>
+    <label for="cOwner">Utilizador do GitHub</label><input id="cOwner" type="text" autocapitalize="off" autocorrect="off">
+    <label for="cRepo">Repositório</label><input id="cRepo" type="text" autocapitalize="off" autocorrect="off">
+    <label for="cBranch">Ramo</label><input id="cBranch" type="text" autocapitalize="off" autocorrect="off">
+    <label for="cToken">Chave (token) do GitHub</label><input id="cToken" type="password" autocapitalize="off" autocorrect="off" placeholder="github_pat_…">
+    <p class="hint">Crie em GitHub → Settings → Developer settings → Fine-grained tokens, só com acesso a este repositório e a permissão <b>Contents: Read and write</b>.</p>
+    <button id="cGo" class="primary full" style="margin-top:14px">Ligar</button>
+  </div>
+</section>
+
+<section id="vList" class="hidden">
+  <button id="bNew" class="primary full">+ Novo artigo</button>
+  <div id="seedBox" class="banner hidden">
+    <b>Primeira utilização.</b> Importe os guias que já estão no site, para os poder editar, ocultar ou apagar aqui.
+    <button id="bSeed" class="primary full" style="margin-top:10px">Importar os guias existentes</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="card" id="items" style="padding:4px 16px"></div>
+  <div class="row" style="margin-top:6px"><a class="btn" href="./" target="_blank" rel="noopener">Ver o site</a><button id="bOut">Desligar</button></div>
+</section>
+
+<section id="vEdit" class="hidden">
+  <div class="row" style="margin-bottom:10px"><button id="eBack">‹ Artigos</button><button id="ePrev">Pré-visualizar</button></div>
+  <div class="card">
+    <label style="margin-top:0">Tipo</label>
+    <div class="seg"><button data-type="guia">Guia</button><button data-type="semana">A semana do investidor</button></div>
+    <label for="eTitle">Título</label><input id="eTitle" type="text">
+    <label for="eSlug">Endereço</label><input id="eSlug" type="text" autocapitalize="off" autocorrect="off">
+    <p class="hint" id="eSlugHint"></p>
+    <label for="eDesc">Resumo para o Google <span id="eDescN"></span></label><textarea id="eDesc" maxlength="200"></textarea>
+    <label for="eTeaser">Frase do cartão (lista de guias)</label><textarea id="eTeaser" maxlength="220" placeholder="Se ficar vazio, usa o resumo"></textarea>
+    <div id="eTagBox"><label for="eTag">Etiqueta</label><input id="eTag" type="text" placeholder="ex.: IRS, Bitcoin, ETFs"></div>
+    <label for="eDate">Data</label><input id="eDate" type="date">
+    <label class="check"><input id="eFeat" type="checkbox"> Destaque na página inicial</label>
+    <label class="check"><input id="eCta" type="checkbox" checked> Convite para a app no fim</label>
+  </div>
+  <label style="margin:4px 2px 6px">Texto</label>
+  <div class="tools" id="tools">
+    <button data-cmd="h2">Título</button><button data-cmd="h3">Subtítulo</button><button data-cmd="p">Normal</button>
+    <button data-cmd="bold"><b>N</b></button><button data-cmd="italic"><i>I</i></button>
+    <button data-cmd="ul">• Lista</button><button data-cmd="ol">1. Lista</button><button data-cmd="link">Link</button>
+    <button data-cmd="note">Destaque</button><button data-cmd="summary">Resumo</button><button data-cmd="table">Tabela</button>
+  </div>
+  <div id="ed" contenteditable="true"></div>
+  <p class="hint">Pode colar texto de outro lado: a formatação é limpa automaticamente. Também aceita Markdown (## título, **negrito**, - listas, tabelas com |).</p>
+  <div class="row" style="margin-top:12px"><button id="eDraft">Guardar rascunho</button><button id="ePub" class="primary">Publicar</button></div>
+</section>
+
+<section id="vDone" class="hidden">
+  <div class="card" style="text-align:center">
+    <div class="ok">✓</div>
+    <h2 id="dTitle" style="margin:0;font-size:19px">Publicado</h2>
+    <p class="hint" style="font-size:14px" id="dText"></p>
+    <div id="dList" style="text-align:left;font-size:14px;line-height:1.9;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:12px 0"></div>
+    <a id="dView" class="btn primary full" target="_blank" rel="noopener">Ver o artigo</a>
+    <button id="dBack" class="full" style="margin-top:8px">Voltar aos artigos</button>
+  </div>
+</section>
+</main>
+
+<div id="pv"><div class="row" style="padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px;background:var(--card);border-bottom:1px solid var(--line)"><button id="pvClose">Fechar a pré-visualização</button></div><iframe id="pvFrame" title="Pré-visualização do artigo"></iframe></div>
+<div id="busy"><div id="busyT">A publicar…</div></div>
+<div id="toast" role="status"></div>
+
+<script src="cms.js"></script>
+<script src="cms-seed.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const CFG_KEY = 'allfolio.cms.cfg';
+let cfg = (() => { try { return JSON.parse(localStorage.getItem(CFG_KEY)) || null; } catch (e) { return null; } })();
+let reg = null, regMissing = false, tab = 'pub', cur = null;
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+
+function toast(t, ms = 3200) { const el = $('#toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = 'none', ms); }
+function busy(on, t) { $('#busy').style.display = on ? 'grid' : 'none'; if (t) $('#busyT').textContent = t; }
+function show(v) { ['vSetup', 'vList', 'vEdit', 'vDone'].forEach(id => $('#' + id).classList.toggle('hidden', id !== v)); window.scrollTo(0, 0); }
+
+/* ---------- GitHub ---------- */
+const b64enc = s => { const b = new TextEncoder().encode(s); let x = ''; for (let i = 0; i < b.length; i += 0x8000) x += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(x); };
+const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
+async function gh(path, opt = {}) {
+  const r = await fetch('https://api.github.com' + path, { ...opt, cache: 'no-store', headers: { Authorization: 'Bearer ' + cfg.token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.body ? { 'Content-Type': 'application/json' } : {}) } });
+  if (!r.ok) { const t = await r.text().catch(() => ''); const e = new Error(r.status + ' ' + t.slice(0, 160)); e.status = r.status; throw e; }
+  return r.status === 204 ? null : r.json();
+}
+const R = () => `/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`;
+async function getFile(path) {
+  try { const j = await gh(`${R()}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(cfg.branch)}&t=${Date.now()}`); return j.content != null ? b64dec(j.content) : null; }
+  catch (e) { if (e.status === 404) return null; throw e; }
+}
+async function commit(files, message) {
+  const ref = await gh(`${R()}/git/ref/heads/${encodeURIComponent(cfg.branch)}`), head = ref.object.sha;
+  const c = await gh(`${R()}/git/commits/${head}`);
+  const tree = [];
+  for (const [path, content] of Object.entries(files)) {
+    if (content === null) tree.push({ path, mode: '100644', type: 'blob', sha: null });
+    else { const b = await gh(`${R()}/git/blobs`, { method: 'POST', body: JSON.stringify({ content: b64enc(content), encoding: 'base64' }) }); tree.push({ path, mode: '100644', type: 'blob', sha: b.sha }); }
+  }
+  const t = await gh(`${R()}/git/trees`, { method: 'POST', body: JSON.stringify({ base_tree: c.tree.sha, tree }) });
+  const nc = await gh(`${R()}/git/commits`, { method: 'POST', body: JSON.stringify({ message, tree: t.sha, parents: [head] }) });
+  await gh(`${R()}/git/refs/heads/${encodeURIComponent(cfg.branch)}`, { method: 'PATCH', body: JSON.stringify({ sha: nc.sha }) });
+}
+function errMsg(e) {
+  if (e.status === 401) return 'A chave do GitHub não é válida ou expirou.';
+  if (e.status === 403) return 'A chave não tem permissão para escrever neste repositório.';
+  if (e.status === 404) return 'Repositório não encontrado. Confirme o utilizador e o nome.';
+  if (e.status === 409 || e.status === 422) return 'O site mudou entretanto. Tente outra vez.';
+  return 'Não foi possível concluir: ' + (e.message || e);
+}
+
+/* ---------- Registo de artigos ---------- */
+async function loadReg() {
+  const t = await getFile('cms/artigos.json');
+  regMissing = t == null; reg = t ? JSON.parse(t) : { items: [] };
+}
+const findItem = slug => reg.items.find(x => x.slug === slug);
+async function siteFiles(regNext) {
+  const idx = await getFile('index.html'); if (idx == null) throw new Error('index.html não encontrado no repositório.');
+  return { 'index.html': CMS.applyIndex(idx, regNext, today()), 'guias.html': CMS.guiasPage(regNext), 'sitemap.xml': CMS.sitemap(regNext, today()), 'cms/artigos.json': JSON.stringify(regNext, null, 1) };
+}
+
+/* ---------- Lista ---------- */
+function renderList() {
+  $('#hst').textContent = '● Ligado';
+  $('#seedBox').classList.toggle('hidden', !(regMissing && window.CMS_SEED));
+  const counts = { pub: 0, draft: 0, hidden: 0 }; reg.items.forEach(x => counts[x.status] = (counts[x.status] || 0) + 1);
+  $('#tabs').innerHTML = [['pub', 'Publicados'], ['draft', 'Rascunhos'], ['hidden', 'Ocultos']].map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l} (${counts[k] || 0})</button>`).join('');
+  const list = reg.items.filter(x => x.status === tab).sort((a, b) => (b.date + b.slug).localeCompare(a.date + a.slug));
+  $('#items').innerHTML = list.length ? list.map(x => `<div class="item"><div class="t">${CMS.esc(x.title)}</div>
+    <div class="m"><span>${x.type === 'semana' ? 'Semana' : 'Guia'} · ${x.date.split('-').reverse().join('/')}${x.featured ? ' · destaque' : ''}</span>
+    <span class="acts"><button class="link" data-act="edit" data-s="${CMS.esc(x.slug)}">Editar</button>
+    ${x.status === 'pub' ? `<button class="link grey" data-act="hide" data-s="${CMS.esc(x.slug)}">Ocultar</button>` : x.status === 'hidden' ? `<button class="link grey" data-act="unhide" data-s="${CMS.esc(x.slug)}">Mostrar</button>` : ''}
+    <button class="link red" data-act="del" data-s="${CMS.esc(x.slug)}">Apagar</button></span></div></div>`).join('')
+    : `<p class="hint" style="padding:12px 0">${tab === 'pub' ? 'Ainda não há artigos publicados.' : tab === 'draft' ? 'Sem rascunhos.' : 'Sem artigos ocultos.'}</p>`;
+}
+$('#tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; renderList(); } };
+$('#items').onclick = async e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const slug = b.dataset.s, it = findItem(slug); if (!it) return;
+  if (b.dataset.act === 'edit') {
+    busy(true, 'A abrir…');
+    try { const t = await getFile(`cms/fontes/${slug}.json`); if (!t) throw new Error('Texto do artigo não encontrado.'); openEditor(JSON.parse(t), true); }
+    catch (er) { toast(errMsg(er)); } finally { busy(false); }
+    return;
+  }
+  if (b.dataset.act === 'del' && !confirm(`Apagar definitivamente "${it.title}"?\n\nO artigo sai do site e o texto deixa de estar guardado.`)) return;
+  if (b.dataset.act === 'hide' && !confirm(`Ocultar "${it.title}"?\n\nSai do site, mas fica guardado e pode voltar a mostrá-lo.`)) return;
+  busy(true, b.dataset.act === 'del' ? 'A apagar…' : 'A atualizar o site…');
+  try {
+    const next = JSON.parse(JSON.stringify(reg)), n = next.items.find(x => x.slug === slug), files = {};
+    if (b.dataset.act === 'hide') { if (it.status === 'pub') files[`${slug}.html`] = null; n.status = 'hidden'; }
+    if (b.dataset.act === 'unhide') { const t = await getFile(`cms/fontes/${slug}.json`); if (!t) throw new Error('Texto do artigo não encontrado.'); files[`${slug}.html`] = CMS.articlePage(JSON.parse(t)); n.status = 'pub'; }
+    if (b.dataset.act === 'del') { if (it.status === 'pub') files[`${slug}.html`] = null; files[`cms/fontes/${slug}.json`] = null; next.items = next.items.filter(x => x.slug !== slug); }
+    Object.assign(files, await siteFiles(next));
+    await commit(files, `Painel: ${({ hide: 'ocultar', unhide: 'mostrar', del: 'apagar' })[b.dataset.act]} ${slug}`);
+    reg = next; renderList(); toast(b.dataset.act === 'del' ? 'Artigo apagado. O site atualiza em cerca de 1 minuto.' : 'Feito. O site atualiza em cerca de 1 minuto.');
+  } catch (er) { toast(errMsg(er), 5000); } finally { busy(false); }
+};
+$('#bNew').onclick = () => openEditor(null, false);
+$('#bOut').onclick = () => { if (confirm('Desligar este aparelho do painel? A chave é apagada daqui.')) { localStorage.removeItem(CFG_KEY); cfg = null; boot(); } };
+$('#bSeed').onclick = async () => {
+  busy(true, 'A importar…');
+  try {
+    const next = { items: [] }, files = {};
+    for (const a of Object.values(window.CMS_SEED)) {
+      const { body, ...meta } = a; next.items.push({ ...meta, min: CMS.readMin(body) });
+      files[`cms/fontes/${a.slug}.json`] = JSON.stringify(a, null, 1); files[`${a.slug}.html`] = CMS.articlePage(a);
+    }
+    Object.assign(files, await siteFiles(next));
+    await commit(files, 'Painel: importar guias existentes');
+    reg = next; regMissing = false; renderList(); toast('Guias importados.');
+  } catch (er) { toast(errMsg(er), 5000); } finally { busy(false); }
+};
+
+/* ---------- Editor ---------- */
+let eType = 'guia', eExisting = false, eOrigStatus = null;
+function setType(t) { eType = t; document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('on', b.dataset.type === t)); $('#eTagBox').classList.toggle('hidden', t === 'semana');
+  if (!eExisting && t === 'semana' && !$('#eTitle').value) $('#eTitle').value = 'A semana do investidor: '; syncSlug(); }
+document.querySelectorAll('[data-type]').forEach(b => b.onclick = () => setType(b.dataset.type));
+function syncSlug() {
+  if (eExisting) return;
+  if (!$('#eSlug').dataset.touched) { let s = CMS.slugify($('#eTitle').value); if (eType === 'semana') s = 'semana-' + ($('#eDate').value || today()); $('#eSlug').value = s; }
+  $('#eSlugHint').textContent = 'allfolio.pt/' + ($('#eSlug').value || '…');
+}
+$('#eTitle').oninput = syncSlug; $('#eDate').oninput = syncSlug;
+$('#eSlug').oninput = e => { e.target.dataset.touched = '1'; e.target.value = CMS.slugify(e.target.value) || e.target.value.toLowerCase(); syncSlug(); };
+$('#eDesc').oninput = () => { const n = $('#eDesc').value.length; $('#eDescN').textContent = `(${n}/160)`; $('#eDescN').style.color = n > 160 ? 'var(--red)' : ''; };
+function openEditor(a, existing) {
+  cur = a; eExisting = existing; eOrigStatus = existing ? findItem(a.slug)?.status : null;
+  $('#eTitle').value = a?.title || ''; $('#eDesc').value = a?.desc || ''; $('#eTeaser').value = a?.teaser || ''; $('#eTag').value = a?.tag || '';
+  $('#eDate').value = a?.date || today(); $('#eFeat').checked = !!a?.featured; $('#eCta').checked = a?.cta !== false;
+  $('#ed').innerHTML = a?.body || ''; delete $('#eSlug').dataset.touched;
+  $('#eSlug').value = a?.slug || ''; $('#eSlug').readOnly = existing; $('#eSlug').style.opacity = existing ? .6 : 1;
+  setType(a?.type || 'guia'); $('#eDesc').oninput(); syncSlug();
+  $('#eSlugHint').textContent = 'allfolio.pt/' + ($('#eSlug').value || '…') + (existing ? ' · o endereço não muda depois de criado' : '');
+  $('#eDraft').classList.toggle('hidden', eOrigStatus === 'pub');
+  $('#ePub').textContent = eOrigStatus === 'pub' ? 'Guardar e publicar' : 'Publicar';
+  show('vEdit');
+}
+$('#eBack').onclick = () => { if (confirm('Voltar à lista? As alterações não guardadas perdem-se.')) { show('vList'); renderList(); } };
+function collect() {
+  const body = cleanBody($('#ed').innerHTML);
+  return { slug: $('#eSlug').value.trim(), type: eType, title: $('#eTitle').value.trim(), desc: $('#eDesc').value.trim(), teaser: $('#eTeaser').value.trim(),
+    tag: eType === 'semana' ? '' : $('#eTag').value.trim(), date: $('#eDate').value || today(), featured: $('#eFeat').checked, cta: $('#eCta').checked, body,
+    updated: eExisting && eOrigStatus === 'pub' && cur?.date && today() > cur.date ? today() : (cur?.updated || '') };
+}
+function validate(a, pub) {
+  if (!a.title) return 'Falta o título.';
+  if (!/^[a-z0-9-]{3,80}$/.test(a.slug)) return 'O endereço só pode ter letras minúsculas, números e hífens.';
+  if (pub && !a.desc) return 'Falta o resumo para o Google.';
+  if (pub && CMS.readMin(a.body) < 1 || pub && a.body.replace(/<[^>]+>/g, '').trim().length < 200) return 'O texto parece muito curto para publicar.';
+  if (!eExisting && reg.items.some(x => x.slug === a.slug)) return 'Já existe um artigo com este endereço. Mude o endereço.';
+  if (['index', 'app', 'guias', 'admin', 'privacidade', 'termos', 'sitemap', 'robots', 'cms'].includes(a.slug)) return 'Este endereço está reservado.';
+  return null;
+}
+async function saveArticle(pub) {
+  const a = collect(), err = validate(a, pub); if (err) return toast(err, 4000);
+  busy(true, pub ? 'A publicar…' : 'A guardar…');
+  try {
+    const next = JSON.parse(JSON.stringify(reg)), meta = { slug: a.slug, type: a.type, title: a.title, desc: a.desc, teaser: a.teaser, tag: a.tag, date: a.date, updated: a.updated, featured: a.featured, cta: a.cta, min: CMS.readMin(a.body), status: pub ? 'pub' : (eOrigStatus === 'hidden' ? 'hidden' : 'draft') };
+    if (a.featured) next.items.forEach(x => { x.featured = false; });
+    const i = next.items.findIndex(x => x.slug === a.slug); if (i >= 0) next.items[i] = meta; else next.items.push(meta);
+    const files = { [`cms/fontes/${a.slug}.json`]: JSON.stringify(a, null, 1) };
+    if (pub) files[`${a.slug}.html`] = CMS.articlePage(a);
+    Object.assign(files, pub || eOrigStatus === 'pub' || a.featured !== !!cur?.featured ? await siteFiles(next) : { 'cms/artigos.json': JSON.stringify(next, null, 1) });
+    await commit(files, `Painel: ${pub ? 'publicar' : 'rascunho'} ${a.slug}`);
+    reg = next; cur = a; eExisting = true; eOrigStatus = meta.status;
+    if (pub) {
+      $('#dTitle').textContent = 'Artigo publicado';
+      $('#dText').innerHTML = `Fica online em cerca de 1 minuto em<br><b>allfolio.pt/${CMS.esc(a.slug)}</b>`;
+      $('#dList').innerHTML = '✓ Página do artigo<br>✓ Lista de guias<br>✓ Página inicial<br>✓ Sitemap do Google';
+      $('#dView').href = './' + a.slug; show('vDone');
+    } else { toast('Rascunho guardado.'); $('#eSlug').readOnly = true; $('#eSlug').style.opacity = .6; }
+  } catch (er) { toast(errMsg(er), 5000); } finally { busy(false); }
+}
+$('#eDraft').onclick = () => saveArticle(false);
+$('#ePub').onclick = () => saveArticle(true);
+$('#dBack').onclick = () => { tab = 'pub'; show('vList'); renderList(); };
+$('#ePrev').onclick = () => {
+  const a = collect(); a.slug = a.slug || 'pre-visualizacao';
+  const html = CMS.articlePage(a).replace('<head>', '<head><base href="https://allfolio.pt/">');
+  $('#pvFrame').srcdoc = html; $('#pv').style.display = 'flex';
+};
+$('#pvClose').onclick = () => { $('#pv').style.display = 'none'; };
+
+/* ---------- Formatação ---------- */
+const ed = $('#ed');
+function insertHTML(h) { ed.focus(); document.execCommand('insertHTML', false, h); }
+$('#tools').addEventListener('mousedown', e => e.preventDefault());
+$('#tools').onclick = e => {
+  const b = e.target.closest('[data-cmd]'); if (!b) return; const c = b.dataset.cmd; ed.focus();
+  if (['h2', 'h3', 'p'].includes(c)) document.execCommand('formatBlock', false, c);
+  else if (c === 'bold' || c === 'italic') document.execCommand(c);
+  else if (c === 'ul') document.execCommand('insertUnorderedList');
+  else if (c === 'ol') document.execCommand('insertOrderedList');
+  else if (c === 'link') { const u = prompt('Endereço do link (https://… ou o nome de outro guia, ex.: guia-irs-xtb)'); if (u) document.execCommand('createLink', false, u.trim()); }
+  else if (c === 'note' || c === 'summary') { const t = String(window.getSelection() || '').trim(); insertHTML(`<div class="${c}"><p>${CMS.esc(t || (c === 'note' ? 'Texto em destaque' : 'Em resumo: …'))}</p></div><p><br></p>`); }
+  else if (c === 'table') insertHTML('<table><thead><tr><th>Coluna</th><th>Coluna</th><th>Coluna</th></tr></thead><tbody><tr><td>…</td><td>…</td><td>…</td></tr><tr><td>…</td><td>…</td><td>…</td></tr></tbody></table><p><br></p>');
+};
+ed.addEventListener('paste', e => {
+  e.preventDefault();
+  const h = e.clipboardData.getData('text/html'), t = e.clipboardData.getData('text/plain');
+  insertHTML(h ? sanitize(h) : mdToHtml(t));
+});
+const BLOCK = { H1: 'h2', H2: 'h2', H3: 'h3', H4: 'h3', H5: 'h3', H6: 'h3', P: 'p', UL: 'ul', OL: 'ol', LI: 'li', TABLE: 'table', THEAD: 'thead', TBODY: 'tbody', TR: 'tr', TH: 'th', TD: 'td', BLOCKQUOTE: 'div' };
+const INLINE = { STRONG: 'strong', B: 'strong', EM: 'em', I: 'em' };
+function sanitize(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const walk = n => {
+    if (n.nodeType === 3) return CMS.esc(n.nodeValue.replace(/\u00a0/g, ' '));
+    if (n.nodeType !== 1) return '';
+    const tag = n.tagName, kids = () => [...n.childNodes].map(walk).join('');
+    if (['SCRIPT', 'STYLE', 'META', 'LINK', 'TITLE', 'HEAD', 'NOSCRIPT', 'IFRAME', 'svg', 'SVG', 'IMG', 'BUTTON', 'INPUT'].includes(tag)) return '';
+    if (tag === 'BR') return '<br>';
+    if (tag === 'A') { const href = (n.getAttribute('href') || '').trim(); return /^(https?:\/\/|[a-z0-9-]+(\.html)?(#.*)?$|#)/i.test(href) ? `<a href="${CMS.esc(href)}">${kids()}</a>` : kids(); }
+    if (INLINE[tag]) { const k = kids(); return k.trim() ? `<${INLINE[tag]}>${k}</${INLINE[tag]}>` : k; }
+    if (tag === 'DIV' && /\b(note|summary)\b/.test(n.className)) return `<div class="${/\bnote\b/.test(n.className) ? 'note' : 'summary'}">${kids()}</div>`;
+    if (tag === 'BLOCKQUOTE') return `<div class="note">${kids()}</div>`;
+    if (BLOCK[tag]) { const k = kids(); if (!k.replace(/<br>/g, '').trim() && !['TD', 'TH'].includes(tag)) return ''; return `<${BLOCK[tag]}>${k}</${BLOCK[tag]}>`; }
+    if (tag === 'DIV' || tag === 'SECTION' || tag === 'ARTICLE') { const hasBlock = n.querySelector('p,h1,h2,h3,h4,ul,ol,table,div,blockquote'); const k = kids(); return hasBlock ? k : (k.trim() ? `<p>${k}</p>` : ''); }
+    return kids();
+  };
+  return [...doc.body.childNodes].map(walk).join('');
+}
+function inlineMd(s) {
+  return CMS.esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|[a-z0-9-]+)\)/g, '<a href="$2">$1</a>');
+}
+function mdToHtml(t) {
+  const L = String(t || '').replace(/\r/g, '').split('\n'), out = []; let i = 0;
+  while (i < L.length) {
+    const l = L[i];
+    if (!l.trim()) { i++; continue; }
+    let m;
+    if ((m = l.match(/^(#{1,4})\s+(.*)/))) { out.push(m[1].length <= 2 ? `<h2>${inlineMd(m[2])}</h2>` : `<h3>${inlineMd(m[2])}</h3>`); i++; continue; }
+    if (/^\s*\|/.test(l)) { const rows = []; while (i < L.length && /^\s*\|/.test(L[i])) { if (!/^\s*\|?\s*:?-{2,}/.test(L[i].replace(/\|/g, '|'))) rows.push(L[i].trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())); i++; }
+      if (rows.length) out.push(`<table><thead><tr>${rows[0].map(c => `<th>${inlineMd(c)}</th>`).join('')}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(c => `<td>${inlineMd(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`); continue; }
+    if (/^\s*([-*•])\s+/.test(l)) { const it = []; while (i < L.length && /^\s*([-*•])\s+/.test(L[i])) { it.push(L[i].replace(/^\s*([-*•])\s+/, '')); i++; } out.push(`<ul>${it.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ul>`); continue; }
+    if (/^\s*\d+[.)]\s+/.test(l)) { const it = []; while (i < L.length && /^\s*\d+[.)]\s+/.test(L[i])) { it.push(L[i].replace(/^\s*\d+[.)]\s+/, '')); i++; } out.push(`<ol>${it.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ol>`); continue; }
+    if (/^>\s?/.test(l)) { const it = []; while (i < L.length && /^>\s?/.test(L[i])) { it.push(L[i].replace(/^>\s?/, '')); i++; } out.push(`<div class="note"><p>${inlineMd(it.join(' '))}</p></div>`); continue; }
+    if (/^-{3,}$/.test(l.trim())) { i++; continue; }
+    const p = []; while (i < L.length && L[i].trim() && !/^(#{1,4}\s|\s*\||\s*[-*•]\s|\s*\d+[.)]\s|>)/.test(L[i])) { p.push(L[i].trim()); i++; }
+    if (p.length) out.push(`<p>${inlineMd(p.join(' '))}</p>`); else i++;
+  }
+  return out.join('\n');
+}
+function cleanBody(h) { return sanitize(h).replace(/<p>(\s|<br>)*<\/p>/g, '').trim() + '\n'; }
+
+/* ---------- Arranque ---------- */
+async function boot() {
+  if (!cfg?.token) {
+    $('#hst').textContent = '';
+    $('#cOwner').value = cfg?.owner || 'leosfTVDE'; $('#cRepo').value = cfg?.repo || 'AllFolio'; $('#cBranch').value = cfg?.branch || 'main'; $('#cToken').value = '';
+    return show('vSetup');
+  }
+  busy(true, 'A ligar…');
+  try { await loadReg(); show('vList'); renderList(); }
+  catch (e) { toast(errMsg(e), 5000); if (e.status === 401 || e.status === 404) { cfg.token = ''; show('vSetup'); $('#cOwner').value = cfg.owner; $('#cRepo').value = cfg.repo; $('#cBranch').value = cfg.branch; } }
+  finally { busy(false); }
+}
+$('#cGo').onclick = async () => {
+  const c = { owner: $('#cOwner').value.trim(), repo: $('#cRepo').value.trim(), branch: $('#cBranch').value.trim() || 'main', token: $('#cToken').value.trim() };
+  if (!c.owner || !c.repo || !c.token) return toast('Preencha todos os campos.');
+  cfg = c; busy(true, 'A verificar…');
+  try {
+    const r = await gh(R());
+    if (r.permissions && r.permissions.push === false) throw Object.assign(new Error('sem escrita'), { status: 403 });
+    localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); busy(false); toast('Ligado ao GitHub.'); boot();
+  } catch (e) { busy(false); toast(errMsg(e), 5000); }
+};
+boot();
+</script>
+</body>
+</html>
