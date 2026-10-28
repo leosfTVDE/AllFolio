@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AllFolio.pt – Carteira de ações, ETFs e IRS (XTB, Anexos J e G)</title>
-<meta name="description" content="Acompanhe ações e ETFs e prepare o IRS em Portugal: importe o extrato da XTB, calcule mais-valias com FIFO e ações fracionadas e gere o relatório dos Anexos J e G. Gratuito.">
+<title>AllFolio.pt – Guias de IRS e app gratuita para ações e ETFs em Portugal</title>
+<meta name="description" content="Guias práticos para declarar ações, ETFs, dividendos e Bitcoin no IRS em Portugal, e uma app gratuita que importa a XTB, aplica o FIFO e prepara os Anexos G e J.">
 <link rel="canonical" href="https://allfolio.pt/">
 <meta name="theme-color" content="#0A2A66">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -116,6 +116,23 @@
   .foot{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;padding:28px 0;font-size:14px;color:var(--muted2)}
   .foot .disc{flex:1 1 320px;text-align:right}
   @media (max-width:640px){.foot .disc{text-align:left}.links{order:3;flex-basis:100%}}
+  .hero2{padding:44px 0 26px;max-width:760px}
+  .hero2 h1{font-size:clamp(32px,5vw,48px)}
+  .hero2 .lead{font-size:18px}
+  .gwrap{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+  .gcard{display:block;text-decoration:none;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:22px;padding:20px}
+  .gcard:hover{border-color:#B9CEF1;color:var(--ink)}
+  .gcard .tag{font-size:13px;font-weight:700;color:var(--muted2)}
+  .gcard h3{margin:6px 0 6px;font-size:20px;line-height:1.3;font-weight:800}
+  .gcard p{margin:0;font-size:16px;line-height:1.6;color:var(--muted)}
+  .gcard .go{display:inline-block;margin-top:12px;font-weight:700;color:var(--blue)}
+  .gcard.big{background:#E6EEFC;border-color:#CFDDF8;grid-column:1/-1;padding:24px}
+  .gcard.big h3{font-size:clamp(22px,3vw,28px)}
+  .gcard.big .tag{color:var(--blue2)}
+  .feat.small{flex:1 1 230px;padding:18px}
+  .feat.small h3{margin:10px 0 4px;font-size:18px}
+  .feat.small p{font-size:15px}
+  .more{display:inline-block;margin-top:18px;font-weight:700}
 </style>
 </head>
 <body>
@@ -126,7 +143,7 @@
       <span>AllFolio<small>.pt</small></span>
     </a>
     <div class="links">
-      <a href="#funcionalidades">Funcionalidades</a><a href="#como-funciona">Como funciona</a><a href="#irs">IRS</a><a href="#perguntas">Perguntas</a><a href="guias">Guias</a><a href="#apoie">Apoie</a>
+      <a href="#guias">Guias</a><a href="#app">A app</a><a href="#perguntas">Perguntas</a><a href="#apoie">Apoie</a>
     </div>
     <div class="ctas" style="margin:0">
       <a class="btn btn-ghost js-open" href="app">Entrar</a>
@@ -137,65 +154,56 @@
 
 <main id="topo">
   <div class="wrap">
-    <section class="hero" aria-labelledby="titulo">
-      <div class="hero-text">
-        <span class="pill">Gratuito · feito para investidores em Portugal</span>
-        <h1 id="titulo">As suas ações e ETFs, prontos para o IRS.</h1>
-        <p class="lead">Importe o extrato da XTB, acompanhe a carteira com preços atualizados e gere o relatório de mais-valias e dividendos para os Anexos J e G, com o método FIFO e suporte total a ações fracionadas.</p>
-        <div class="ctas">
-          <a class="btn btn-primary btn-lg js-signup" href="app">Criar conta grátis</a>
-          <a class="btn btn-ghost btn-lg" href="#como-funciona">Ver como funciona</a>
-        </div>
-        <p class="note">Funciona no iPhone, Android e computador. Os seus dados ficam na sua conta.</p>
-      </div>
-      <div class="phone-col">
-        <div class="phone" role="img" aria-label="Exemplo do ecrã inicial da app AllFolio">
-          <div class="screen">
-            <div class="scr-top"><svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="30" width="8" height="12" rx="2" fill="#0A2A66"/><rect x="19" y="24" width="8" height="18" rx="2" fill="#0A2A66"/><rect x="30" y="18" width="8" height="24" rx="2" fill="#0A2A66"/><path d="M6 23 L42 7" fill="none" stroke="#5B8DEF" stroke-width="3.4" stroke-linecap="round"/></svg>AllFolio</div>
-            <div class="scr-body">
-              <div class="hero-card"><div class="lbl">Património total</div><div class="big">3 412,85 €</div>
-                <div class="split"><div><span>Investimentos</span>3 000,00 €</div><div><span>Caixa</span>412,85 €</div></div></div>
-              <div class="list">
-                <div class="row"><div><b>VWCE</b><small>ETF · Xetra</small></div><span class="up">+12,4%</span></div>
-                <div class="row"><div><b>AAPL</b><small>Ação · EUA</small></div><span class="up">+8,1%</span></div>
-                <div class="row"><div><b>EDP</b><small>Ação · Lisboa</small></div><span class="down">−2,3%</span></div>
-              </div>
-              <div class="ok">✓ Dados consolidados para o IRS</div>
-            </div>
-          </div>
-        </div>
-        <span class="caption">Valores ilustrativos</span>
+    <section class="hero2" aria-labelledby="titulo">
+      <span class="pill">Para investidores em Portugal</span>
+      <h1 id="titulo">Investir e declarar no IRS, sem complicações</h1>
+      <p class="lead">Guias práticos sobre ações, ETFs, dividendos e Bitcoin, escritos para quem investe a partir de Portugal, e uma app gratuita que faz as contas do IRS por si.</p>
+      <div class="ctas">
+        <a class="btn btn-primary btn-lg js-signup" href="app">Experimentar a app grátis</a>
+        <a class="btn btn-ghost btn-lg" href="#guias">Ver os guias</a>
       </div>
     </section>
-
-    <div class="brokers" aria-label="Corretoras suportadas">
-      <strong>Importa extratos de</strong><span class="chip">XTB</span><span class="chip">DEGIRO</span><span class="chip">Trading 212</span><span class="chip">Revolut</span><span class="chip" style="font-weight:700;color:#475569">ou registo manual</span>
-    </div>
   </div>
 
-  <section id="funcionalidades" class="band" aria-labelledby="t-func">
+  <section id="guias" aria-labelledby="t-guias" style="padding-top:8px">
     <div class="wrap">
-      <h2 id="t-func">Tudo o que precisa, sem folhas de Excel</h2>
-      <p class="sub">Da compra de uma fração de ETF ao relatório que envia à contabilista.</p>
-      <div class="grid">
-        <article class="feat"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg><h3>Importação de extratos</h3><p>Leia o ficheiro da XTB, DEGIRO, Trading 212 ou Revolut. Contas em euros ou dólares, com o câmbio do BCE de cada dia.</p></article>
-        <article class="feat"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9h-9z"/></svg><h3>FIFO com ações fracionadas</h3><p>Cada fração vendida é casada com as compras mais antigas, até 8 casas decimais, como pedem as Finanças.</p></article>
-        <article class="feat"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg><h3>Relatório para a contabilista</h3><p>PDF ou Excel com os Anexos J e G, datas e valores de aquisição, despesas e todos os movimentos. Envia por WhatsApp ou email.</p></article>
-        <article class="feat"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg><h3>Preços e comparação</h3><p>Veja quanto vale hoje a carteira e compare a rentabilidade com o S&amp;P 500, o mercado mundial ou qualquer ação.</p></article>
-        <article class="feat"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0F9D6E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M9 12h6"/></svg><h3>Dividendos sem surpresas</h3><p>Dividendos previstos, retenção na fonte e crédito por dupla tributação: sabe quanto vai pagar antes de entregar o IRS.</p></article>
-        <article class="feat"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0F9D6E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg><h3>Caixa e metas</h3><p>Guarde dinheiro para oportunidades, defina o aporte mensal e a distribuição desejada, e acompanhe o progresso.</p></article>
+      <h2 id="t-guias">Guias</h2>
+      <p class="sub">Explicações claras, com exemplos e contas feitas, sobre as dúvidas mais comuns de quem investe.</p>
+      <div class="gwrap">
+        <a class="gcard big" href="guia-bitcoin-direto-ou-etp"><span class="tag">Novo · Bitcoin · 9 min</span>
+          <h3>Bitcoin direto ou ETP de Bitcoin? O que é seu, o que paga de IRS e o que fica para a família</h3>
+          <p>A história do Bitcoin, a diferença entre ter a criptomoeda e ter um produto de bolsa, e porque é que um pode pagar 0 € de IRS e o outro 28%.</p>
+          <span class="go">Ler o guia →</span></a>
+        <a class="gcard" href="guia-irs-xtb"><span class="tag">IRS · 7 min</span>
+          <h3>Como declarar ações e ETFs da XTB no IRS</h3>
+          <p>Anexo G ou J, onde estão os documentos, dividendos, englobamento e os erros mais comuns.</p>
+          <span class="go">Ler o guia →</span></a>
+        <a class="gcard" href="guia-fifo-acoes-fracionadas"><span class="tag">IRS · 6 min</span>
+          <h3>Mais-valias com FIFO e ações fracionadas</h3>
+          <p>Um exemplo completo, passo a passo, com as linhas exatas a declarar.</p>
+          <span class="go">Ler o guia →</span></a>
       </div>
+      <a class="more" href="guias">Ver todos os guias →</a>
     </div>
   </section>
+  <!-- AdSense: espaço de anúncio 1 (a ativar) -->
 
-  <section id="como-funciona" aria-labelledby="t-como">
+  <section id="app" class="band" aria-labelledby="t-app">
     <div class="wrap">
-      <h2 id="t-como">Como funciona</h2>
-      <ol class="steps">
-        <li class="step"><span class="num">1</span><div><h3>Importe ou registe</h3><p>Carregue o extrato da corretora ou registe cada compra no momento, em segundos.</p></div></li>
-        <li class="step"><span class="num">2</span><div><h3>Acompanhe</h3><p>Preços atualizados, gráficos, dividendos previstos e o imposto estimado do ano.</p></div></li>
-        <li class="step"><span class="num">3</span><div><h3>Entregue o IRS</h3><p>Gere o relatório e envie à contabilista, ou copie as tabelas para o Portal das Finanças.</p></div></li>
-      </ol>
+      <h2 id="t-app">A app AllFolio, gratuita</h2>
+      <p class="sub">Tudo o que os guias explicam, feito automaticamente a partir do extrato da sua corretora.</p>
+      <div class="brokers" aria-label="Corretoras suportadas" style="margin-bottom:22px">
+        <strong>Importa extratos de</strong><span class="chip">XTB</span><span class="chip">DEGIRO</span><span class="chip">Trading 212</span><span class="chip">Revolut</span>
+      </div>
+      <div class="grid">
+        <article class="feat small"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg><h3>Importa e corrige</h3><p>Lê os extratos e o PDF diário da XTB e acerta os valores que registou à mão.</p></article>
+        <article class="feat small"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9h-9z"/></svg><h3>FIFO e frações</h3><p>Cada venda calculada como pedem as Finanças, até 8 casas decimais.</p></article>
+        <article class="feat small"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg><h3>Anexos G e J prontos</h3><p>Relatório em PDF ou Excel para a contabilista, com dividendos e dupla tributação.</p></article>
+        <article class="feat small"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg><h3>Compara com índices</h3><p>Veja se a sua carteira bate o S&amp;P 500, o mercado mundial ou o Bitcoin.</p></article>
+      </div>
+      <div class="ctas" style="margin-top:24px">
+        <a class="btn btn-primary btn-lg js-signup" href="app">Criar conta grátis</a>
+      </div>
     </div>
   </section>
 
@@ -218,18 +226,7 @@
     </div>
   </section>
 
-  <section id="guias" aria-labelledby="t-guias" style="padding-top:0">
-    <div class="wrap">
-      <h2 id="t-guias">Guias de IRS</h2>
-      <p class="sub">Explicações práticas, com exemplos, para declarar os seus investimentos.</p>
-      <div class="grid">
-        <a class="feat" href="guia-irs-xtb" style="text-decoration:none"><h3 style="margin-top:0">Como declarar ações e ETFs da XTB no IRS</h3><p>Anexo G ou J, documentos, dividendos e englobamento.</p><p style="margin-top:10px;font-weight:700;color:#1D4ED8">Ler o guia →</p></a>
-        <a class="feat" href="guia-fifo-acoes-fracionadas" style="text-decoration:none"><h3 style="margin-top:0">Mais-valias com FIFO e ações fracionadas</h3><p>Um exemplo completo, passo a passo.</p><p style="margin-top:10px;font-weight:700;color:#1D4ED8">Ler o guia →</p></a>
-        <a class="feat" href="guia-bitcoin-direto-ou-etp" style="text-decoration:none"><h3 style="margin-top:0">Bitcoin direto ou ETP de Bitcoin?</h3><p>Quem é o dono, quanto paga de IRS e o que fica para a família.</p><p style="margin-top:10px;font-weight:700;color:#1D4ED8">Ler o guia →</p></a>
-      </div>
-    </div>
-  </section>
-
+  <!-- AdSense: espaço de anúncio 2 (a ativar) -->
   <section id="perguntas" aria-labelledby="t-faq">
     <div class="wrap faq">
       <h2 id="t-faq">Perguntas frequentes</h2>
