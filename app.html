@@ -531,8 +531,9 @@ const TF = (() => {
       const time = m[7] || (after.match(/\b(\d{2}:\d{2}:\d{2})\b/) || [])[1] || '';
       const price = num(m[8]), cur = m[11].toUpperCase(), conv = Math.abs(num(m[13])), comm = Math.abs(num(m[14])), tot = Math.abs(num(m[15]));
       const isBuy = /buy|compra/i.test(m[4]);
+      const pol = /\bDIST\b/i.test(m[3] + ' ' + after) ? 'dist' : /\bACC\b/i.test(m[3] + ' ' + after) ? 'acc' : '';
       out.push({ kind: isBuy ? 'buy' : 'sell', date: parseDate(m[6]), time, ticker: T(m[2]), name: '',
-        qty: r8(qty), price, priceOrig: price, currency: cur, xtbFx: num(m[12]), fees: r2(tot || conv + comm), broker: 'XTB', orderId: m[1] });
+        qty: r8(qty), price, priceOrig: price, currency: cur, xtbFx: num(m[12]), fees: r2(tot || conv + comm), broker: 'XTB', orderId: m[1], policy: pol });
     });
     return out.filter(r => r.date);
   }
@@ -1131,11 +1132,22 @@ function openHolderCfg() {
   $('#hForm').onsubmit = e => { e.preventDefault(); S.settings.holderName = $('#h2Name').value.trim(); S.settings.holderNif = $('#h2Nif').value.trim(); save(); closeModal(); render(); toast('Guardado'); };
 }
 
+const SECTORS_ETF = ['Mundo', 'EUA', 'Europa', 'Emergentes', 'Tecnologia', 'Semicondutores', 'Dividendos', 'Saúde', 'Energia', 'Imobiliário', 'Obrigações', 'Ouro'];
+const SECTORS_ACAO = ['Tecnologia', 'Bancos', 'Energia', 'Saúde', 'Consumo', 'Indústria', 'Telecomunicações', 'Imobiliário', 'Materiais', 'Utilities'];
+function infoTags(a) {
+  if (!a) return '';
+  const chips = [];
+  if (a.sector) chips.push(`<span class="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-brand-50 text-brand-700">${esc(a.sector)}</span>`);
+  if (a.policy === 'acc') chips.push('<span class="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600">Acumulação</span>');
+  if (a.policy === 'dist') chips.push('<span class="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800">Distribuição</span>');
+  return (chips.length ? `<div class="flex flex-wrap gap-1 mt-1">${chips.join('')}</div>` : '')
+    + (a.note ? `<div class="text-xs text-slate-500 mt-1 truncate"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="inline -mt-0.5 mr-0.5" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>${esc(a.note)}</div>` : '');
+}
 function posRow(p) {
   return `<button data-asset="${esc(p.ticker)}" class="w-full text-left p-4 flex items-center gap-3 hover:bg-brand-50/60">
     <div class="w-10 h-10 rounded-2xl bg-brand-50 text-brand-700 grid place-items-center text-xs font-extrabold shrink-0">${esc(p.ticker.slice(0, 4))}</div>
     <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="font-bold truncate">${esc(p.ticker)}</span>${kindBadge(p.kind)}</div>
-      <div class="text-xs text-slate-500 truncate">${fmtQ(p.qty)} un. · PM ${fmtEUR(p.avg)}${p.value != null ? ' · ' + fmtEUR(p.value / p.qty) + ' ' + priceWhen(S.assets[p.ticker]) : ''}</div></div>
+      <div class="text-xs text-slate-500 truncate">${fmtQ(p.qty)} un. · PM ${fmtEUR(p.avg)}${p.value != null ? ' · ' + fmtEUR(p.value / p.qty) + ' ' + priceWhen(S.assets[p.ticker]) : ''}</div>${infoTags(S.assets[p.ticker])}</div>
     <div class="text-right num"><div class="font-bold">${fmtEUR(p.value ?? p.cost)}</div>
       ${p.value != null ? `<div class="text-xs font-bold ${sgn(p.value - p.cost)}">${plus(p.value - p.cost)} (${pctStr(p.value - p.cost, p.cost)})</div>`
         : '<div class="text-xs text-slate-400">sem preço atual</div>'}</div></button>`;
@@ -1980,6 +1992,20 @@ function openAsset(tk) {
     <div class="text-xs text-brand-200 mt-2">Lotes FIFO em aberto (o primeiro é o próximo a sair numa venda):</div>
     <div class="mt-1 max-h-32 overflow-y-auto text-xs space-y-0.5">${p.lots.map(l => `<div class="flex justify-between"><span>${fmtD(l.date)}</span><span>${fmtQ(l.qty)} un. a ${fmtEUR(l.unit)}</span></div>`).join('')}</div></div>` : ''}
   <form id="assetForm" class="space-y-3">
+    <div class="rounded-2xl border border-brand-100 p-3 space-y-3">
+      <div class="font-bold text-sm">Informação rápida</div>
+      <div><div class="lbl">Setor ou tema</div>
+        <div id="secChips" class="flex flex-wrap gap-1.5"></div>
+        <input id="aSector" class="field mt-2 ${a.sector && ![...SECTORS_ETF, ...SECTORS_ACAO].includes(a.sector) ? '' : 'hidden'}" maxlength="24" value="${esc(a.sector || '')}" placeholder="Escreva o setor ou tema"></div>
+      <div id="polBox" class="${a.kind === 'etf' ? '' : 'hidden'}"><div class="lbl">Dividendos</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" data-pol="acc" class="h-10 rounded-xl border text-sm font-bold">Acumulação</button>
+          <button type="button" data-pol="dist" class="h-10 rounded-xl border text-sm font-bold">Distribuição</button></div>
+        <p class="text-[11px] text-slate-500 mt-1">Preenchido sozinho ao importar o PDF diário da XTB (ACC / DIST).</p></div>
+      <div><label class="lbl" for="aNote">Nota rápida</label>
+        <input id="aNote" class="field" maxlength="80" value="${esc(a.note || '')}" placeholder="ex.: comprar a cada 2 meses">
+        <div id="aNoteN" class="text-[11px] text-slate-500 text-right mt-1"></div></div>
+    </div>
     <div><label class="lbl" for="aName">Nome</label><input id="aName" class="field" value="${esc(a.name)}"></div>
     <div class="grid grid-cols-2 gap-3">
       <div><label class="lbl" for="aKind">Tipo</label><select id="aKind" class="field"><option value="acao" ${a.kind === 'acao' ? 'selected' : ''}>Ação</option><option value="etf" ${a.kind === 'etf' ? 'selected' : ''}>ETF</option></select></div>
@@ -2003,14 +2029,33 @@ function openAsset(tk) {
     <button class="w-full h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold">Guardar ativo</button>
   </form>`);
   $('#aIsin').oninput = ev => { const c = TF.ISO2[ev.target.value.slice(0, 2).toUpperCase()]; if (c) $('#aCountry').value = String(c); };
-  $('#aKind').onchange = ev => { $('#aCode').value = TF.defaultCode(ev.target.value); };
+  let sector = a.sector || '', policy = a.policy || '';
+  const drawInfo = () => {
+    const kind = $('#aKind').value, list = kind === 'etf' ? SECTORS_ETF : SECTORS_ACAO, other = sector && !list.includes(sector);
+    const chip = (v, l, on) => `<button type="button" data-sec="${esc(v)}" class="h-8 px-3 rounded-full text-xs font-bold border ${on ? 'bg-brand-600 text-white border-brand-600' : 'border-brand-100 text-slate-600'}">${esc(l)}</button>`;
+    $('#secChips').innerHTML = list.map(s => chip(s, s, sector === s)).join('') + chip('__other', other ? sector : '+ Outro', other || !$('#aSector').classList.contains('hidden'));
+    $('#polBox').classList.toggle('hidden', kind !== 'etf');
+    document.querySelectorAll('[data-pol]').forEach(b => { const on = b.dataset.pol === policy;
+      b.className = `h-10 rounded-xl border text-sm font-bold ${on ? (policy === 'dist' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-brand-600 text-white border-brand-600') : 'border-brand-100 text-slate-600'}`; });
+    $('#aNoteN').textContent = `${$('#aNote').value.length} / 80`;
+  };
+  $('#secChips').onclick = ev => { const b = ev.target.closest('[data-sec]'); if (!b) return;
+    if (b.dataset.sec === '__other') { $('#aSector').classList.remove('hidden'); $('#aSector').focus(); sector = $('#aSector').value.trim(); }
+    else { sector = sector === b.dataset.sec ? '' : b.dataset.sec; $('#aSector').classList.add('hidden'); $('#aSector').value = sector; }
+    drawInfo(); };
+  $('#aSector').oninput = ev => { sector = ev.target.value.trim(); };
+  document.querySelectorAll('[data-pol]').forEach(b => b.onclick = () => { policy = policy === b.dataset.pol ? '' : b.dataset.pol; drawInfo(); });
+  $('#aNote').oninput = drawInfo;
+  drawInfo();
+  $('#aKind').onchange = ev => { $('#aCode').value = TF.defaultCode(ev.target.value); drawInfo(); };
   $('#assetForm').onsubmit = ev => {
     ev.preventDefault();
     const newPrice = TF.num($('#aPrice').value) || null;
     if (newPrice !== (a.price != null ? TF.r2(a.price) : null)) Object.assign(a, { price: newPrice, priceAt: newPrice ? Date.now() : null, priceSrc: 'manual' });
     Object.assign(a, { name: $('#aName').value.trim() || tk, kind: $('#aKind').value, isin: $('#aIsin').value.trim().toUpperCase(),
       country: Number($('#aCountry').value), code: $('#aCode').value.trim().toUpperCase() || TF.defaultCode($('#aKind').value),
-      quoteSym: $('#aQSym').value.trim().toUpperCase(), quoteCur: $('#aQCur').value });
+      quoteSym: $('#aQSym').value.trim().toUpperCase(), quoteCur: $('#aQCur').value,
+      sector: sector.slice(0, 24), policy: $('#aKind').value === 'etf' ? policy : '', note: $('#aNote').value.trim().slice(0, 80) });
     if ($('#aYSym')) { const y = $('#aYSym').value.trim().toUpperCase(); a.ySym = y === yDefault(tk) ? undefined : y; }
     save(); closeModal(); render(); toast('Ativo guardado');
   };
@@ -2450,6 +2495,7 @@ function commitImport() {
   }
   const renamed = [...renames].map(([o, n]) => `${o} → ${n} (${renameTicker(o, n)})`);
   sel.forEach(r => TF.ensureAsset(S, { ticker: r.ticker.toUpperCase(), name: r.name, isin: r.isin }));
+  UI.imp.rows.forEach(r => { const as = S.assets[String(r.ticker || '').toUpperCase()]; if (as && r.policy && !as.policy) { as.policy = r.policy; if (as.kind !== 'etf') as.kind = 'etf'; } });
   save(); UI.imp = null;
   toast([nFix ? `${nFix} corrigida(s)` : '', nNew ? `${nNew} nova(s)` : '', renamed.length ? 'ticker corrigido: ' + renamed.join(', ') : ''].filter(Boolean).join(' · ') || 'Nada a alterar');
   go('portfolio');
