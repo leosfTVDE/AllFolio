@@ -1,0 +1,41 @@
+{
+ "items": [
+  {
+   "slug": "guia-irs-xtb",
+   "type": "guia",
+   "tag": "IRS",
+   "date": "2026-10-27",
+   "title": "Como declarar ações e ETFs da XTB no IRS",
+   "desc": "Passo a passo para declarar no IRS as vendas e os dividendos de ações e ETFs da XTB: Anexo G ou J, onde estão os documentos, FIFO, englobamento e erros comuns.",
+   "teaser": "Anexo G ou J, onde estão os documentos, dividendos, englobamento e os erros mais comuns.",
+   "status": "pub",
+   "cta": true,
+   "min": 4
+  },
+  {
+   "slug": "guia-fifo-acoes-fracionadas",
+   "type": "guia",
+   "tag": "IRS",
+   "date": "2026-10-27",
+   "title": "Mais-valias com FIFO e ações fracionadas: exemplo passo a passo",
+   "desc": "Como calcular as mais-valias pelo método FIFO quando compra o mesmo ETF várias vezes e em frações, com um exemplo completo e as linhas a declarar no IRS.",
+   "teaser": "Um exemplo completo, passo a passo, com as linhas exatas a declarar.",
+   "status": "pub",
+   "cta": true,
+   "min": 3
+  },
+  {
+   "slug": "guia-bitcoin-direto-ou-etp",
+   "type": "guia",
+   "tag": "Bitcoin",
+   "date": "2026-10-28",
+   "featured": true,
+   "title": "Bitcoin direto ou ETP de Bitcoin? O que é seu, o que paga de IRS e o que fica para a família",
+   "desc": "O que é o Bitcoin, porque foi criado e a diferença entre ter Bitcoin em carteira própria e comprar um ETP: quem é o dono, quanto paga de IRS e o que acontece na herança.",
+   "teaser": "A história do Bitcoin, a diferença entre ter a criptomoeda e ter um produto de bolsa, e porque é que um pode pagar 0 € de IRS e o outro 28%.",
+   "status": "pub",
+   "cta": true,
+   "min": 5
+  }
+ ]
+}
