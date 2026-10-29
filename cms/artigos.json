@@ -3,15 +3,16 @@
   {
    "slug": "guia-irs-xtb",
    "type": "guia",
-   "tag": "IRS",
-   "date": "2026-10-27",
    "title": "Como declarar ações e ETFs da XTB no IRS",
    "desc": "Passo a passo para declarar no IRS as vendas e os dividendos de ações e ETFs da XTB: Anexo G ou J, onde estão os documentos, FIFO, englobamento e erros comuns.",
    "teaser": "Anexo G ou J, onde estão os documentos, dividendos, englobamento e os erros mais comuns.",
-   "status": "pub",
+   "tag": "IRS",
+   "date": "2026-10-27",
+   "updated": "2026-10-29",
+   "featured": false,
    "cta": true,
    "min": 4,
-   "featured": false
+   "status": "pub"
   },
   {
    "slug": "guia-fifo-acoes-fracionadas",
