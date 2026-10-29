@@ -50,6 +50,20 @@
    "cta": true,
    "min": 4,
    "status": "pub"
+  },
+  {
+   "slug": "semana-2026-10-29",
+   "type": "semana",
+   "title": "A semana do investidor: BCE em pausa, Lagarde de saída e a IA posta à prova",
+   "desc": "BCE mantém os juros e Lagarde anuncia a saída, Alphabet e Amazon desiludem, Orçamento aprovado na generalidade e o que vigiar na próxima semana.",
+   "teaser": "Juros em pausa na Europa e nos EUA, gigantes da IA sob pressão e a agenda da próxima semana.",
+   "tag": "",
+   "date": "2026-10-29",
+   "updated": "",
+   "featured": false,
+   "cta": true,
+   "min": 4,
+   "status": "pub"
   }
  ]
 }
