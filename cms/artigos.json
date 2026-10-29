@@ -17,15 +17,16 @@
   {
    "slug": "guia-fifo-acoes-fracionadas",
    "type": "guia",
-   "tag": "IRS",
-   "date": "2026-10-27",
    "title": "Mais-valias com FIFO e ações fracionadas: exemplo passo a passo",
    "desc": "Como calcular as mais-valias pelo método FIFO quando compra o mesmo ETF várias vezes e em frações, com um exemplo completo e as linhas a declarar no IRS.",
    "teaser": "Um exemplo completo, passo a passo, com as linhas exatas a declarar.",
-   "status": "pub",
+   "tag": "IRS",
+   "date": "2026-10-27",
+   "updated": "2026-10-29",
+   "featured": false,
    "cta": true,
    "min": 3,
-   "featured": false
+   "status": "pub"
   },
   {
    "slug": "guia-bitcoin-direto-ou-etp",
