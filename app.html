@@ -776,18 +776,19 @@ function priceWhen(a) {
   return d.toDateString() === now.toDateString() ? 'às ' + d.toTimeString().slice(0, 5) : 'em ' + fmtD(d.toISOString().slice(0, 10));
 }
 
-async function refreshPricesWorker() {
+async function refreshPricesWorker(silent = false) {
   const pos = TF.positions(TF.fifo(S.tx).lots, S.assets);
-  if (!pos.length) return toast('Não há posições abertas para atualizar');
+  if (!pos.length) return silent ? null : toast('Não há posições abertas para atualizar');
   const list = pos.map(p => ({ tk: p.ticker, y: ySymOf(p.ticker) }));
   const noSym = list.filter(x => !x.y).map(x => x.tk), todo = list.filter(x => x.y);
-  if (!todo.length) return showPriceReport([], noSym, 0);
-  UI.job = { done: 0, total: 1, cur: 'todos os ativos', what: 'preços' }; render();
+  if (!todo.length) return silent ? null : showPriceReport([], noSym, 0);
+  if (!silent) { UI.job = { done: 0, total: 1, cur: 'todos os ativos', what: 'preços' }; render(); }
   const rates = await getFx();
   let data = null;
   const hb = homeBenchOn() ? benchInfo(homeBenchId()).ysym : '', syms = [...new Set([...todo.map(x => x.y), ...(hb ? [hb] : [])])];
   try { const r = await fetch(`${workerBase()}/quote?symbols=${encodeURIComponent(syms.join(','))}`); if (r.ok) data = await r.json(); } catch (e) {}
   if (data && hb) storeBenchQuote(hb, data[hb]);
+  if (!data && silent) return null;
   if (!data) { UI.job = null; render(); return showPriceReport(['Não foi possível contactar o servidor de preços. Confirme o endereço em Configurações → Preços e câmbio.'], [], 0); }
   const errors = []; let ok = 0;
   for (const x of todo) {
@@ -800,9 +801,26 @@ async function refreshPricesWorker() {
       pricePrev: d.prev != null ? toEURq(d.prev, cur, rates) : null });
     ok++;
   }
+  S.settings.lastPriceRefresh = Date.now();
+  if (silent) { save(); render(); return ok; }
   UI.job = null; save(); render();
   errors.length || noSym.length ? showPriceReport(errors, noSym, ok) : toast(`Preços atualizados: ${ok} ativo(s)`);
 }
+
+/* ---------- Atualização automática dos preços (servidor próprio) ---------- */
+const autoMin = () => { const v = S.settings.autoPrices; return v === undefined ? 15 : Number(v) || 0; };
+function marketHours() { const d = new Date(), wd = d.getDay(), m = d.getHours() * 60 + d.getMinutes(); return wd >= 1 && wd <= 5 && m >= 8 * 60 && m <= 21 * 60 + 30; }
+async function autoRefreshTick() {
+  const mins = autoMin();
+  if (!mins || !useWorker() || !navigator.onLine || UI.job || UI.autoBusy || document.hidden || !S.tx.length) return;
+  const age = Date.now() - (S.settings.lastPriceRefresh || 0);
+  // Em horário de bolsa: segundo o intervalo escolhido. Fora dele: no máximo uma vez a cada 6 horas (para apanhar os fechos).
+  if (marketHours() ? age < mins * 60e3 : age < 6 * 3600e3) return;
+  UI.autoBusy = true;
+  try { await refreshPricesWorker(true); } catch (e) {} finally { UI.autoBusy = false; }
+}
+setInterval(autoRefreshTick, 60e3);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(autoRefreshTick, 800); });
 
 async function refreshHistoryWorker() {
   if (!S.tx.length) return toast('Registe ou importe compras primeiro');
@@ -846,6 +864,9 @@ function openQuoteSettings(first = false) {
       <p class="text-sm text-slate-600">Preços com cerca de 15 minutos de atraso para os EUA, Xetra, Amesterdão, Londres e Lisboa, todos de uma vez e sem limite diário. Recomendado.</p>
       <div><label class="lbl" for="qUrl">Endereço do servidor (Cloudflare Worker)</label><input id="qUrl" class="field font-mono text-sm" autocomplete="off" autocapitalize="none" value="${esc(S.settings.workerUrl || '')}" placeholder="https://taxfolio-precos.….workers.dev"></div>
       <button type="button" id="qTest" class="h-10 px-4 rounded-xl bg-brand-50 text-brand-700 text-sm font-bold">Testar ligação</button> <span id="qTestRes" class="text-sm font-semibold"></span>
+      <div><label class="lbl" for="qAuto">Atualização automática</label>
+        <select id="qAuto" class="field">${[[0, 'Desligada'], [5, 'A cada 5 minutos'], [15, 'A cada 15 minutos'], [30, 'A cada 30 minutos'], [60, 'A cada hora']].map(([v, l]) => `<option value="${v}" ${autoMin() === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <p class="text-[11px] text-slate-500 mt-1">Com a app aberta, em dias úteis das 8h00 às 21h30. Fora desse horário atualiza no máximo a cada 6 horas. O botão Preços continua a funcionar a qualquer momento.</p></div>
     </div>
     <div id="pvAv" class="${prov === 'av' ? '' : 'hidden'}">
       <p class="text-sm text-slate-600 mb-2">Gratuito com 25 pedidos por dia. Bom para os EUA; para a Europa os preços podem vir atrasados (fecho do dia anterior).</p>
@@ -870,7 +891,7 @@ function openQuoteSettings(first = false) {
     e.preventDefault();
     const u = $('#qUrl').value.trim();
     if (pv === 'worker' && !/^https:\/\//.test(u)) return toast('Indique o endereço do servidor (começa por https://)');
-    Object.assign(S.settings, { priceProvider: pv, workerUrl: u, avKey: $('#qKey').value.trim() });
+    Object.assign(S.settings, { priceProvider: pv, workerUrl: u, avKey: $('#qKey').value.trim(), autoPrices: Number($('#qAuto').value) || 0 });
     save(); closeModal(); render(); toast('Definições guardadas');
     if (first) refreshPrices();
   };
@@ -2993,7 +3014,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   }).catch(() => {}));
 }
 
-load(); applyTheme(); netStatus(); renderSupportBtn();
+load(); applyTheme(); netStatus(); renderSupportBtn(); setTimeout(autoRefreshTick, 2000);
 if (standalone()) $('#pwaTxt').textContent = ' · App';
 $('#fxBtn').onclick = openFxModal;
 renderFx(); refreshFx();
