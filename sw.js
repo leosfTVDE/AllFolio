@@ -1,5 +1,5 @@
 /* AllFolio.pt — Service Worker (offline) */
-const CACHE = 'taxfolio-v24';
+const CACHE = 'taxfolio-v26';
 const CORE = ['./', './index.html', './app.html', './manifest.json', './firebase-config.js', './icon-192.png', './icon-512.png'];
 const CDN = [
   'https://cdn.tailwindcss.com/3.4.17',
