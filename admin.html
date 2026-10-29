@@ -104,7 +104,7 @@
     <button data-cmd="h2">Título</button><button data-cmd="h3">Subtítulo</button><button data-cmd="p">Normal</button>
     <button data-cmd="bold"><b>N</b></button><button data-cmd="italic"><i>I</i></button>
     <button data-cmd="ul">• Lista</button><button data-cmd="ol">1. Lista</button><button data-cmd="link">Link</button>
-    <button data-cmd="note">Destaque</button><button data-cmd="summary">Resumo</button><button data-cmd="table">Tabela</button>
+    <button data-cmd="note">Destaque</button><button data-cmd="summary">Resumo</button><button data-cmd="table">Tabela</button><button data-cmd="md" title="Converte ## títulos, **negrito**, tabelas com | e links">Converter Markdown</button>
   </div>
   <div id="ed" contenteditable="true"></div>
   <p class="hint">Pode colar texto de outro lado: a formatação é limpa automaticamente. Também aceita Markdown (## título, **negrito**, - listas, tabelas com |).</p>
@@ -320,12 +320,13 @@ $('#tools').onclick = e => {
   else if (c === 'ol') document.execCommand('insertOrderedList');
   else if (c === 'link') { const u = prompt('Endereço do link (https://… ou o nome de outro guia, ex.: guia-irs-xtb)'); if (u) document.execCommand('createLink', false, u.trim()); }
   else if (c === 'note' || c === 'summary') { const t = String(window.getSelection() || '').trim(); insertHTML(`<div class="${c}"><p>${CMS.esc(t || (c === 'note' ? 'Texto em destaque' : 'Em resumo: …'))}</p></div><p><br></p>`); }
+  else if (c === 'md') { if (!looksMd(ed.innerText)) return toast('Não encontrei marcas de Markdown (##, **, | ou links) no texto.'); ed.innerHTML = mdToHtml(ed.innerText); toast('Formatação aplicada. Reveja e publique.'); }
   else if (c === 'table') insertHTML('<table><thead><tr><th>Coluna</th><th>Coluna</th><th>Coluna</th></tr></thead><tbody><tr><td>…</td><td>…</td><td>…</td></tr><tr><td>…</td><td>…</td><td>…</td></tr></tbody></table><p><br></p>');
 };
 ed.addEventListener('paste', e => {
   e.preventDefault();
   const h = e.clipboardData.getData('text/html'), t = e.clipboardData.getData('text/plain');
-  insertHTML(h ? sanitize(h) : mdToHtml(t));
+  insertHTML(looksMd(t) || !h ? mdToHtml(t) : sanitize(h));
 });
 const BLOCK = { H1: 'h2', H2: 'h2', H3: 'h3', H4: 'h3', H5: 'h3', H6: 'h3', P: 'p', UL: 'ul', OL: 'ol', LI: 'li', TABLE: 'table', THEAD: 'thead', TBODY: 'tbody', TR: 'tr', TH: 'th', TD: 'td', BLOCKQUOTE: 'div' };
 const INLINE = { STRONG: 'strong', B: 'strong', EM: 'em', I: 'em' };
@@ -347,6 +348,10 @@ function sanitize(html) {
   };
   return [...doc.body.childNodes].map(walk).join('');
 }
+function looksMd(t) {
+  t = String(t || '');
+  return /^\s*#{1,4}\s+\S/m.test(t) || /^\s*\|.*\|\s*$/m.test(t) || /\[[^\]]+\]\((https?:\/\/|[a-z0-9-]+\))/i.test(t) || /\*\*[^*]+\*\*/.test(t) || /^>\s/m.test(t);
+}
 function inlineMd(s) {
   return CMS.esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<em>$2</em>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|[a-z0-9-]+)\)/g, '<a href="$2">$1</a>');
@@ -358,10 +363,11 @@ function mdToHtml(t) {
     if (!l.trim()) { i++; continue; }
     let m;
     if ((m = l.match(/^(#{1,4})\s+(.*)/))) { out.push(m[1].length <= 2 ? `<h2>${inlineMd(m[2])}</h2>` : `<h3>${inlineMd(m[2])}</h3>`); i++; continue; }
-    if (/^\s*\|/.test(l)) { const rows = []; while (i < L.length && /^\s*\|/.test(L[i])) { if (!/^\s*\|?\s*:?-{2,}/.test(L[i].replace(/\|/g, '|'))) rows.push(L[i].trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())); i++; }
+    const nextNb = k => { while (k < L.length && !L[k].trim()) k++; return k; };
+    if (/^\s*\|/.test(l)) { const rows = []; while (i < L.length && /^\s*\|/.test(L[i])) { if (!/^\s*\|?\s*:?-{2,}/.test(L[i])) rows.push(L[i].trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())); i++; const k = nextNb(i); if (k < L.length && /^\s*\|/.test(L[k])) i = k; }
       if (rows.length) out.push(`<table><thead><tr>${rows[0].map(c => `<th>${inlineMd(c)}</th>`).join('')}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(c => `<td>${inlineMd(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`); continue; }
-    if (/^\s*([-*•])\s+/.test(l)) { const it = []; while (i < L.length && /^\s*([-*•])\s+/.test(L[i])) { it.push(L[i].replace(/^\s*([-*•])\s+/, '')); i++; } out.push(`<ul>${it.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ul>`); continue; }
-    if (/^\s*\d+[.)]\s+/.test(l)) { const it = []; while (i < L.length && /^\s*\d+[.)]\s+/.test(L[i])) { it.push(L[i].replace(/^\s*\d+[.)]\s+/, '')); i++; } out.push(`<ol>${it.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ol>`); continue; }
+    if (/^\s*([-*•])\s+/.test(l)) { const it = []; while (i < L.length && /^\s*([-*•])\s+/.test(L[i])) { it.push(L[i].replace(/^\s*([-*•])\s+/, '')); i++; const k = nextNb(i); if (k < L.length && /^\s*([-*•])\s+/.test(L[k])) i = k; } out.push(`<ul>${it.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ul>`); continue; }
+    if (/^\s*\d+[.)]\s+/.test(l)) { const it = []; while (i < L.length && /^\s*\d+[.)]\s+/.test(L[i])) { it.push(L[i].replace(/^\s*\d+[.)]\s+/, '')); i++; const k = nextNb(i); if (k < L.length && /^\s*\d+[.)]\s+/.test(L[k])) i = k; } out.push(`<ol>${it.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ol>`); continue; }
     if (/^>\s?/.test(l)) { const it = []; while (i < L.length && /^>\s?/.test(L[i])) { it.push(L[i].replace(/^>\s?/, '')); i++; } out.push(`<div class="note"><p>${inlineMd(it.join(' '))}</p></div>`); continue; }
     if (/^-{3,}$/.test(l.trim())) { i++; continue; }
     const p = []; while (i < L.length && L[i].trim() && !/^(#{1,4}\s|\s*\||\s*[-*•]\s|\s*\d+[.)]\s|>)/.test(L[i])) { p.push(L[i].trim()); i++; }
