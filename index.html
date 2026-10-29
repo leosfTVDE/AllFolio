@@ -133,6 +133,24 @@
   .feat.small h3{margin:10px 0 4px;font-size:18px}
   .feat.small p{font-size:15px}
   .more{display:inline-block;margin-top:18px;font-weight:700}
+  .feats{display:grid;gap:22px;margin-top:8px}
+  .fblk{display:grid;gap:18px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:24px;padding:18px;min-width:0}
+  .fblk>div{min-width:0}
+  @media (min-width:860px){.fblk{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding:28px 32px}.fblk:nth-child(even) .fshot{order:2}}
+  .fblk h3{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em}
+  .fblk p{margin:8px 0 0;font-size:17px;line-height:1.65;color:var(--muted)}
+  .fshot{background:#EEF3FB;border-radius:20px;padding:18px 8px;display:flex;justify-content:center}
+  .ph{width:280px;max-width:100%;background:#F4F7FC;border:7px solid #0A2A66;border-radius:32px;overflow:hidden;color:#0A2A66;font-size:11px;line-height:1.45;box-shadow:0 18px 40px rgba(10,42,102,.18)}
+  .ph .hd{display:flex;align-items:center;gap:6px;padding:10px 12px;background:#fff;border-bottom:1px solid #E2E8F4;font-weight:800;font-size:14px}
+  .ph .hd small{font-size:inherit;font-weight:600;color:#64748B}
+  .ph .bd{padding:10px}
+  .ph .cd{background:#fff;border:1px solid #DCE7F8;border-radius:16px;padding:10px}
+  .ph .mut{color:#64748B}.ph .g{color:#0F9D6E}.ph .r{color:#DC2626}
+  .ph .chip{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;margin-right:3px}
+  .ph .prow{display:flex;justify-content:space-between;gap:6px}
+  .ph .bar{height:5px;border-radius:9px;margin-top:3px}
+  .extras{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .extras span{background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px 14px;font-size:15px;font-weight:600;color:var(--muted);max-width:100%}
 </style>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2352895338707924" crossorigin="anonymous"></script>
 </head>
@@ -176,10 +194,6 @@
           <h3>Bitcoin direto ou ETP de Bitcoin? O que é seu, o que paga de IRS e o que fica para a família</h3>
           <p>A história do Bitcoin, a diferença entre ter a criptomoeda e ter um produto de bolsa, e porque é que um pode pagar 0 € de IRS e o outro 28%.</p>
           <span class="go">Ler →</span></a>
-        <a class="gcard" href="acoes-ou-cfds-a-diferenca-que-pode-custar-caro-e-o-que-muda-no-irs"><span class="tag">Investir · 4 min</span>
-          <h3>Ações ou CFDs? A diferença que pode custar caro (e o que muda no IRS)</h3>
-          <p>Parecem iguais na app da corretora, mas um é seu e o outro é uma aposta com alavancagem. Saiba distinguir.</p>
-          <span class="go">Ler →</span></a>
         <a class="gcard" href="guia-irs-xtb"><span class="tag">IRS · 4 min</span>
           <h3>Como declarar ações e ETFs da XTB no IRS</h3>
           <p>Anexo G ou J, onde estão os documentos, dividendos, englobamento e os erros mais comuns.</p>
@@ -199,18 +213,71 @@
     <div class="wrap">
       <h2 id="t-app">A app AllFolio, gratuita</h2>
       <p class="sub">Tudo o que os guias explicam, feito automaticamente a partir do extrato da sua corretora.</p>
-      <div class="brokers" aria-label="Corretoras suportadas" style="margin-bottom:22px">
-        <strong>Importa extratos de</strong><span class="chip">XTB</span><span class="chip">DEGIRO</span><span class="chip">Trading 212</span><span class="chip">Revolut</span>
+      <div class="feats">
+        <article class="fblk"><div class="fshot" aria-hidden="true"><div class="ph"><div class="hd"><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="30" width="8" height="12" rx="2" fill="#0A2A66"/><rect x="19" y="24" width="8" height="18" rx="2" fill="#0A2A66"/><rect x="30" y="18" width="8" height="24" rx="2" fill="#0A2A66"/><path d="M6 23 L42 7" fill="none" stroke="#5B8DEF" stroke-width="3.4" stroke-linecap="round"/></svg>AllFolio<small>.pt</small></div><div class="bd"><div style="background:linear-gradient(135deg,#1D4ED8,#0A2A66);color:#fff;border-radius:18px;padding:12px">
+  <div class="prow"><span style="opacity:.85">Património total</span><span style="background:rgba(255,255,255,.15);border-radius:99px;padding:2px 7px;font-weight:700">vs S&amp;P 500 ▾</span></div>
+  <div style="font-size:24px;font-weight:800;margin-top:2px">12.480,35 €</div>
+  <div style="color:#A7F3D0;font-weight:700">+186,40 € (+1,5%) esta semana</div>
+  <svg viewBox="0 0 220 50" width="100%" height="44"><polyline fill="none" stroke="#FCD34D" stroke-width="1.6" stroke-dasharray="4 3" points="0,44 70,42 120,24 220,28"/><polyline fill="none" stroke="#A7F3D0" stroke-width="2.2" points="0,44 70,43 120,22 220,20"/></svg>
+  <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:5px 7px">A sua carteira está <b>0,3 pontos acima</b> do S&amp;P 500 esta semana</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px;text-align:center;font-weight:700"><span style="background:rgba(255,255,255,.12);border-radius:7px;padding:3px">1 dia</span><span style="background:#fff;color:#1D4ED8;border-radius:7px;padding:3px">Semana</span><span style="background:rgba(255,255,255,.12);border-radius:7px;padding:3px">Mês</span><span style="background:rgba(255,255,255,.12);border-radius:7px;padding:3px">Ano</span></div>
+  <div style="border-top:1px solid rgba(255,255,255,.15);margin-top:7px;padding-top:5px;display:grid;gap:2px">
+    <div class="prow"><span style="opacity:.85">Desde a compra</span><b>+11,8%</b></div>
+    <div class="prow"><span style="opacity:.85">Inflação em Portugal</span><b>+2,4%</b></div>
+    <div class="prow" style="color:#A7F3D0"><span>Ganho real</span><b>+9,4 pontos</b></div></div></div></div></div></div>
+          <div><h3>Está a ganhar à inflação?</h3><p>Veja a variação do dia, da semana, do mês e do ano, e compare com o S&amp;P 500, o mercado mundial, o Bitcoin ou a inflação oficial de Portugal. A app mostra o seu ganho real, já descontada a inflação.</p></div></article>
+        <article class="fblk"><div class="fshot" aria-hidden="true"><div class="ph"><div class="hd"><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="30" width="8" height="12" rx="2" fill="#0A2A66"/><rect x="19" y="24" width="8" height="18" rx="2" fill="#0A2A66"/><rect x="30" y="18" width="8" height="24" rx="2" fill="#0A2A66"/><path d="M6 23 L42 7" fill="none" stroke="#5B8DEF" stroke-width="3.4" stroke-linecap="round"/></svg>AllFolio<small>.pt</small></div><div class="bd"><div style="font-weight:800;font-size:13px;margin:2px 2px 6px">As suas posições <span class="mut">(9)</span></div>
+<div class="cd" style="padding:0 10px">
+  <div style="display:flex;gap:8px;padding:9px 0;border-bottom:1px solid #EEF3FB">
+    <div style="width:32px;height:32px;flex:none;border-radius:50%;background:#EEF3FB;display:grid;place-items:center;font-size:8px;font-weight:800">VWCE</div>
+    <div style="flex:1;min-width:0"><b style="font-size:12px">VWCE.DE</b> <span class="chip" style="background:#E6EEFC;color:#1A3FAE">ETF</span>
+      <div class="mut">42 un. · PM 112,40 € · 128,65 €</div>
+      <div style="margin-top:3px"><span class="chip" style="background:#E6EEFC;color:#1A3FAE">Mundo</span><span class="chip" style="background:#F1F5F9;color:#475569">Acumulação</span></div>
+      <div class="mut" style="margin-top:2px">✎ Aporte todos os meses</div></div>
+    <div style="text-align:right"><b style="font-size:12px">5.403,30 €</b><div class="g" style="font-weight:700">+0,9%</div></div></div>
+  <div style="display:flex;gap:8px;padding:9px 0">
+    <div style="width:32px;height:32px;flex:none;border-radius:50%;background:#EEF3FB;display:grid;place-items:center;font-size:8px;font-weight:800">VHYL</div>
+    <div style="flex:1;min-width:0"><b style="font-size:12px">VHYL.AS</b> <span class="chip" style="background:#E6EEFC;color:#1A3FAE">ETF</span>
+      <div class="mut">30 un. · PM 61,20 € · 66,85 €</div>
+      <div style="margin-top:3px"><span class="chip" style="background:#E6EEFC;color:#1A3FAE">Dividendos</span><span class="chip" style="background:#E7F6EF;color:#0B5D41">Distribuição</span></div></div>
+    <div style="text-align:right"><b style="font-size:12px">2.005,50 €</b><div class="r" style="font-weight:700">−0,3%</div></div></div></div></div></div></div>
+          <div><h3>Cada ativo explicado de relance</h3><p>Setor ou tema, acumulação ou distribuição e as suas notas pessoais ao lado de cada ETF ou ação. Os preços atualizam-se sozinhos enquanto a app está aberta.</p></div></article>
+        <article class="fblk"><div class="fshot" aria-hidden="true"><div class="ph"><div class="hd"><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="30" width="8" height="12" rx="2" fill="#0A2A66"/><rect x="19" y="24" width="8" height="18" rx="2" fill="#0A2A66"/><rect x="30" y="18" width="8" height="24" rx="2" fill="#0A2A66"/><path d="M6 23 L42 7" fill="none" stroke="#5B8DEF" stroke-width="3.4" stroke-linecap="round"/></svg>AllFolio<small>.pt</small></div><div class="bd"><div class="cd"><div style="font-weight:800;font-size:12px;margin-bottom:8px">Distribuição da carteira</div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <svg viewBox="0 0 42 42" width="96" height="96" style="flex:none"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#1D4ED8" stroke-width="6" stroke-dasharray="43 57" stroke-dashoffset="25"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#0F9D6E" stroke-width="6" stroke-dasharray="16 84" stroke-dashoffset="-18"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#7FA5F0" stroke-width="6" stroke-dasharray="14 86" stroke-dashoffset="-34"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#F2A93B" stroke-width="6" stroke-dasharray="12 88" stroke-dashoffset="-48"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#8B5CF6" stroke-width="6" stroke-dasharray="9 91" stroke-dashoffset="-60"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#34D399" stroke-width="6" stroke-dasharray="6 94" stroke-dashoffset="-69"/></svg>
+    <div style="flex:1;display:grid;gap:3px">
+      <div class="prow"><span><span style="color:#1D4ED8">●</span> VWCE</span><b>43%</b></div><div class="prow"><span><span style="color:#0F9D6E">●</span> VHYL</span><b>16%</b></div>
+      <div class="prow"><span><span style="color:#7FA5F0">●</span> SXR8</span><b>14%</b></div><div class="prow"><span><span style="color:#F2A93B">●</span> IS3N</span><b>12%</b></div>
+      <div class="prow"><span><span style="color:#8B5CF6">●</span> Outros</span><b>9%</b></div><div class="prow"><span><span style="color:#34D399">●</span> Caixa</span><b>6%</b></div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+    <div style="background:#EEF3FB;border-radius:10px;padding:6px"><div class="mut">Investido</div><b style="font-size:12px">11.167,75 €</b></div>
+    <div style="background:#EEF3FB;border-radius:10px;padding:6px"><div class="mut">Resultado</div><b class="g" style="font-size:12px">+11,8%</b></div></div></div></div></div></div>
+          <div><h3>Metas, caixa e distribuição</h3><p>Defina a distribuição desejada por ativo, incluindo a caixa de oportunidade, o aporte mensal e o valor a atingir. A app diz-lhe onde investir a seguir.</p></div></article>
+        <article class="fblk"><div class="fshot" aria-hidden="true"><div class="ph"><div class="hd"><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="30" width="8" height="12" rx="2" fill="#0A2A66"/><rect x="19" y="24" width="8" height="18" rx="2" fill="#0A2A66"/><rect x="30" y="18" width="8" height="24" rx="2" fill="#0A2A66"/><path d="M6 23 L42 7" fill="none" stroke="#5B8DEF" stroke-width="3.4" stroke-linecap="round"/></svg>AllFolio<small>.pt</small></div><div class="bd"><div class="cd"><div class="prow" style="align-items:center;margin-bottom:6px"><b style="font-size:12px">Pagou vs vale hoje</b><span class="mut">▬ pagou <span style="color:#1D4ED8">▬</span> hoje</span></div>
+  <div class="prow" style="font-weight:700"><span>VWCE.DE</span><span class="g">+14,5%</span></div>
+  <div class="bar" style="background:#CBD5E1;width:86%"></div><div class="bar" style="background:#1D4ED8;width:100%"></div>
+  <div class="mut" style="margin:3px 0 7px">4.720,80 € → 5.403,30 €</div>
+  <div class="prow" style="font-weight:700"><span>VHYL.AS</span><span class="g">+9,2%</span></div>
+  <div class="bar" style="background:#CBD5E1;width:34%"></div><div class="bar" style="background:#1D4ED8;width:37%"></div>
+  <div class="mut" style="margin:3px 0 7px">1.836,00 € → 2.005,50 €</div>
+  <div class="prow" style="font-weight:700"><span>IS3N.DE</span><span class="r">−2,1%</span></div>
+  <div class="bar" style="background:#CBD5E1;width:28%"></div><div class="bar" style="background:#1D4ED8;width:27%"></div>
+  <div class="mut" style="margin-top:3px">1.528,40 € → 1.496,30 €</div></div></div></div></div>
+          <div><h3>Veja quanto rendeu cada ativo</h3><p>Compare o que pagou com o que vale hoje, ativo a ativo, já convertido para euros com o câmbio do BCE.</p></div></article>
+        <article class="fblk"><div class="fshot" aria-hidden="true"><div class="ph"><div class="hd"><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="30" width="8" height="12" rx="2" fill="#0A2A66"/><rect x="19" y="24" width="8" height="18" rx="2" fill="#0A2A66"/><rect x="30" y="18" width="8" height="24" rx="2" fill="#0A2A66"/><path d="M6 23 L42 7" fill="none" stroke="#5B8DEF" stroke-width="3.4" stroke-linecap="round"/></svg>AllFolio<small>.pt</small></div><div class="bd"><div class="prow" style="align-items:center"><b style="font-size:16px">IRS 2026</b><span style="background:#fff;border:1px solid #DCE7F8;border-radius:9px;padding:2px 8px;font-weight:700">2026 ⇅</span></div>
+<div class="mut" style="margin:2px 0 8px">Rendimentos de 2026, a declarar em 2027.</div>
+<div style="background:#0A2A66;color:#fff;border-radius:16px;padding:10px">
+  <div style="opacity:.85">Imposto estimado (taxa autónoma de 28%)</div><div style="font-size:22px;font-weight:800">96,32 €</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><div style="background:rgba(255,255,255,.12);border-radius:9px;padding:6px"><div style="opacity:.8">Mais-valias</div><b>62,72 €</b></div><div style="background:rgba(255,255,255,.12);border-radius:9px;padding:6px"><div style="opacity:.8">Dividendos</div><b>33,60 €</b></div></div></div>
+<div class="cd" style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+  <div><div class="mut">Ganhos</div><b class="g">312,40 €</b></div><div><div class="mut">Perdas</div><b class="r">88,40 €</b></div>
+  <div><div class="mut">Dividendos brutos</div><b>164,20 €</b></div><div><div class="mut">Retido no estrangeiro</div><b>12,30 €</b></div></div>
+<div style="margin-top:8px;background:#1D4ED8;color:#fff;border-radius:12px;padding:7px;text-align:center;font-weight:700">Relatório para a contabilista</div></div></div></div>
+          <div><h3>O IRS fica pronto</h3><p>FIFO com ações fracionadas, câmbio de cada dia, dividendos e crédito por dupla tributação. As linhas dos Anexos G e J prontas a copiar ou a enviar à contabilista em PDF e Excel.</p></div></article>
       </div>
-      <div class="grid">
-        <article class="feat small"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg><h3>Importa e corrige</h3><p>Lê os extratos e o PDF diário da XTB e acerta os valores que registou à mão.</p></article>
-        <article class="feat small"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9h-9z"/></svg><h3>FIFO e frações</h3><p>Cada venda calculada como pedem as Finanças, até 8 casas decimais.</p></article>
-        <article class="feat small"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg><h3>Anexos G e J prontos</h3><p>Relatório em PDF ou Excel para a contabilista, com dividendos e dupla tributação.</p></article>
-        <article class="feat small"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg><h3>Compara com índices</h3><p>Veja se a sua carteira bate o S&amp;P 500, o mercado mundial ou o Bitcoin.</p></article>
-      </div>
-      <div class="ctas" style="margin-top:24px">
-        <a class="btn btn-primary btn-lg js-signup" href="app">Criar conta grátis</a>
-      </div>
+      <div class="extras"><span>⤓ Importa e corrige os extratos da XTB, DEGIRO, Trading 212 e Revolut</span><span>⟳ Preços automáticos</span><span>☁ Todos os seus aparelhos</span><span>◐ Modo escuro</span><span>✈ Funciona sem internet</span></div>
+      <div class="ctas" style="margin-top:24px"><a class="btn btn-primary btn-lg js-signup" href="app">Criar conta grátis</a></div>
+      <p class="note">Ecrãs da app com valores de exemplo.</p>
     </div>
   </section>
 
