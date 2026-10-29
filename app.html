@@ -1813,12 +1813,15 @@ function goalsData() {
   }
   if (g.alloc.on && total > 0) {
     const t = g.alloc.targets || {};
+    const cashT = Number(t.__cash) || 0, cashV = cashT > 0 ? Math.max(0, cashState().saldo || 0) : 0, base = total + cashV;
     const groups = g.alloc.mode === 'asset'
-      ? [...new Set([...Object.keys(t).filter(k => t[k] > 0), ...pos.map(p => p.ticker)])].map(k => ({ key: k, label: k, target: Number(t[k]) || 0, value: pos.filter(p => p.ticker === k).reduce((s, p) => s + (p.value ?? p.cost), 0) }))
+      ? [...new Set([...Object.keys(t).filter(k => k !== '__cash' && t[k] > 0), ...pos.map(p => p.ticker)])].map(k => ({ key: k, label: k, target: Number(t[k]) || 0, value: pos.filter(p => p.ticker === k).reduce((s, p) => s + (p.value ?? p.cost), 0) }))
       : [{ key: 'etf', label: 'ETFs' }, { key: 'acao', label: 'Ações' }].map(x => ({ ...x, target: Number(t[x.key]) || 0, value: pos.filter(p => (p.kind === 'etf' ? 'etf' : 'acao') === x.key).reduce((s, p) => s + (p.value ?? p.cost), 0) }));
-    groups.forEach(x => { x.pct = x.value / total * 100; x.need = Math.max(0, x.target / 100 * total - x.value); });
+    if (cashT > 0) groups.push({ key: '__cash', label: 'Caixa de oportunidade', target: cashT, value: cashV, cash: true });
+    groups.forEach(x => { x.pct = x.value / base * 100; x.need = Math.max(0, x.target / 100 * base - x.value); x.over = x.value - x.target / 100 * base; });
     const under = groups.filter(x => x.need > 1).sort((a, b) => b.need - a.need);
-    out.alloc = { groups, under, sum: groups.reduce((s, x) => s + x.target, 0) };
+    const cg = groups.find(x => x.cash);
+    out.alloc = { groups, under, sum: groups.reduce((s, x) => s + x.target, 0), cashOver: cg && cg.over > 1 ? cg.over : 0 };
   }
   if (g.div.on && g.div.amount > 0) {
     const from = addDays(today(), -365), net12 = S.div.filter(d => d.date > from).reduce((s, d) => s + divNet(d), 0);
@@ -1840,7 +1843,7 @@ function goalsCardHTML() {
   if (d.port) { title = `Meta: ${fmtEUR(g.port.target).replace(',00', '')} até ${monthYear(g.port.month)}`; main = `${fmtEUR(d.total)} · ${fmtN(d.port.pct, 0)}%`; pct = d.port.pct; }
   else if (d.monthly) { title = `Aporte de ${monthName(ym(today()))}`; main = `${fmtEUR(d.monthly.now)} de ${fmtEUR(g.monthly.amount)}`; pct = d.monthly.now / g.monthly.amount * 100; }
   else if (d.div) { title = 'Dividendos por mês'; main = `${fmtEUR(d.div.perMonth)} de ${fmtEUR(g.div.amount)}`; pct = d.div.pct; }
-  else if (d.alloc) { title = 'Distribuição desejada'; main = d.alloc.under.length ? `Priorize ${esc(d.alloc.under[0].label)}` : 'Carteira equilibrada'; }
+  else if (d.alloc) { title = 'Distribuição desejada'; main = d.alloc.under.length ? (d.alloc.under[0].cash ? 'Reforce a caixa' : `Priorize ${esc(d.alloc.under[0].label)}`) : 'Carteira equilibrada'; }
   const sub = d.port && d.monthly ? `Aporte de ${monthName(ym(today()))}: ${fmtEUR(d.monthly.now)} de ${fmtEUR(g.monthly.amount)}${d.monthly.left > 0 ? ' · faltam ' + fmtEUR(d.monthly.left) : ' · cumprido'}` : '';
   return `<button data-go="goals" class="mt-3 w-full text-left rounded-3xl border border-brand-100 bg-white p-4">
     <div class="flex items-center gap-3">
@@ -1876,8 +1879,9 @@ function renderGoals() {
       <div class="flex justify-between text-sm"><span class="font-semibold">${esc(x.label)}</span><span class="num"><b>${fmtN(x.pct, 0)}%</b> <span class="text-slate-500">/ alvo ${fmtN(x.target, 0)}%</span></span></div>
       <div class="relative h-2 rounded-full bg-brand-50 mt-1"><div class="h-full rounded-full" style="width:${Math.min(100, x.pct).toFixed(1)}%;background:${PALETTE[i % PALETTE.length]}"></div>
         <div class="absolute -top-1 w-0.5 h-4 bg-ink" style="left:${Math.min(100, x.target).toFixed(1)}%"></div></div></div>`).join('')}</div>
-    ${d.alloc.under.length ? tip(`Próximas compras: dê prioridade a ${d.alloc.under.slice(0, 2).map(x => `<b>${esc(x.label)}</b> (cerca de <span class="num">${fmtEUR(x.need)}</span>)`).join(' e ')} para voltar à distribuição desejada.`, 'bg-amber-50 text-amber-900')
-      : tip('A carteira está na distribuição desejada.', 'bg-emerald-50 text-emerald-800')}`}</div>`, 'mt-3'));
+    ${d.alloc.under.length ? tip(`Próximos passos: ${d.alloc.under.slice(0, 2).map(x => x.cash ? `<b>reforçar a caixa de oportunidade</b> (cerca de <span class="num">${fmtEUR(x.need)}</span>)` : `dar prioridade a <b>${esc(x.label)}</b> (cerca de <span class="num">${fmtEUR(x.need)}</span>)`).join(' e ')}, para voltar à distribuição desejada.`, 'bg-amber-50 text-amber-900')
+      : tip('A carteira está na distribuição desejada.', 'bg-emerald-50 text-emerald-800')}
+    ${d.alloc.cashOver ? tip(`A caixa de oportunidade tem cerca de <b class="num">${fmtEUR(d.alloc.cashOver)}</b> acima do alvo, que pode investir.`, 'bg-brand-50 text-brand-700') : ''}`}</div>`, 'mt-3'));
   if (d.div) parts.push(card(`<div class="p-4"><h2 class="font-extrabold">Rendimento em dividendos</h2>
     <div class="num text-2xl font-extrabold mt-1">${fmtEUR(d.div.perMonth)}/mês <span class="text-sm font-semibold text-slate-500">de ${fmtEUR(g.div.amount)}/mês</span></div>
     <div class="mt-2">${bar(d.div.pct, '#0F9D6E')}</div>
@@ -1907,8 +1911,9 @@ function openGoalsCfg() {
         <div class="flex gap-1 p-1 rounded-xl bg-brand-50">${[['kind', 'ETFs / Ações'], ['asset', 'Por ativo']].map(([k, l]) => `<button type="button" data-almode="${k}" class="flex-1 h-9 rounded-lg text-sm font-bold ${g.alloc.mode === k ? 'bg-white shadow-sm text-ink' : 'text-slate-500'}">${l}</button>`).join('')}</div>
         <div id="alKind" class="grid grid-cols-2 gap-3 ${g.alloc.mode === 'kind' ? '' : 'hidden'}">
           <div><label class="lbl" for="gAlEtf">ETFs (%)</label><input id="gAlEtf" class="field num" inputmode="decimal" value="${g.alloc.mode === 'kind' ? (g.alloc.targets.etf ?? 70) : 70}"></div>
-          <div><label class="lbl" for="gAlAc">Ações (%)</label><input id="gAlAc" class="field num" inputmode="decimal" value="${g.alloc.mode === 'kind' ? (g.alloc.targets.acao ?? 30) : 30}"></div></div>
-        <div id="alAsset" class="space-y-2 ${g.alloc.mode === 'asset' ? '' : 'hidden'}">${tickers.length ? tickers.map(t => `<label class="flex items-center gap-2"><span class="flex-1 font-semibold text-sm">${esc(t)}</span><input data-alt="${esc(t)}" class="field !py-1.5 !w-24 num text-right" inputmode="decimal" value="${g.alloc.mode === 'asset' ? (g.alloc.targets[t] ?? '') : ''}" placeholder="0"><span class="text-sm text-slate-500">%</span></label>`).join('') : '<p class="text-xs text-slate-500">Registe compras para definir percentagens por ativo.</p>'}</div>
+          <div><label class="lbl" for="gAlAc">Ações (%)</label><input id="gAlAc" class="field num" inputmode="decimal" value="${g.alloc.mode === 'kind' ? (g.alloc.targets.acao ?? 30) : 30}"></div>
+          <div class="col-span-2"><label class="lbl" for="gAlCashK">Caixa de oportunidade (%)</label><input id="gAlCashK" class="field num" inputmode="decimal" value="${g.alloc.mode === 'kind' ? (g.alloc.targets.__cash ?? '') : ''}" placeholder="0"></div></div>
+        <div id="alAsset" class="space-y-2 ${g.alloc.mode === 'asset' ? '' : 'hidden'}">${tickers.length ? tickers.map(t => `<label class="flex items-center gap-2"><span class="flex-1 font-semibold text-sm">${esc(t)}</span><input data-alt="${esc(t)}" class="field !py-1.5 !w-24 num text-right" inputmode="decimal" value="${g.alloc.mode === 'asset' ? (g.alloc.targets[t] ?? '') : ''}" placeholder="0"><span class="text-sm text-slate-500">%</span></label>`).join('') + `<label class="flex items-center gap-2 pt-2 border-t border-brand-50"><span class="flex-1 font-semibold text-sm">Caixa de oportunidade</span><input data-alt="__cash" class="field !py-1.5 !w-24 num text-right" inputmode="decimal" value="${g.alloc.mode === 'asset' ? (g.alloc.targets.__cash ?? '') : ''}" placeholder="0"><span class="text-sm text-slate-500">%</span></label>` : '<p class="text-xs text-slate-500">Registe compras para definir percentagens por ativo.</p>'}</div>
         <div id="alSum" class="text-xs font-semibold"></div></div></div>
     <div class="space-y-3 border-t border-brand-50 pt-4">${sw('gDivOn', g.div.on, 'Dividendos por mês', 'Quanto quer receber em dividendos, em média')}
       <div class="pl-8"><label class="lbl" for="gDivA">Valor por mês (EUR)</label><input id="gDivA" class="field num" inputmode="decimal" value="${g.div.amount || ''}" placeholder="50"></div></div>
@@ -1916,21 +1921,22 @@ function openGoalsCfg() {
   </form>`);
   let mode = g.alloc.mode || 'kind';
   const sum = () => {
-    const v = mode === 'kind' ? TF.num($('#gAlEtf').value) + TF.num($('#gAlAc').value) : [...document.querySelectorAll('[data-alt]')].reduce((s, i) => s + TF.num(i.value), 0);
+    const v = mode === 'kind' ? TF.num($('#gAlEtf').value) + TF.num($('#gAlAc').value) + TF.num($('#gAlCashK').value) : [...document.querySelectorAll('[data-alt]')].reduce((s, i) => s + TF.num(i.value), 0);
     const el = $('#alSum'); el.textContent = `Total: ${fmtN(v, 0)}%${Math.abs(v - 100) > 0.5 ? ' (deve somar 100%)' : ''}`; el.className = 'text-xs font-semibold ' + (Math.abs(v - 100) > 0.5 ? 'text-loss' : 'text-gain');
     return v;
   };
   document.querySelectorAll('[data-almode]').forEach(b => b.onclick = () => {
     mode = b.dataset.almode; $('#alKind').classList.toggle('hidden', mode !== 'kind'); $('#alAsset').classList.toggle('hidden', mode !== 'asset');
     document.querySelectorAll('[data-almode]').forEach(x => x.className = 'flex-1 h-9 rounded-lg text-sm font-bold ' + (x.dataset.almode === mode ? 'bg-white shadow-sm text-ink' : 'text-slate-500')); sum(); });
-  $('#gAlEtf').oninput = e => { const v = TF.num(e.target.value); if (v >= 0 && v <= 100) $('#gAlAc').value = fmtN(100 - v, 0); sum(); };
+  $('#gAlEtf').oninput = e => { const v = TF.num(e.target.value), c = TF.num($('#gAlCashK').value) || 0; if (v >= 0 && v + c <= 100) $('#gAlAc').value = fmtN(100 - v - c, 0); sum(); };
+  $('#gAlCashK').oninput = e => { const c = TF.num(e.target.value) || 0, v = TF.num($('#gAlEtf').value) || 0; if (c >= 0 && v + c <= 100) $('#gAlAc').value = fmtN(100 - v - c, 0); sum(); };
   $('#gForm').addEventListener('input', sum); sum();
   $('#gForm').onsubmit = ev => {
     ev.preventDefault();
     const port = { on: $('#gPortOn').checked, target: TF.num($('#gPortT').value), month: $('#gPortM').value };
     const monthly = { on: $('#gMonOn').checked, amount: TF.num($('#gMonA').value) };
     const div = { on: $('#gDivOn').checked, amount: TF.num($('#gDivA').value) };
-    const targets = mode === 'kind' ? { etf: TF.num($('#gAlEtf').value), acao: TF.num($('#gAlAc').value) }
+    const targets = mode === 'kind' ? { etf: TF.num($('#gAlEtf').value), acao: TF.num($('#gAlAc').value), ...(TF.num($('#gAlCashK').value) > 0 ? { __cash: TF.num($('#gAlCashK').value) } : {}) }
       : Object.fromEntries([...document.querySelectorAll('[data-alt]')].map(i => [i.dataset.alt, TF.num(i.value)]).filter(([, v]) => v > 0));
     const alloc = { on: $('#gAlOn').checked, mode, targets };
     if (port.on && (!(port.target > 0) || !/^\d{4}-\d{2}$/.test(port.month))) return toast('Indique o valor e o mês da meta da carteira');
