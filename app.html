@@ -968,8 +968,10 @@ function homeVariation(per) {
       for (const l of i.lots) { if (l.date > t && t !== t0) continue; const v = px ?? l.st; num += l.q * (v - l.st); den += l.q * l.st; } }
     return den > 0 ? num / den * 100 : 0; });
   const ranked = items.filter(i => i.base > 0).sort((x, y) => y.pct - x.pct);
-  return { ok: items.length > 0 && base > 0, gain, pct: base > 0 ? gain / base * 100 : 0, grid, pts, missing,
-    byTk: Object.fromEntries(items.map(i => [i.tk, i.pct])), best: ranked[0], worst: ranked.length > 1 ? ranked[ranked.length - 1] : null };
+  const eur = S.settings.homeUnit === 'eur', rk = eur ? items.filter(i => i.base > 0).sort((x, y) => y.gain - x.gain) : ranked;
+  return { ok: items.length > 0 && base > 0, gain, base, pct: base > 0 ? gain / base * 100 : 0, grid, pts, missing,
+    byTk: Object.fromEntries(items.map(i => [i.tk, i.pct])), byTkEur: Object.fromEntries(items.map(i => [i.tk, i.gain])),
+    best: rk[0], worst: rk.length > 1 ? rk[rk.length - 1] : null };
 }
 function benchVariation(per, id, grid) {
   const b = benchInfo(id), h = b.hkey ? S.hist?.[b.hkey] : null, cur = h?.cur || b.cur, t0 = today(), s = grid[0];
@@ -1042,7 +1044,7 @@ function realGain(geo) {
     for (const l of p.lots) { const c = l.qty * l.unit, at = seriesAt(h.pts, l.date) ?? h.pts[0][1]; cost += c; adj += c * last / at; } }
   if (!cost) return null;
   const nominal = (value / cost - 1) * 100, infl = (adj / cost - 1) * 100;
-  return { nominal, infl, real: nominal - infl, label: INF_GEO[geo] || geo, geo, last: h.last };
+  return { nominal, infl, real: nominal - infl, realEur: value - adj, inflEur: adj - cost, label: INF_GEO[geo] || geo, geo, last: h.last };
 }
 
 function openHomeBench() {
@@ -1125,7 +1127,7 @@ function renderHome() {
       + (hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3">${tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cashV), cashV < 0 ? 'text-loss' : '')}${tile(gd ? 'data-go="goals"' : 'data-goalcfg', goalTile[0], goalTile[1])}</div>` : '')
     : `<div class="flex items-center justify-between mt-3 mb-2"><h2 class="font-extrabold text-lg">As suas posições <span class="text-slate-500 font-semibold">(${pos.length})</span></h2>
       <span class="flex gap-3"><button data-charts class="text-sm font-bold text-brand-600">Gráficos</button><button data-go="portfolio" class="text-sm font-bold text-brand-600">Ver carteira</button></span></div>
-    ${card(pos.slice(0, S.settings.homeAllPos ? pos.length : 5).map(p => posRow(p, hv?.ok ? (hv.byTk[p.ticker] ?? null) : undefined)).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}
+    ${card(pos.slice(0, S.settings.homeAllPos ? pos.length : 5).map(p => posRow(p, hv?.ok ? (hv.byTk[p.ticker] ?? null) : undefined, hv?.ok && S.settings.homeUnit === 'eur' ? (hv.byTkEur[p.ticker] ?? null) : undefined)).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}
     ${pos.length > 5 ? `<button data-hmore class="mt-2 w-full h-11 rounded-2xl bg-white border border-brand-100 text-sm font-bold text-brand-700">${S.settings.homeAllPos ? 'Mostrar menos ▴' : `Mostrar todas (mais ${pos.length - 5}) ▾`}</button>` : ''}
     ${card(`<div class="p-4">
       <div class="flex items-center justify-between mb-1"><h2 class="font-extrabold">Resumo de ${yr}</h2><button data-tab="tax" class="text-sm font-bold text-brand-600">IRS</button></div>
@@ -1143,27 +1145,37 @@ function renderHome() {
   if (pos.length) setTimeout(ensureHomeData, 0);
 }
 function homeVarHTML(hv, hbv, per, nPriced, res, invested) {
-  const col = v => v >= 0 ? 'text-emerald-200' : 'text-rose-200';
+  const col = v => v >= 0 ? 'text-emerald-200' : 'text-rose-200', eur = S.settings.homeUnit === 'eur';
+  const idxEur = hbv?.ok ? hv.base * hbv.pct / 100 : null;
+  const show = (pct, e) => eur && e != null ? plus(e) : fmtPct(pct);
   let top;
-  if (hv.ok) top = `<div class="num text-sm font-bold mt-1 ${col(hv.gain)}">${plus(hv.gain)} (${fmtPct(hv.pct)}) ${HP[per].w}</div>`;
+  if (hv.ok) top = `<div class="num text-sm font-bold mt-1 ${col(hv.gain)}">${eur ? `${plus(hv.gain)} <span class="font-semibold opacity-80">(${fmtPct(hv.pct)})</span>` : `${fmtPct(hv.pct)} <span class="font-semibold opacity-80">(${plus(hv.gain)})</span>`} ${HP[per].w}</div>`;
   else top = `<div class="text-xs text-brand-100 mt-1">${per === 'd' ? 'Toque em Preços para ver a variação do último dia.' : useWorker() ? 'A carregar o histórico de preços…' : 'Toque em Preços e depois em Gráficos → Atualizar histórico.'}</div>`;
   const chart = hv.ok ? homeChart(hv.pts, hbv?.ok ? hbv.pts : null) : '';
   const legend = hv.ok ? `<div class="flex flex-wrap gap-x-4 gap-y-1 text-xs mt-1 num">
-      <span><i class="inline-block w-3.5 h-[3px] rounded align-middle" style="background:#A7F3D0"></i> Carteira <b>${fmtPct(hv.pct)}</b></span>
-      ${hbv?.ok ? `<span><i class="inline-block w-3.5 align-middle" style="border-top:2px dashed #FCD34D"></i> ${esc(hbv.label)} <b>${fmtPct(hbv.pct)}</b></span>` : hbv ? `<span class="text-brand-200">${esc(hbv.label)}: ${hbv.monthly ? '—' : per === 'd' ? 'toque em Preços' : 'a carregar…'}</span>` : ''}</div>` : '';
-  const d = hv.ok && hbv?.ok ? hv.pct - hbv.pct : null;
+      <span><i class="inline-block w-3.5 h-[3px] rounded align-middle" style="background:#A7F3D0"></i> Carteira <b>${show(hv.pct, hv.gain)}</b></span>
+      ${hbv?.ok ? `<span><i class="inline-block w-3.5 align-middle" style="border-top:2px dashed #FCD34D"></i> ${esc(hbv.label)} <b>${show(hbv.pct, idxEur)}</b></span>` : hbv ? `<span class="text-brand-200">${esc(hbv.label)}: ${hbv.monthly ? '—' : per === 'd' ? 'toque em Preços' : 'a carregar…'}</span>` : ''}</div>` : '';
+  const d = hv.ok && hbv?.ok ? hv.pct - hbv.pct : null, dE = d != null ? hv.gain - idxEur : null;
+  const who = hbv?.inf ? 'da inflação ' + esc(infPhrase(hbv.geo || '')) : 'do ' + esc(hbv?.label || '');
   const diff = hbv?.monthly ? `<div class="mt-2 text-xs rounded-xl bg-white/10 px-3 py-2">A inflação mede-se por mês: escolha <b>Mês</b> ou <b>Ano</b> para comparar.</div>`
-    : d != null ? `<div class="mt-2 text-xs rounded-xl bg-white/10 px-3 py-2">A sua carteira está <b>${fmtN(Math.abs(d), 1)} pontos ${d >= 0 ? 'acima' : 'abaixo'}</b> ${hbv.inf ? 'da inflação ' + esc(infPhrase(hbv.geo || '')) : 'do ' + esc(hbv.label)} ${HP[per].w}${hbv.inf && d >= 0 ? ': o seu dinheiro ganhou poder de compra.' : ''}</div>` : '';
-  const bw = hv.ok && hv.best && hv.worst ? `<div class="text-[11px] text-brand-100 mt-2 num">Melhor: ${esc(hv.best.tk.replace(/\.[A-Z]+$/, ''))} ${fmtPct(hv.best.pct)} · Pior: ${esc(hv.worst.tk.replace(/\.[A-Z]+$/, ''))} ${fmtPct(hv.worst.pct)}</div>` : '';
-  const pb = k => `<button data-hper="${k}" class="h-8 rounded-xl text-xs font-bold ${per === k ? 'bg-white text-brand-700' : 'bg-white/12 text-white'}" style="${per === k ? '' : 'background:rgba(255,255,255,.12)'}">${HP[k].l}</button>`;
+    : d == null ? ''
+    : eur ? `<div class="mt-2 text-xs rounded-xl bg-white/10 px-3 py-2">${hbv.inf
+        ? `Ganhou <b class="num">${fmtEUR(Math.abs(dE))} ${dE >= 0 ? 'acima' : 'abaixo'}</b> da inflação ${esc(infPhrase(hbv.geo || ''))} ${HP[per].w}${dE >= 0 ? ': o seu dinheiro ganhou poder de compra.' : '.'}`
+        : `Com o mesmo dinheiro no ${esc(hbv.label)} teria ${idxEur >= 0 ? 'ganho' : 'perdido'} <b class="num">${fmtEUR(Math.abs(idxEur))}</b>: a sua carteira ficou <b class="num">${fmtEUR(Math.abs(dE))} ${dE >= 0 ? 'acima' : 'abaixo'}</b> ${HP[per].w}.`}</div>`
+    : `<div class="mt-2 text-xs rounded-xl bg-white/10 px-3 py-2">A sua carteira está <b>${fmtN(Math.abs(d), 1)} pontos ${d >= 0 ? 'acima' : 'abaixo'}</b> ${who} ${HP[per].w}${hbv.inf && d >= 0 ? ': o seu dinheiro ganhou poder de compra.' : ''}</div>`;
+  const nm = t => esc(t.replace(/\.[A-Z]+$/, ''));
+  const bw = hv.ok && hv.best && hv.worst ? `<div class="text-[11px] text-brand-100 mt-2 num">Melhor: ${nm(hv.best.tk)} ${show(hv.best.pct, hv.best.gain)} · Pior: ${nm(hv.worst.tk)} ${show(hv.worst.pct, hv.worst.gain)}</div>` : '';
+  const pb = k => `<button data-hper="${k}" class="h-8 rounded-xl text-xs font-bold ${per === k ? 'bg-white text-brand-700' : 'text-white'}" style="${per === k ? '' : 'background:rgba(255,255,255,.12)'}">${HP[k].l}</button>`;
+  const ub = (k, l) => `<button data-hunit="${k}" aria-pressed="${(eur ? 'eur' : 'pct') === k}" class="h-8 w-9 rounded-lg text-xs font-extrabold ${(eur ? 'eur' : 'pct') === k ? 'bg-white text-brand-700' : 'text-white'}">${l}</button>`;
   const rg = nPriced ? realGain(inflGeoReal()) : null;
   const total = nPriced ? (rg ? `<div class="text-xs mt-3 pt-2 border-t border-white/15 num space-y-0.5">
       <div class="flex justify-between"><span class="text-brand-100">Desde a compra</span><b>${plus(res)} (${pctStr(res, invested) || '0%'})</b></div>
-      <div class="flex justify-between"><span class="text-brand-100">Inflação ${esc(infPhrase(rg.geo))} no mesmo período</span><b>${fmtPct(rg.infl)}</b></div>
-      <div class="flex justify-between ${rg.real >= 0 ? 'text-emerald-200' : 'text-rose-200'}"><span>${rg.real >= 0 ? 'Ganho real (acima da inflação)' : 'Abaixo da inflação'}</span><b>${rg.real >= 0 ? '+' : '−'}${fmtN(Math.abs(rg.real), 1)} pontos</b></div>
+      <div class="flex justify-between"><span class="text-brand-100">Inflação ${esc(infPhrase(rg.geo))} no mesmo período</span><b>${eur ? plus(rg.inflEur) : fmtPct(rg.infl)}</b></div>
+      <div class="flex justify-between ${rg.real >= 0 ? 'text-emerald-200' : 'text-rose-200'}"><span>${rg.real >= 0 ? 'Ganho real (acima da inflação)' : 'Abaixo da inflação'}</span><b>${eur ? plus(rg.realEur) : `${rg.real >= 0 ? '+' : '−'}${fmtN(Math.abs(rg.real), 1)} pontos`}</b></div>
       <div class="text-[10px] text-brand-200 pt-1">Fonte: Eurostat (inflação oficial) · dados até ${esc(infMonth(rg.last))}${hv.missing.length ? ` · sem dados: ${esc(hv.missing.map(t => t.replace(/\.[A-Z]+$/, '')).join(', '))}` : ''}</div></div>`
       : `<div class="text-[11px] text-brand-200 mt-2 num">Desde a compra: ${plus(res)} (${pctStr(res, invested) || '0%'})${hv.missing.length ? ` · sem dados: ${esc(hv.missing.map(t => t.replace(/\.[A-Z]+$/, '')).join(', '))}` : ''}</div>`) : '';
-  return `${top}${chart}${legend}${diff}<div class="grid grid-cols-4 gap-1.5 mt-3">${pb('d')}${pb('w')}${pb('m')}${pb('y')}</div>${bw}${total}`;
+  return `${top}${chart}${legend}${diff}<div class="flex items-center gap-2 mt-3"><div class="grid grid-cols-4 gap-1.5 flex-1">${pb('d')}${pb('w')}${pb('m')}${pb('y')}</div>
+    <div class="flex rounded-xl p-0.5 shrink-0" style="background:rgba(255,255,255,.12)" role="group" aria-label="Mostrar em percentagem ou em euros">${ub('pct', '%')}${ub('eur', '€')}</div></div>${bw}${total}`;
 }
 
 /* ================= APOIAR ================= */
@@ -1319,13 +1331,13 @@ function infoTags(a) {
   return (chips.length ? `<div class="flex flex-wrap gap-1 mt-1">${chips.join('')}</div>` : '')
     + (a.note ? `<div class="text-xs text-slate-500 mt-1 truncate"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="inline -mt-0.5 mr-0.5" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>${esc(a.note)}</div>` : '');
 }
-function posRow(p, pv) {
+function posRow(p, pv, pvEur) {
   return `<button data-asset="${esc(p.ticker)}" class="w-full text-left p-4 flex items-center gap-3 hover:bg-brand-50/60">
     <div class="w-10 h-10 rounded-2xl bg-brand-50 text-brand-700 grid place-items-center text-xs font-extrabold shrink-0">${esc(p.ticker.slice(0, 4))}</div>
     <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="font-bold truncate">${esc(p.ticker)}</span>${kindBadge(p.kind)}</div>
       <div class="text-xs text-slate-500 truncate">${fmtQ(p.qty)} un. · PM ${fmtEUR(p.avg)}${p.value != null ? ' · ' + fmtEUR(p.value / p.qty) + ' ' + priceWhen(S.assets[p.ticker]) : ''}</div>${infoTags(S.assets[p.ticker])}</div>
     <div class="text-right num"><div class="font-bold">${fmtEUR(p.value ?? p.cost)}</div>
-      ${pv !== undefined ? (pv != null ? `<div class="text-xs font-bold ${pv >= 0 ? 'text-gain' : 'text-loss'}">${fmtPct(pv)}</div>` : '<div class="text-xs text-slate-400">—</div>')
+      ${pv !== undefined ? (pv != null ? `<div class="text-xs font-bold ${pv >= 0 ? 'text-gain' : 'text-loss'}">${pvEur != null ? plus(pvEur) : fmtPct(pv)}</div>` : '<div class="text-xs text-slate-400">—</div>')
         : p.value != null ? `<div class="text-xs font-bold ${sgn(p.value - p.cost)}">${plus(p.value - p.cost)} (${pctStr(p.value - p.cost, p.cost)})</div>`
         : '<div class="text-xs text-slate-400">sem preço atual</div>'}</div></button>`;
 }
@@ -3002,9 +3014,10 @@ function accountCardHTML() {
 
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-hunit],[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
+  if (d.hunit) { S.settings.homeUnit = d.hunit === 'eur' ? 'eur' : 'pct'; save(); renderHome(); return; }
   if ('hmore' in d) { S.settings.homeAllPos = !S.settings.homeAllPos; save(); renderHome(); return; }
   if (d.hper) { S.settings.homePer = d.hper; save(); renderHome(); return; }
   if ('hbench' in d) { openHomeBench(); return; }
