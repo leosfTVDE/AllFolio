@@ -173,7 +173,7 @@ const TF = (() => {
   const CDT = {840:15,276:15,250:15,528:10,724:15,380:15,756:15,124:15,56:15,40:15,208:15,752:15,578:15,246:15,616:15,826:10,372:15,442:15,76:15,392:10};
   const ANEXO_G_DEFAULT = {XTB:true};
   const NIF_DEFAULT = {XTB:'980436613'};
-  const BROKERS = {XTB:{name:'XTB',cp:616},DEGIRO:{name:'DEGIRO',cp:276},T212:{name:'Trading 212',cp:196},REVOLUT:{name:'Revolut',cp:440},OUTRA:{name:'Outra',cp:''}};
+  const BROKERS = {XTB:{name:'XTB',cp:620},DEGIRO:{name:'DEGIRO',cp:276},T212:{name:'Trading 212',cp:196},REVOLUT:{name:'Revolut',cp:440},OUTRA:{name:'Outra',cp:''}};
   const ETF_HINT = /\b(ETF|UCITS|ISHARES|VANGUARD|XTRACKERS|AMUNDI|SPDR|LYXOR|INVESCO|WISDOMTREE|VANECK)\b/i;
   const US_ETF = new Set(['SPY','VOO','VTI','IVV','QQQ','SCHD','VYM','VT','SMH','DIA','VUG','VEA','VWO','BND','GLD']);
   const ETF_TICKERS = new Set(['VWCE','VWRL','VWRA','IWDA','SWDA','EUNL','CSPX','SXR8','VUSA','VUAA','SPYL','SPPW','EQQQ','CNDX','IS3N','EIMI','XDWD','XDEW','EXSA','MEUD','IUSQ','ISAC','SSAC','VHVE','VEVE','VFEM','XMME','AGGH','IBGS','ZPRV','ZPRX','QDVE','IUIT','SXRV','INRG','VGWL','VGWD','TDIV','VHYL','FWRA','FWIA','WEBN','XNAS','DFNS',...US_ETF]);
@@ -567,8 +567,95 @@ const TF = (() => {
       : [c.kind, c.date, T(c.ticker), r8(c.qty), r2(c.qty * c.price)].join('|');
   }
 
+
+  /* ---------- Relatório anual de mais-valias da XTB (PDF "IRS AAAA - Capital Gains") ---------- */
+  const XN = '(-?\\d{1,3}(?: \\d{3})*\\.\\d{2})';
+  const xnum = s => Number(String(s).replace(/ /g, ''));
+  const xdate = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  function parseXtbAnnual(text) {
+    const T = String(text || '').replace(/\u00a0/g, ' ');
+    const D = '(\\d{4})\\s+(\\d{1,2})\\s+(\\d{1,2})\\s+';
+    const reG = new RegExp(`\\b(9\\d{3})\\s+([A-Z])\\s+(\\d{9})\\s+(G\\d{2})\\s+${D}${XN}\\s+${D}${XN}\\s+${XN}\\s+(\\d{3})`, 'g');
+    const reJ = new RegExp(`\\b(9[5-8]\\d|\\d{4})\\s+(\\d{3})\\s+(G\\d{2})\\s+${D}${XN}\\s+${D}${XN}\\s+${XN}\\s+${XN}\\s+(\\d{3})`, 'g');
+    const reB = new RegExp(`\\b(99\\d)\\s+(G\\d{2})\\s+(\\d{3})\\s+${XN}\\s+${XN}\\s+(\\d{3})`, 'g');
+    const reQ13 = new RegExp(`\\b(G51)\\s+([A-Z])\\s+${XN}\\s+(\\d{3})`, 'g');
+    const shares = [], frac = [], cfd = [], seen = new Set();
+    for (const m of T.matchAll(reG)) {
+      const k = 'G' + m[1]; if (seen.has(k)) continue; seen.add(k);
+      shares.push({ src: 'G', line: Number(m[1]), titular: m[2], nifEmit: m[3], country: 620, code: m[4], sell: xdate(m[5], m[6], m[7]), real: xnum(m[8]),
+        buy: xdate(m[9], m[10], m[11]), aq: xnum(m[12]), desp: xnum(m[13]), tax: 0, cp: Number(m[14]) });
+    }
+    for (const m of T.matchAll(reJ)) {
+      const k = 'J' + m[1]; if (seen.has(k)) continue; seen.add(k);
+      shares.push({ src: 'J', line: Number(m[1]), titular: 'A', nifEmit: '', country: Number(m[2]), code: m[3], sell: xdate(m[4], m[5], m[6]), real: xnum(m[7]),
+        buy: xdate(m[8], m[9], m[10]), aq: xnum(m[11]), desp: xnum(m[12]), tax: xnum(m[13]), cp: Number(m[14]) });
+    }
+    for (const m of T.matchAll(reB)) {
+      const row = { line: Number(m[1]), code: m[2], country: Number(m[3]), net: xnum(m[4]), tax: xnum(m[5]), cp: Number(m[6]) };
+      (m[2] === 'G98' ? frac : cfd).push(row);
+    }
+    for (const m of T.matchAll(reQ13)) cfd.push({ line: 0, code: 'G51', country: 620, net: xnum(m[3]), tax: 0, cp: Number(m[4]) });
+    shares.forEach(s => { s.ganho = r2(s.real - s.aq - s.desp); s.days = daysBetween(s.buy, s.sell); });
+    const sums = [...T.matchAll(new RegExp(`Soma\\s+${XN}\\s+${XN}\\s+${XN}`, 'g'))].map(m => [xnum(m[1]), xnum(m[2]), xnum(m[3])]);
+    const yr = (T.match(/\((?:Ano|FY)\s+(\d{4})\)/) || [])[1] || (shares[0]?.sell || '').slice(0, 4) || '';
+    const holder = ((T.match(/Dear Sir\(Madam\)\s*\n\s*([^\n]+)/) || [])[1] || '').trim();
+    const nif = ((T.match(/\n\s*(\d{9})\s*\n[\s\S]{0,400}?Assunto/) || [])[1] || '');
+    const tot = arr => arr.reduce((s, x) => [s[0] + x.real, s[1] + x.aq, s[2] + x.desp], [0, 0, 0]).map(r2);
+    const tG = tot(shares.filter(s => s.src === 'G')), tJ = tot(shares.filter(s => s.src === 'J'));
+    const near = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 0.015);
+    const checks = [], hasG = shares.some(s => s.src === 'G'), hasJ = shares.some(s => s.src === 'J');
+    let si = 0;
+    if (hasG) { checks.push({ what: 'Anexo G (ações de empresas portuguesas)', ok: sums[si] ? near(tG, sums[si]) : null, ours: tG, theirs: sums[si] || null }); si++; }
+    if (hasJ) { checks.push({ what: 'Anexo J 9.2A (ações e ETF estrangeiros)', ok: sums[si] ? near(tJ, sums[si]) : null, ours: tJ, theirs: sums[si] || null }); si++; }
+    shares.sort((x, y) => x.sell.localeCompare(y.sell) || (x.src === y.src ? 0 : x.src === 'G' ? -1 : 1) || x.line - y.line);
+    return { year: yr, holder, nif, shares, frac, cfd, checks, ok: shares.length > 0 || frac.length > 0 || cfd.length > 0 };
+  }
+  // Agrupa as linhas como o Portal as mostra no Anexo G, quadro 9: por data de venda e NIF (XTB para ações estrangeiras, a empresa para as portuguesas)
+  function portalGroups(rep, xtbNif = '980436613') {
+    const map = new Map();
+    for (const s of rep.shares) {
+      const nif = s.src === 'G' ? s.nifEmit : xtbNif, key = s.sell + '|' + nif;
+      const g = map.get(key) || map.set(key, { key, sell: s.sell, nif, pt: s.src === 'G', lots: [] }).get(key);
+      g.lots.push(s);
+    }
+    return [...map.values()].map(g => {
+      g.lots.sort((x, y) => (x.country - y.country) || x.buy.localeCompare(y.buy) || x.line - y.line);
+      return { ...g, countries: [...new Set(g.lots.map(l => l.country))], real: r2(g.lots.reduce((t, l) => t + l.real, 0)), aq: r2(g.lots.reduce((t, l) => t + l.aq, 0)),
+        desp: r2(g.lots.reduce((t, l) => t + l.desp, 0)), ganho: r2(g.lots.reduce((t, l) => t + l.ganho, 0)) };
+    }).sort((x, y) => x.sell.localeCompare(y.sell) || (x.pt ? -1 : 1));
+  }
+  // Reparte as linhas da XTB pelos valores que aparecem no Portal (em cêntimos). Aceita uma linha da XTB partida em duas no Portal.
+  function matchPortal(values, lots) {
+    const P = values.map(v => Math.round(v * 100)).filter(v => v > 0), L0 = lots.map((l, i) => ({ i, c: Math.round(l.real * 100), frac: 1 }));
+    const tol = 2, sumP = P.reduce((s, v) => s + v, 0), sumL = L0.reduce((s, v) => s + v.c, 0);
+    if (!P.length) return { ok: false, msg: 'Indique pelo menos um valor.' };
+    if (Math.abs(sumP - sumL) > tol * Math.max(P.length, L0.length)) return { ok: false, msg: `Os valores indicados somam ${(sumP / 100).toFixed(2).replace('.', ',')} €, mas as linhas da XTB desta venda somam ${(sumL / 100).toFixed(2).replace('.', ',')} €.` };
+    let steps = 0;
+    const partition = (pv, items) => {
+      if (!pv.length) return items.length ? null : [];
+      const [target, ...rest] = pv, its = [...items].sort((a, b) => b.c - a.c), pick = [];
+      const dfs = (k, sum) => {
+        if (++steps > 300000) return null;
+        if (Math.abs(sum - target) <= tol && pick.length) { const left = its.filter(x => !pick.includes(x)), sub = partition(rest, left); if (sub) return [{ value: target, parts: [...pick] }, ...sub]; }
+        for (let j = k; j < its.length; j++) { if (sum + its[j].c > target + tol) continue; pick.push(its[j]); const r = dfs(j + 1, sum + its[j].c); if (r) return r; pick.pop(); }
+        return null;
+      };
+      return dfs(0, 0);
+    };
+    let res = partition([...P].sort((a, b) => b - a), L0);
+    if (!res) {
+      outer: for (let a = 0; a < P.length; a++) for (let b = a + 1; b < P.length; b++) for (const l of L0) {
+        if (Math.abs(P[a] + P[b] - l.c) > tol) continue;
+        const items = L0.filter(x => x !== l).concat([{ i: l.i, c: P[a], frac: P[a] / l.c }, { i: l.i, c: l.c - P[a], frac: 1 - P[a] / l.c }]);
+        res = partition([...P].sort((x, y) => y - x), items); if (res) break outer;
+      }
+    }
+    if (!res) return { ok: false, replace: true, msg: 'Os valores do Portal desta data não correspondem a combinações exatas das linhas da XTB: a XTB reparte o valor de venda por cada compra de forma ligeiramente diferente. Solução: apague as linhas pré-preenchidas desta data e introduza as linhas abaixo. O total de realização fica exatamente igual.' };
+    return { ok: true, assign: res.map(r => ({ value: r.value / 100, parts: r.parts.map(p => ({ lot: lots[p.i], frac: p.frac, real: p.c / 100 })) })) };
+  }
+
   return { COUNTRIES, ISO2, CDT, BROKERS, ANEXO_G_DEFAULT, NIF_DEFAULT, EPS, r2, r8, pad3, num, parseDate, norm, daysBetween, guessKind, guessCountry, defaultCode,
-    ensureAsset, fifo, positions, yearReport, years, parseCSV, parseSheets, parseXTBText, parseXTBDaily, fingerprint };
+    ensureAsset, fifo, positions, yearReport, years, parseCSV, parseSheets, parseXTBText, parseXTBDaily, fingerprint, parseXtbAnnual, portalGroups, matchPortal };
 })();
 if (typeof module !== 'undefined') module.exports = TF;
 
@@ -2378,6 +2465,7 @@ function renderTax() {
     <button id="btnPdf" class="w-full h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center justify-center gap-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/></svg>Relatório para a contabilista</button>
     <button id="btnCopyAll" class="w-full h-11 rounded-2xl bg-brand-50 hover:bg-brand-100 text-brand-700 text-sm font-bold">Copiar tabelas para Excel</button>
   </div>
+  ${xtbAnnualCard()}
 
   <div class="no-print flex gap-1 p-1 rounded-2xl bg-brand-100/70 mt-4">${[['G', 'Anexo G', rep.G.length], ['J', 'Anexo J', rep.J.length], ['D', 'Dividendos', rep.D.length]].map(([k, l, n]) =>
     `<button data-taxtab="${k}" class="flex-1 h-10 rounded-xl text-sm font-bold ${taxTab === k ? 'bg-white shadow-sm text-ink' : 'text-slate-500'}">${l}${n ? ` <span class="text-xs opacity-70">${n}</span>` : ''}</button>`).join('')}</div>
@@ -2412,6 +2500,210 @@ function renderTax() {
     toast(await copyText(txt) ? 'Tabelas copiadas: cole no Excel' : 'Não foi possível copiar');
   };
   $('#btnPdf').onclick = () => openReportModal(rep);
+  bindXtbAnnualCard();
+}
+
+
+/* ---------- Relatório anual da XTB → guia para completar o pré-preenchimento do Portal ---------- */
+function xtbAnnualCard() {
+  const ys = Object.keys(S.xtbAnnual || {}).sort().reverse();
+  return `<div class="no-print mt-4 rounded-3xl border border-brand-100 bg-white p-4">
+    <div class="flex items-center gap-2"><span class="w-9 h-9 rounded-xl bg-[#E8352A] text-white grid place-items-center text-xs font-extrabold shrink-0">XTB</span>
+      <div><div class="font-bold leading-tight">Relatório anual da XTB</div><div class="text-[11px] text-slate-500">Guia para preencher o Portal das Finanças</div></div></div>
+    <p class="text-xs text-slate-600 mt-2 leading-relaxed">Carregue o PDF "IRS – Capital Gains" que a XTB envia todos os anos. A app lê-o neste aparelho e prepara, para cada data de venda, as linhas que faltam no Anexo G (compras, valores e despesas), incluindo as ações fracionadas.</p>
+    ${ys.length ? `<div class="flex flex-wrap gap-2 mt-3">${ys.map(y => `<button data-xtbguide="${esc(y)}" class="h-9 px-3 rounded-full bg-brand-600 text-white text-xs font-bold">Guia IRS ${esc(y)} →</button>`).join('')}</div>` : ''}
+    <label class="mt-3 w-full h-11 rounded-2xl bg-brand-50 text-brand-700 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Carregar PDF da XTB
+      <input type="file" id="xtbAnnualIn" accept="application/pdf,.pdf" class="hidden"></label></div>`;
+}
+function bindXtbAnnualCard() {
+  const inp = $('#xtbAnnualIn'); if (inp) inp.onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadXtbAnnual(f); };
+  document.querySelectorAll('[data-xtbguide]').forEach(b => b.onclick = () => openXtbGuide(b.dataset.xtbguide));
+}
+async function loadXtbAnnual(file) {
+  toast('A ler o relatório da XTB…');
+  const text = await pdfText(file);
+  if (!text) return toast('Não foi possível ler o PDF. Ligue-se à internet e tente de novo.');
+  const r = TF.parseXtbAnnual(text);
+  if (!r.ok || !r.year) return toast('Não reconheci o relatório anual de mais-valias da XTB neste PDF.');
+  S.xtbAnnual ||= {};
+  const old = S.xtbAnnual[r.year];
+  S.xtbAnnual[r.year] = { ...r, portal: old?.portal || {}, at: Date.now() };
+  if (r.holder && !S.settings.holderName) S.settings.holderName = r.holder;
+  if (r.nif && !S.settings.holderNif) S.settings.holderNif = r.nif;
+  save(); render(); openXtbGuide(r.year);
+}
+const XTB_NIF = () => S.settings.nif?.XTB || TF.NIF_DEFAULT.XTB;
+function xtbGuideData(y) {
+  const R = S.xtbAnnual?.[y]; if (!R) return null;
+  const real = (() => { try { return TF.fifo(S.tx).realized; } catch (e) { return []; } })();
+  R.shares.forEach(s => { const m = real.find(x => x.sellDate === s.sell && x.buyDate === s.buy && Math.abs(x.aquisicao - s.aq) < 0.06); s.ticker = m?.ticker || ''; });
+  const groups = TF.portalGroups(R, XTB_NIF());
+  groups.forEach(g => { const v = R.portal?.[g.key]; g.match = v?.length ? TF.matchPortal(v, g.lots) : null; g.portalValues = v || []; });
+  const sh = R.shares, sum = f => TF.r2(sh.reduce((s, x) => s + x[f], 0));
+  const fracNet = TF.r2(R.frac.reduce((s, x) => s + x.net, 0)), cfdNet = TF.r2(R.cfd.reduce((s, x) => s + x.net, 0));
+  const saldo = TF.r2(sum('real') - sum('aq') - sum('desp'));
+  const total = TF.r2(saldo + fracNet + cfdNet);
+  return { R, groups, real: sum('real'), aq: sum('aq'), desp: sum('desp'), saldo, fracNet, cfdNet, total, tax: TF.r2(Math.max(0, total) * 0.28),
+    ok: R.checks.every(c => c.ok !== false), long: sh.filter(s => s.days >= 730).length, short: sh.filter(s => s.days < 365).length };
+}
+const ymdParts = d => d.split('-').map(Number);
+const cnameS = c => `${TF.pad3(c)} ${cname(c)}`;
+function guideLotRows(g) {
+  // devolve as linhas a introduzir no Portal, pela ordem dos valores pré-preenchidos quando estes foram indicados e batem certo
+  if (g.match?.ok) return g.match.assign.flatMap(a => a.parts.map((p, i, arr) => {
+    const l = p.lot, last = i === arr.length - 1;
+    return { portal: a.value, first: i === 0, n: arr.length, real: p.real, aq: TF.r2(l.aq * p.frac), desp: TF.r2(l.desp * p.frac), lot: l };
+  }));
+  return g.lots.map((l, i) => ({ portal: null, first: i === 0, n: g.lots.length, real: l.real, aq: l.aq, desp: l.desp, lot: l }));
+}
+function openXtbGuide(y, openKey = null) {
+  const G = xtbGuideData(y); if (!G) return;
+  const { R } = G, e = fmtEUR;
+  const grp = (g, gi) => {
+    const rows = guideLotRows(g);
+    const head = g.match?.ok ? `Linhas do Portal associadas às compras (${rows.length} linhas a preencher)` : g.lots.length === 1 ? 'Completar a linha pré-preenchida' : `As linhas desta data somam ${e(g.real)}`;
+    return `<details id="xg${gi}" class="rounded-2xl border border-brand-100 bg-white mt-2" ${(openKey ? g.key === openKey : gi === 0) ? 'open' : ''}>
+      <summary class="p-3 cursor-pointer flex items-start justify-between gap-2"><span><b>${fmtD(g.sell)}</b> <span class="text-xs text-slate-500">· NIF ${esc(g.nif)}${g.pt ? ' (empresa portuguesa)' : ''}</span>
+        <span class="block text-xs text-slate-500">${g.lots.length} compra(s) · ${esc(g.countries.map(c => cname(c)).join(', '))}</span></span>
+        <span class="text-right num"><b>${e(g.real)}</b><span class="block text-xs ${sgn(g.ganho)}">${plus(g.ganho)}</span></span></summary>
+      <div class="px-3 pb-3">
+        <p class="text-xs font-semibold text-brand-700 mb-2">${head}</p>
+        <div class="overflow-x-auto"><table class="tbl num text-[11px] w-full"><thead><tr>${g.match?.ok ? '<th>Linha Portal</th>' : ''}<th>Data compra</th><th>Valor venda</th><th>Valor compra</th><th>Despesas</th><th>Código</th><th class="l">País · ativo</th></tr></thead>
+        <tbody>${rows.map(r => `<tr>${g.match?.ok ? `<td>${r.first ? e(r.portal) : ''}</td>` : ''}<td>${fmtD(r.lot.buy)}</td><td>${e(r.real)}</td><td>${e(r.aq)}</td><td>${e(r.desp)}</td><td>${esc(r.lot.code)}</td>
+          <td class="l text-slate-500">${esc(cname(r.lot.country))}${r.lot.ticker ? ' · ' + esc(r.lot.ticker) : ''}${r.lot.days >= 730 ? ' · <b class="text-gain">+2 anos</b>' : ''}</td></tr>`).join('')}</tbody></table></div>
+        ${`<div class="mt-2 rounded-xl bg-brand-50 p-2.5">
+          <label class="text-[11px] font-semibold text-slate-600" for="pv${gi}">Valores pré-preenchidos no Portal com esta data (opcional)</label>
+          <div class="flex gap-2 mt-1"><input id="pv${gi}" class="field !py-2 num text-sm" inputmode="decimal" placeholder="ex.: 553,89 16,88" value="${esc(g.portalValues.map(v => fmtN(v, 2)).join('  '))}">
+            <button data-pvgo="${gi}" class="h-10 px-3 rounded-xl bg-brand-600 text-white text-xs font-bold shrink-0">Comparar</button></div>
+          ${g.match ? `<p class="text-[11px] mt-1.5 ${g.match.ok ? 'text-gain font-semibold' : 'text-amber-800'}">${g.match.ok ? '✓ Cada linha do Portal foi associada às compras correspondentes (coluna "Linha Portal").' : esc(g.match.msg)}</p>`
+            : '<p class="text-[11px] text-slate-500 mt-1.5">Escreva os valores que vê no Portal com esta data, separados por espaço. A app indica que compras pertencem a cada linha.</p>'}</div>`}
+      </div></details>`;
+  };
+  openModal(`${modalHead('Guia para o Portal · IRS ' + esc(y))}
+    <div class="rounded-2xl bg-ink text-white p-4">
+      <div class="text-xs text-brand-200">${esc(R.holder || S.settings.holderName || '')}${R.nif ? ' · NIF ' + esc(R.nif) : ''} · fonte: relatório anual da XTB</div>
+      <div class="grid grid-cols-2 gap-3 mt-2">
+        <div><div class="text-xs text-brand-200">Saldo de mais-valias</div><div class="num text-xl font-extrabold ${G.total >= 0 ? 'text-emerald-200' : 'text-rose-200'}">${plus(G.total)}</div></div>
+        <div><div class="text-xs text-brand-200">Imposto estimado (28%)</div><div class="num text-xl font-extrabold">${e(G.tax)}</div></div></div>
+      <div class="text-[11px] mt-2 ${G.ok ? 'text-emerald-200' : 'text-amber-200'}">${G.ok ? `✓ ${R.shares.length} linhas lidas · os totais conferem com os da XTB` : '⚠ Os totais lidos não batem certo com os da XTB: confira o PDF.'}</div>
+    </div>
+    <div class="rounded-2xl bg-amber-50 border border-amber-200 p-3 mt-3 text-xs text-amber-900 leading-relaxed">
+      <b>Como usar no Portal (Anexo G, quadro 9, pré-preenchido):</b>
+      <ol class="list-decimal pl-4 mt-1 space-y-0.5">
+        <li>Para cada data abaixo, as linhas pré-preenchidas com essa data somam o valor indicado.</li>
+        <li>Se a venda teve uma só compra, complete a linha com a data, o valor de compra e as despesas.</li>
+        <li>Se teve várias, escreva os valores do Portal no campo "Comparar": a app diz que compras pertencem a cada linha. Se não baterem, apague as linhas dessa data e introduza as indicadas: o total fica igual.</li>
+        <li>Em todas as linhas: titular A, país da contraparte <b>620</b> e "Respeita a valores mobiliários…" <b>SIM</b>.</li>
+        ${R.frac.length ? '<li>As ações fracionadas não vêm pré-preenchidas: acrescente-as no Anexo J, quadro 9.2B (ver no fim).</li>' : ''}
+      </ol></div>
+    <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
+      <div class="rounded-xl bg-brand-50 p-2.5"><div class="text-slate-500">Total de venda</div><b class="num">${e(G.real)}</b></div>
+      <div class="rounded-xl bg-brand-50 p-2.5"><div class="text-slate-500">Total de compra</div><b class="num">${e(G.aq)}</b></div>
+      <div class="rounded-xl bg-brand-50 p-2.5"><div class="text-slate-500">Despesas</div><b class="num">${e(G.desp)}</b></div>
+      <div class="rounded-xl bg-brand-50 p-2.5"><div class="text-slate-500">Datas de venda</div><b class="num">${new Set(G.groups.map(g => g.sell)).size}</b></div></div>
+    <h3 class="font-bold mt-4">Anexo G · Quadro 9, por data de venda</h3>
+    ${G.groups.map(grp).join('')}
+    ${R.frac.length ? `<h3 class="font-bold mt-4">Ações fracionadas · Anexo J, quadro 9.2B</h3>
+      <p class="text-xs text-slate-500">A XTB trata as frações como direitos (código G98) e comunica só o resultado líquido por país. Acrescente estas linhas à mão.</p>
+      <div class="overflow-x-auto mt-2"><table class="tbl num text-[11px] w-full"><thead><tr><th>Código</th><th>País da fonte</th><th>Rendimento líquido</th><th>Imposto estrangeiro</th><th>País contraparte</th></tr></thead>
+      <tbody>${R.frac.map(f => `<tr><td>${f.code}</td><td>${esc(cnameS(f.country))}</td><td>${e(f.net)}</td><td>${e(f.tax)}</td><td>${TF.pad3(f.cp)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${R.cfd.length ? `<h3 class="font-bold mt-4">CFD</h3><div class="overflow-x-auto"><table class="tbl num text-[11px] w-full"><thead><tr><th>Código</th><th>País</th><th>Rendimento líquido</th><th>Contraparte</th></tr></thead>
+      <tbody>${R.cfd.map(f => `<tr><td>${f.code}</td><td>${esc(cnameS(f.country))}</td><td>${e(f.net)}</td><td>${TF.pad3(f.cp)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${G.long ? `<p class="text-xs text-gain font-semibold mt-3">${G.long} linha(s) com mais de 2 anos de detenção: podem ter redução da taxa (responder SIM à pergunta dos valores mobiliários).</p>` : ''}
+    <div class="grid grid-cols-2 gap-2 mt-4">
+      <button data-xg="pdf" class="h-12 rounded-2xl bg-brand-600 text-white font-bold">Enviar PDF</button>
+      <button data-xg="xlsx" class="h-12 rounded-2xl bg-brand-50 text-brand-700 font-bold">Enviar Excel</button></div>
+    <button data-xg="del" class="w-full mt-2 h-10 rounded-2xl text-loss text-xs font-bold">Apagar este relatório da app</button>
+    <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">Ajuda ao preenchimento com base no relatório da XTB. Não é aconselhamento fiscal: a contabilista decide o preenchimento final.</p>`);
+  document.querySelectorAll('[data-pvgo]').forEach(b => b.onclick = () => {
+    const g = G.groups[+b.dataset.pvgo], vals = $('#pv' + b.dataset.pvgo).value.split(/[\s;]+/).map(v => TF.num(v)).filter(v => v > 0);
+    R.portal ||= {}; if (vals.length) R.portal[g.key] = vals; else delete R.portal[g.key];
+    save(); openXtbGuide(y, g.key);
+    setTimeout(() => $('#xg' + b.dataset.pvgo)?.scrollIntoView({ block: 'start' }), 30);
+  });
+  document.querySelectorAll('[data-xg]').forEach(b => b.onclick = () => {
+    if (b.dataset.xg === 'del') { if (confirm(`Apagar o relatório da XTB de ${y} desta app?`)) { delete S.xtbAnnual[y]; save(); closeModal(); render(); } return; }
+    Promise.resolve(b.dataset.xg === 'pdf' ? exportXtbGuidePDF(y) : exportXtbGuideXLSX(y)).then(ok => { if (ok) setTimeout(supportPrompt, 600); });
+  });
+}
+function xtbGuideTable(G) {
+  const head = ['Linha Portal', 'Titular', 'NIF entidade emitente', 'Código', 'Ano real.', 'Mês', 'Dia', 'Valor realização', 'Ano aquis.', 'Mês', 'Dia', 'Valor aquisição', 'Despesas e encargos', 'País contraparte', 'Valores mobiliários?', 'Resultado', 'País da fonte · ativo'];
+  const blocks = G.groups.map(g => {
+    const rows = guideLotRows(g), [sy, sm, sd] = ymdParts(g.sell);
+    const title = `Venda de ${fmtD(g.sell)} · NIF ${g.nif}${g.pt ? ' (empresa portuguesa)' : ''} · total no Portal ${fmtEUR(g.real).replace(/\u00a0/g, ' ')} · `
+      + (g.match?.ok ? `preencher ${rows.length} linha(s) conforme a coluna "Linha Portal"` : g.lots.length === 1 ? 'completar a linha pré-preenchida' : `introduzir ${rows.length} linhas (substituem as pré-preenchidas desta data)`);
+    return { title, rows: rows.map(r => { const [by, bm, bd] = ymdParts(r.lot.buy);
+      return [r.portal != null && r.first ? TF.r2(r.portal) : '', 'A', g.nif, r.lot.code, sy, sm, sd, TF.r2(r.real), by, bm, bd, TF.r2(r.aq), TF.r2(r.desp), '620', 'SIM', TF.r2(r.real - r.aq - r.desp),
+        `${cnameS(r.lot.country)}${r.lot.ticker ? ' · ' + r.lot.ticker : ''}${r.lot.days >= 730 ? ' · +2 anos' : ''}`]; }) };
+  });
+  return { head, blocks, money: [0, 7, 11, 12, 15] };
+}
+function exportXtbGuidePDF(y) {
+  const JS = window.jspdf && window.jspdf.jsPDF;
+  if (!JS || !JS.API.autoTable) return toast('Gerador de PDF ainda a carregar. Ligue-se à internet e tente de novo.');
+  const G = xtbGuideData(y), R = G.R, T = xtbGuideTable(G);
+  const doc = new JS({ orientation: 'landscape', unit: 'pt', format: 'a4' }), W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+  const e = n => fmtEUR(n).replace(/\u00a0/g, ' ');
+  doc.setFillColor(10, 42, 102); doc.rect(0, 0, W, 70, 'F');
+  doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(17);
+  doc.text(`IRS ${y} - Guia para o Portal (mais-valias XTB)`, 32, 32);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+  doc.text([R.holder || S.settings.holderName, (R.nif || S.settings.holderNif) ? 'NIF ' + (R.nif || S.settings.holderNif) : ''].filter(Boolean).join(' - ') || 'Relatório anual de mais-valias da XTB', 32, 52);
+  doc.text(`Gerado em ${fmtD(today())} com AllFolio.pt`, W - 32, 52, { align: 'right' });
+  doc.setTextColor(10, 42, 102);
+  doc.autoTable({ startY: 86, theme: 'plain', styles: { fontSize: 9.5, cellPadding: 3, textColor: [10, 42, 102] }, columnStyles: { 1: { halign: 'right', fontStyle: 'bold' }, 3: { halign: 'right', fontStyle: 'bold' } },
+    body: [['Total de realização (ações e ETF)', e(G.real), 'Saldo de mais-valias (ações e ETF)', e(G.saldo)],
+      ['Total de aquisição', e(G.aq), 'Ações fracionadas (resultado líquido)', e(G.fracNet)],
+      ['Despesas e encargos', e(G.desp), 'Saldo total', e(G.total)],
+      ['Linhas do relatório da XTB', String(R.shares.length), 'Imposto estimado (taxa autónoma de 28%)', e(G.tax)],
+      ['Conferência com os totais da XTB', G.ok ? 'OK' : 'VERIFICAR', 'Datas de venda', String(new Set(G.groups.map(g => g.sell)).size)]],
+    margin: { left: 32, right: 32 } });
+  let yy = doc.lastAutoTable.finalY + 14;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.text('Como preencher (Anexo G, quadro 9, pré-preenchido pelas Finanças)', 32, yy); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.8); yy += 13;
+  const notes = [
+    'As Finanças pré-preenchem o Anexo G, quadro 9, com as vendas comunicadas pela XTB: uma linha por venda, só com a data e o valor de realização, e com o NIF da XTB (980436613) como entidade emitente (as empresas portuguesas aparecem com o NIF da própria empresa).',
+    'Para cada data de venda, as linhas pré-preenchidas com essa data somam o "total no Portal" indicado nas páginas seguintes.',
+    'Venda com uma só compra: complete a linha pré-preenchida com o ano, mês, dia e valor de aquisição e as despesas.',
+    'Venda com várias compras: quando a coluna "Linha Portal" está preenchida, cada linha pré-preenchida é dividida nas compras indicadas. Quando não está, apague as linhas pré-preenchidas dessa data e introduza as linhas indicadas: o total de realização fica exatamente igual.',
+    'Em todas as linhas: titular A, país da contraparte 620 (Portugal) e "Respeita a valores mobiliários admitidos à negociação ou a partes de OIC abertos?" = SIM.',
+    'Código: G01 para ações; a XTB indica G20 para ETF (unidades de participação em fundos). O Portal pode pré-preencher G01 em todas as linhas; a taxa é igual.',
+    R.frac.length ? 'Ações fracionadas: não vêm pré-preenchidas. A XTB classifica-as como cessão de direitos (código G98), no Anexo J, quadro 9.2B, só com o resultado líquido por país (última página).' : 'Não houve vendas de ações fracionadas neste ano.',
+    G.long ? `${G.long} linha(s) com mais de 2 anos de detenção podem beneficiar de redução da taxa.` : 'Todas as compras vendidas foram detidas menos de 2 anos: sem redução de taxa por detenção.',
+    'Estimativa sem opção pelo englobamento. Ajuda ao preenchimento com base no relatório da XTB; não substitui a análise da contabilista.'];
+  for (const n of notes) { const ls = doc.splitTextToSize('- ' + n, W - 64); if (yy + ls.length * 11 > H - 30) { doc.addPage(); yy = 40; } doc.text(ls, 32, yy); yy += ls.length * 11 + 2; }
+  doc.addPage(); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Anexo G - Quadro 9: linhas a introduzir, por data de venda', 32, 36); doc.setFont('helvetica', 'normal');
+  const body = [], cell = (v, i) => v === '' ? '' : T.money.includes(i) ? e(v) : String(v);
+  T.blocks.forEach(b => { body.push([{ content: b.title, colSpan: T.head.length, styles: { halign: 'left', fontStyle: 'bold', fillColor: [230, 238, 252], textColor: [10, 42, 102] } }]); b.rows.forEach(r => body.push(r.map(cell))); });
+  doc.autoTable({ startY: 46, head: [T.head], body, styles: { fontSize: 7, cellPadding: 2.6, textColor: [10, 42, 102], halign: 'right' },
+    headStyles: { fillColor: [29, 78, 216], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 6.8 }, margin: { left: 20, right: 20 },
+    columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' }, 13: { halign: 'center' }, 14: { halign: 'center' }, 16: { halign: 'left' } } });
+  if (R.frac.length || R.cfd.length) {
+    doc.addPage(); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Ações fracionadas e CFD (não pré-preenchidos)', 32, 36); doc.setFont('helvetica', 'normal');
+    doc.autoTable({ startY: 48, head: [['Anexo / quadro', 'Código', 'País da fonte', 'Rendimento líquido', 'Imposto pago no estrangeiro', 'País da contraparte']],
+      body: [...R.frac.map(f => ['Anexo J - 9.2B', f.code, cnameS(f.country), e(f.net), e(f.tax), TF.pad3(f.cp)]), ...R.cfd.map(f => [f.code === 'G51' ? 'Anexo G - 13' : 'Anexo J - 9.2B', f.code, cnameS(f.country), e(f.net), e(f.tax), TF.pad3(f.cp)])],
+      styles: { fontSize: 8.5, cellPadding: 3, textColor: [10, 42, 102] }, headStyles: { fillColor: [29, 78, 216], textColor: 255 }, margin: { left: 32, right: 32 } });
+  }
+  const pages = doc.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) { doc.setPage(p); doc.setFontSize(7); doc.setTextColor(120);
+    doc.text(`Página ${p} de ${pages} - gerado a partir do relatório anual da XTB; confirmar com o pré-preenchimento do Portal das Finanças.`, 32, H - 14); }
+  return shareFile(doc.output('blob'), `IRS_${y}_guia_Portal_XTB.pdf`, 'application/pdf');
+}
+function exportXtbGuideXLSX(y) {
+  if (!window.XLSX) return toast('Gerador de Excel ainda a carregar. Ligue-se à internet e tente de novo.');
+  const G = xtbGuideData(y), R = G.R, T = xtbGuideTable(G), wb = XLSX.utils.book_new();
+  const sheet = (rows, widths) => { const ws = XLSX.utils.aoa_to_sheet(rows); ws['!cols'] = widths.map(w => ({ wch: w })); return ws; };
+  XLSX.utils.book_append_sheet(wb, sheet([[`IRS ${y} - Guia para o Portal (XTB)`], [R.holder || S.settings.holderName || '', R.nif ? 'NIF ' + R.nif : ''], [],
+    ['Total de realização', G.real], ['Total de aquisição', G.aq], ['Despesas e encargos', G.desp], ['Saldo ações e ETF', G.saldo], ['Ações fracionadas (líquido)', G.fracNet], ['Saldo total', G.total], ['Imposto estimado (28%)', G.tax],
+    ['Conferência com a XTB', G.ok ? 'OK' : 'VERIFICAR']], [36, 18]), 'Resumo');
+  const rows = [T.head]; T.blocks.forEach(b => { rows.push([b.title]); b.rows.forEach(r => rows.push(r)); });
+  XLSX.utils.book_append_sheet(wb, sheet(rows, T.head.map(h => Math.max(9, h.length + 2))), 'Anexo G Q9');
+  if (R.frac.length || R.cfd.length) XLSX.utils.book_append_sheet(wb, sheet([['Quadro', 'Código', 'País da fonte', 'Rendimento líquido', 'Imposto estrangeiro', 'País contraparte'],
+    ...R.frac.map(f => ['Anexo J 9.2B', f.code, TF.pad3(f.country), f.net, f.tax, TF.pad3(f.cp)]), ...R.cfd.map(f => [f.code === 'G51' ? 'Anexo G 13' : 'Anexo J 9.2B', f.code, TF.pad3(f.country), f.net, f.tax, TF.pad3(f.cp)])], [14, 8, 14, 18, 18, 14]), 'Frações e CFD');
+  XLSX.utils.book_append_sheet(wb, sheet([['Linha XTB', 'Quadro XTB', 'País fonte', 'Código', 'Data venda', 'Valor realização', 'Data compra', 'Valor aquisição', 'Despesas', 'Resultado', 'Dias'],
+    ...R.shares.map(s => [s.line, s.src === 'G' ? 'Anexo G Q9' : 'Anexo J 9.2A', TF.pad3(s.country), s.code, s.sell, s.real, s.buy, s.aq, s.desp, s.ganho, s.days])], [10, 14, 10, 8, 12, 16, 12, 16, 10, 10, 6]), 'Linhas XTB');
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return shareFile(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `IRS_${y}_guia_Portal_XTB.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
 
 /* ---------- Relatório para a contabilista (PDF e Excel, partilháveis) ---------- */
@@ -2798,7 +3090,7 @@ function exitDemo() {
 /* ================= CONTA E SINCRONIZAÇÃO (Firebase) ================= */
 const FB_VER = '10.12.2';
 const FB_SCRIPTS = ['app', 'auth', 'firestore'].map(m => `https://www.gstatic.com/firebasejs/${FB_VER}/firebase-${m}-compat.js`);
-const SYNC_KEYS = ['tx', 'div', 'assets', 'cash', 'divDone'];
+const SYNC_KEYS = ['tx', 'div', 'assets', 'cash', 'divDone', 'xtbAnnual'];
 const CLOUD = { mode: 'off', user: null, lastJson: null, applying: false, unsub: null, auth: null, db: null };
 const DEVICE = (() => { try { let d = localStorage.getItem(KEY + '.device'); if (!d) { d = uid(); localStorage.setItem(KEY + '.device', d); } return d; } catch (e) { return uid(); } })();
 const syncMeta = () => { try { return JSON.parse(localStorage.getItem(KEY + '.sync') || '{}'); } catch (e) { return {}; } };
@@ -2806,7 +3098,7 @@ const setMeta = p => { try { localStorage.setItem(KEY + '.sync', JSON.stringify(
 const cfgValid = c => !!(c && c.apiKey && c.projectId && c.appId && !JSON.stringify(c).includes('COLE_AQUI'));
 
 function personalData() {
-  const o = {}; SYNC_KEYS.forEach(k => o[k] = S[k] ?? (k === 'assets' || k === 'divDone' ? {} : []));
+  const o = {}; SYNC_KEYS.forEach(k => o[k] = S[k] ?? (k === 'assets' || k === 'divDone' || k === 'xtbAnnual' ? {} : []));
   const st = { ...(S.settings || {}) }; delete st.fx; delete st.quota; o.settings = st;
   return o;
 }
