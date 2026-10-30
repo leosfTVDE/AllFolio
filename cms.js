@@ -14,7 +14,7 @@
   const FOOT = `
 </main>
 <footer><div class="foot">
-  <a href="./">Início</a><a href="guias">Guias</a><a href="privacidade.html">Política de privacidade</a><a href="termos.html">Termos de utilização</a><a href="mailto:taxfolio.suporte@gmail.com">Contacto</a>
+  <a href="./">Início</a><a href="guias">Guias</a><a href="privacidade.html">Política de privacidade</a><a href="termos.html">Termos de utilização</a><a href="como-ganhamos-dinheiro.html">Como ganhamos dinheiro</a><a href="mailto:taxfolio.suporte@gmail.com">Contacto</a>
 </div></footer>
 <script src="track.js" defer></script>
 </body>
@@ -61,6 +61,10 @@ ${HEADER}
     guia: d => `<p class="disc">Este guia é informação geral e foi atualizado em ${fmtDate(d)}. Não substitui o aconselhamento de um contabilista certificado nem as instruções oficiais da Autoridade Tributária, que podem mudar de ano para ano.</p>`,
     semana: d => `<p class="disc">Resumo publicado em ${fmtDate(d)}, com base em informação pública. É informação geral e não constitui aconselhamento financeiro, fiscal ou de investimento.</p>`
   };
+  // Links externos abrem com noopener; links de parceria levam rel="sponsored nofollow", como o Google pede.
+  const AFF = /shop\.ledger\.com|trezor\.io\/.*[?&](offer_id|aff|ref)=|partners?\.|amzn\.to|amazon\.[a-z.]+\/.*[?&]tag=|[?&](r|ref|aff|affiliate|tag)=/i;
+  const relLinks = h => String(h || '').replace(/<a href="(https?:\/\/[^"]+)"[^>]*>/g, (m, u) => u.includes('allfolio.pt') ? m
+    : `<a href="${u}" rel="${AFF.test(u) ? 'sponsored nofollow ' : ''}noopener" target="_blank">`);
   function articlePage(a) {
     const type = a.type === 'semana' ? 'semana' : 'guia', min = readMin(a.body), section = type === 'semana' ? 'A semana do investidor' : (a.tag || 'Guia');
     const art = { '@context': 'https://schema.org', '@type': type === 'semana' ? 'NewsArticle' : 'Article', headline: a.title, description: a.desc, inLanguage: 'pt-PT',
@@ -70,7 +74,7 @@ ${HEADER}
       + `<p class="crumbs"><a href="./">Início</a> › <a href="guias">Guias</a> › ${esc(section)}</p>
 <h1>${esc(a.title)}</h1>
 <p class="meta">${a.updated && a.updated !== a.date ? 'Atualizado' : 'Publicado'} em ${fmtDate(a.updated || a.date)} · ${min} min de leitura</p>
-${a.body}
+${relLinks(a.body)}
 <!-- AdSense: anúncio no fim do artigo (a ativar) -->
 ${a.cta === false ? '' : CTA}
 ${DISC[type](a.updated || a.date)}` + FOOT;
@@ -111,7 +115,7 @@ ${sec('semana', 'A semana do investidor')}${sec('guia', 'Guias')}
     const u = (loc, lm, cf, pr) => `  <url><loc>${SITE}${loc}</loc><lastmod>${lm}</lastmod><changefreq>${cf}</changefreq><priority>${pr}</priority></url>`;
     return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${[u('', now, 'weekly', '1.0'), u('guias', now, 'weekly', '0.7'), u('privacidade.html', '2026-10-26', 'yearly', '0.3'), u('termos.html', '2026-10-26', 'yearly', '0.3'),
+${[u('', now, 'weekly', '1.0'), u('guias', now, 'weekly', '0.7'), u('privacidade.html', '2026-10-26', 'yearly', '0.3'), u('termos.html', '2026-10-26', 'yearly', '0.3'), u('como-ganhamos-dinheiro.html', '2026-10-30', 'yearly', '0.3'),
   ...pubList(reg).map(a => u(a.slug, a.updated || a.date, a.type === 'semana' ? 'yearly' : 'monthly', a.type === 'semana' ? '0.6' : '0.8'))].join('\n')}
 </urlset>
 `;
