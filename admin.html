@@ -18,7 +18,7 @@
   main{max-width:760px;margin:0 auto;padding:16px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}
   label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:12px 0 6px}
-  input[type=text],input[type=password],input[type=date],textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+  input[type=text],input[type=email],input[type=password],input[type=date],textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
   textarea{min-height:70px;resize:vertical}
   .hint{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.5}
   button,.btn{font:inherit;font-weight:700;border-radius:12px;min-height:44px;padding:0 16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
@@ -53,12 +53,24 @@
   #pv{position:fixed;inset:0;background:var(--bg);z-index:12;display:none;flex-direction:column}
   #pv iframe{flex:1;border:0;width:100%;background:#fff}
   .ok{width:58px;height:58px;border-radius:50%;background:var(--greenbg);color:var(--green);display:grid;place-items:center;font-size:28px;margin:6px auto 10px}
+  .nav{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+  .nav button{min-height:40px;font-size:14px}.nav button.on{background:var(--soft);color:var(--blue);border-color:var(--blue)}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+  .kpi span{font-size:12px;color:var(--muted)}.kpi b{display:block;font-size:26px;margin-top:2px}
+  .up{color:var(--green);font-size:12px;font-weight:700}.dn{color:var(--red);font-size:12px;font-weight:700}
+  .card h3{margin:0 0 4px;font-size:16px}
+  .srow{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:14px}
+  .sbar{height:7px;border-radius:9px;background:var(--soft);margin-top:5px;overflow:hidden}.sbar i{display:block;height:100%;border-radius:9px}
+  .fun div{color:#fff;border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;margin-top:8px;font-weight:700}
+  pre.rules{white-space:pre-wrap;font-size:11.5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px;overflow:auto;margin:10px 0}
   .hidden{display:none!important}
 </style>
 </head>
 <body>
 <header><h1>Painel · AllFolio.pt</h1><span id="hst" class="st"></span></header>
 <main>
+<div id="nav" class="nav hidden"><button data-nav="list" class="on">Artigos</button><button data-nav="stats">📊 Visitas</button></div>
 
 <section id="vSetup" class="hidden">
   <div class="card">
@@ -82,7 +94,34 @@
   <div class="tabs" id="tabs"></div>
   <div class="card" id="items" style="padding:4px 16px"></div>
   <div class="row" style="margin-top:6px"><a class="btn" href="./" target="_blank" rel="noopener">Ver o site</a><button id="bOut">Desligar</button></div>
+  <button id="bRepub" class="full" style="margin-top:16px">Republicar todas as páginas</button>
+  <p class="hint">Volta a gerar todos os artigos publicados, a lista de guias, a página inicial e o sitemap, num só envio. Use depois de enviar ficheiros novos do site para o GitHub.</p>
 </section>
+<section id="vStats" class="hidden">
+  <p class="hint" style="font-size:14px;margin-top:0">Visitas ao site, contadas sem cookies e sem dados pessoais (só totais por dia). Complementa o Search Console, que mostra as pesquisas do Google. Conta a partir do dia em que o contador foi publicado.</p>
+  <div id="sLogin" class="card hidden">
+    <h2 style="margin:0 0 6px;font-size:19px">Entrar</h2>
+    <p class="hint" style="font-size:14px">Use a mesma conta com que entra na app AllFolio.</p>
+    <button id="sGoogle" class="full" style="margin-top:8px">Entrar com Google</button>
+    <label for="sEmail">Email</label><input id="sEmail" type="email" autocapitalize="off" autocorrect="off" autocomplete="username">
+    <label for="sPass">Palavra-passe</label><input id="sPass" type="password" autocomplete="current-password">
+    <button id="sEmailGo" class="primary full" style="margin-top:12px">Entrar com email</button>
+  </div>
+  <div id="sMain" class="hidden">
+    <div class="srow" style="margin:0 0 10px;font-size:13px;color:var(--muted)"><span>Conta: <b id="sWho"></b></span><button class="link grey" id="sOut">Sair</button></div>
+    <div id="sRules" class="card hidden"></div>
+    <div id="sPer" class="seg" style="grid-template-columns:1fr 1fr 1fr"></div>
+    <div id="sKpi" class="kpis"></div>
+    <div class="card"><h3>Visitas por dia</h3><svg id="sBars" viewBox="0 0 300 96" width="100%" height="96" aria-hidden="true"></svg><div id="sLbl" style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)"></div></div>
+    <div class="card"><h3>Páginas mais vistas</h3><div id="sPages"></div></div>
+    <div class="card"><h3>De onde vêm</h3><div id="sSrc"></div></div>
+    <div class="card"><h3>Do artigo à conta</h3><div id="sFun" class="fun"></div></div>
+    <div class="card"><h3>Países, aparelho e idioma</h3><div id="sDev"></div></div>
+    <label class="check"><input type="checkbox" id="sNo"> Não contar as minhas visitas neste aparelho</label>
+    <button id="sRef" class="primary full" style="margin-top:12px">⟳ Atualizar</button>
+  </div>
+</section>
+
 
 <section id="vEdit" class="hidden">
   <div class="row" style="margin-bottom:10px"><button id="eBack">‹ Artigos</button><button id="ePrev">Pré-visualizar</button></div>
@@ -138,7 +177,8 @@ const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOff
 
 function toast(t, ms = 3200) { const el = $('#toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = 'none', ms); }
 function busy(on, t) { $('#busy').style.display = on ? 'grid' : 'none'; if (t) $('#busyT').textContent = t; }
-function show(v) { ['vSetup', 'vList', 'vEdit', 'vDone'].forEach(id => $('#' + id).classList.toggle('hidden', id !== v)); window.scrollTo(0, 0); }
+function show(v) { ['vSetup', 'vList', 'vEdit', 'vDone', 'vStats'].forEach(id => $('#' + id).classList.toggle('hidden', id !== v)); $('#nav').classList.toggle('hidden', !['vList', 'vStats'].includes(v));
+  document.querySelectorAll('[data-nav]').forEach(x => x.classList.toggle('on', x.dataset.nav === (v === 'vStats' ? 'stats' : 'list'))); window.scrollTo(0, 0); }
 
 /* ---------- GitHub ---------- */
 const b64enc = s => { const b = new TextEncoder().encode(s); let x = ''; for (let i = 0; i < b.length; i += 0x8000) x += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(x); };
@@ -399,6 +439,120 @@ $('#cGo').onclick = async () => {
     localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); busy(false); toast('Ligado ao GitHub.'); boot();
   } catch (e) { busy(false); toast(errMsg(e), 5000); }
 };
+/* ---------- Republicar tudo ---------- */
+$('#bRepub').onclick = async () => {
+  if (!confirm('Voltar a gerar todas as páginas publicadas, a lista de guias, a página inicial e o sitemap?')) return;
+  busy(true, 'A republicar…');
+  try {
+    await loadReg(); const files = {};
+    for (const it of reg.items.filter(x => x.status === 'pub')) { const t = await getFile(`cms/fontes/${it.slug}.json`); if (t) files[`${it.slug}.html`] = CMS.articlePage(JSON.parse(t)); }
+    Object.assign(files, await siteFiles(reg));
+    await commit(files, 'Painel: republicar todas as páginas');
+    renderList(); toast('Feito. O site atualiza em cerca de 1 minuto.');
+  } catch (er) { toast(errMsg(er), 5000); } finally { busy(false); }
+};
+
+/* ---------- Visitas ---------- */
+const FBV = '10.12.2'; let FB = null, sDocs = [], sPer = '7';
+if (localStorage.getItem('af_notrack') === null) localStorage.setItem('af_notrack', '1');
+$('#nav').onclick = e => { const b = e.target.closest('[data-nav]'); if (!b) return; if (b.dataset.nav === 'stats') openStats(); else { show('vList'); renderList(); } };
+const loadScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Não foi possível ligar ao Firebase. Verifique a internet.')); document.head.appendChild(s); });
+async function fbInit() {
+  if (FB) return FB;
+  if (!window.TAXFOLIO_FIREBASE) await loadScript('firebase-config.js');
+  for (const m of ['app', 'auth', 'firestore']) await loadScript(`https://www.gstatic.com/firebasejs/${FBV}/firebase-${m}-compat.js`);
+  if (!firebase.apps.length) firebase.initializeApp(window.TAXFOLIO_FIREBASE);
+  FB = { auth: firebase.auth(), db: firebase.firestore() }; FB.auth.languageCode = 'pt';
+  await new Promise(r => { const u = FB.auth.onAuthStateChanged(() => { u(); r(); }); });
+  return FB;
+}
+async function openStats() {
+  show('vStats'); busy(true, 'A ligar…');
+  try { await fbInit(); } catch (e) { busy(false); return toast(e.message, 5000); }
+  busy(false); statsAuth();
+}
+function statsAuth() {
+  const u = FB.auth.currentUser;
+  $('#sLogin').classList.toggle('hidden', !!u); $('#sMain').classList.toggle('hidden', !u);
+  if (u) { $('#sWho').textContent = u.email || u.uid; $('#sNo').checked = localStorage.getItem('af_notrack') === '1'; loadStats(); }
+}
+$('#sGoogle').onclick = async () => { try { await FB.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); statsAuth(); } catch (e) { if (e.code !== 'auth/popup-closed-by-user') toast('Não foi possível entrar: ' + (e.code || e.message), 5000); } };
+$('#sEmailGo').onclick = async () => { try { await FB.auth.signInWithEmailAndPassword($('#sEmail').value.trim(), $('#sPass').value); statsAuth(); } catch (e) { toast(e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' ? 'Email ou palavra-passe errados.' : 'Não foi possível entrar: ' + (e.code || e.message), 5000); } };
+$('#sOut').onclick = async () => { await FB.auth.signOut(); statsAuth(); };
+$('#sNo').onchange = e => localStorage.setItem('af_notrack', e.target.checked ? '1' : '0');
+$('#sRef').onclick = () => loadStats();
+const dayStr = off => { const d = new Date(); d.setDate(d.getDate() + off); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function rulesText(uid) {
+  return `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Estatísticas de visitas do site: qualquer visitante soma, só o dono lê.
+    match /stats/{day} {
+      allow read: if request.auth != null && request.auth.uid == "${uid}";
+      allow create, update: if day.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.keys().hasOnly(['v', 'pv', 'p', 's', 'd', 'l', 'c', 'f']);
+      allow delete: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}`;
+}
+async function loadStats() {
+  busy(true, 'A carregar as visitas…'); $('#sRules').classList.add('hidden');
+  try {
+    const q = await FB.db.collection('stats').where(firebase.firestore.FieldPath.documentId(), '>=', dayStr(-62)).get();
+    sDocs = q.docs.map(x => ({ id: x.id, ...x.data() })); renderStats();
+  } catch (e) {
+    if (e.code === 'permission-denied') {
+      const r = rulesText(FB.auth.currentUser.uid);
+      $('#sRules').innerHTML = `<h3>Falta um passo (só uma vez)</h3>
+        <p class="hint" style="font-size:14px">A base de dados ainda não deixa somar nem ler as visitas. Copie as regras abaixo e cole-as no Firebase:</p>
+        <ol class="hint" style="font-size:14px;padding-left:18px"><li>Abra <b>console.firebase.google.com</b> e escolha o projeto <b>taxfolio</b>.</li><li>Menu <b>Firestore Database</b> → separador <b>Regras</b>.</li><li>Apague tudo o que lá está, cole as regras e toque em <b>Publicar</b>.</li><li>Volte aqui e toque em <b>Atualizar</b>.</li></ol>
+        <pre class="rules" id="sRulesTxt"></pre><button id="sCopy" class="primary full">Copiar regras</button>`;
+      $('#sRulesTxt').textContent = r; $('#sRules').classList.remove('hidden');
+      $('#sCopy').onclick = async () => { try { await navigator.clipboard.writeText(r); toast('Regras copiadas.'); } catch (er) { toast('Selecione o texto e copie à mão.'); } };
+      sDocs = []; renderStats();
+    } else toast('Não foi possível carregar: ' + (e.code || e.message), 5000);
+  } finally { busy(false); }
+}
+const sTot = (docs, k) => docs.reduce((s, d) => s + (+(k.includes('.') ? d[k.split('.')[0]]?.[k.split('.')[1]] : d[k]) || 0), 0);
+const sMap = (docs, k) => { const o = {}; docs.forEach(d => Object.entries(d[k] || {}).forEach(([x, v]) => o[x] = (o[x] || 0) + (+v || 0))); return o; };
+const PAGE_NAMES = { inicio: 'Página inicial', guias: 'Lista de guias', privacidade: 'Política de privacidade', termos: 'Termos de utilização' };
+const SRC = { google: '🔎 Google', pesquisa: '🔍 Outros motores de pesquisa', social: '📱 Redes sociais', direto: '🔗 Direto (link guardado, escrito à mão)', outros: '🌐 Outros sites' };
+const CTRY = { PT: '🇵🇹 Portugal', BR: '🇧🇷 Brasil', EU: '🇪🇺 Outros países europeus', outro: '🌍 Outros' };
+const DEV = { mobile: '📱 Telemóvel', desktop: '💻 Computador' };
+const LNG = { pt: '🇵🇹 Português', en: '🇬🇧 English', es: '🇪🇸 Español', fr: '🇫🇷 Français', de: '🇩🇪 Deutsch', outro: '🌍 Outros idiomas' };
+function sRows(obj, names, color, max = 8) {
+  const e = Object.entries(obj).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, max); if (!e.length) return '<p class="hint">Ainda sem dados.</p>';
+  const m = e[0][1]; return e.map(([k, v]) => `<div class="srow"><span>${CMS.esc(names(k))}</span><b>${v}</b></div><div class="sbar"><i style="width:${v / m * 100}%;background:${color}"></i></div>`).join('');
+}
+function renderStats() {
+  const n = { hoje: 1, '7': 7, '30': 30 }[sPer], days = Array.from({ length: n }, (_, i) => dayStr(i - n + 1)), prevDays = Array.from({ length: n }, (_, i) => dayStr(i - 2 * n + 1));
+  const docs = sDocs.filter(d => days.includes(d.id)), prev = sDocs.filter(d => prevDays.includes(d.id));
+  $('#sPer').innerHTML = [['hoje', 'Hoje'], ['7', '7 dias'], ['30', '30 dias']].map(([k, l]) => `<button data-sp="${k}" class="${k === sPer ? 'on' : ''}">${l}</button>`).join('');
+  const v = sTot(docs, 'v'), pv0 = sTot(prev, 'v'), acc = sTot(docs, 'f.acc');
+  const delta = pv0 ? Math.round((v / pv0 - 1) * 100) : null;
+  $('#sKpi').innerHTML = `<div class="kpi"><span>Visitas</span><b>${v}</b>${delta == null ? '<span>&nbsp;</span>' : `<span class="${delta >= 0 ? 'up' : 'dn'}">${delta >= 0 ? '↑' : '↓'} ${Math.abs(delta)}%</span>`}</div>
+    <div class="kpi"><span>Páginas vistas</span><b>${sTot(docs, 'pv')}</b></div>
+    <div class="kpi"><span>Abriram a app</span><b>${sTot(docs, 'f.app')}</b></div>
+    <div class="kpi"><span>Contas criadas</span><b>${acc}</b><span>${v ? (acc / v * 100).toFixed(1).replace('.', ',') + '% das visitas' : '&nbsp;'}</span></div>`;
+  const bd = (sPer === 'hoje' ? Array.from({ length: 7 }, (_, i) => dayStr(i - 6)) : days), vals = bd.map(d => +(sDocs.find(x => x.id === d)?.v) || 0), mx = Math.max(1, ...vals), w = 300 / bd.length;
+  $('#sBars').innerHTML = vals.map((x, i) => `<rect x="${(i * w + w * .12).toFixed(1)}" y="${(92 - x / mx * 84).toFixed(1)}" width="${(w * .76).toFixed(1)}" height="${Math.max(x ? 2 : 0, x / mx * 84).toFixed(1)}" rx="${Math.min(4, w * .2).toFixed(1)}" fill="#1D4ED8"/>`).join('');
+  const step = Math.ceil(bd.length / 7); $('#sLbl').innerHTML = bd.filter((_, i) => i % step === 0 || i === bd.length - 1).map(d => `<span>${+d.slice(8)}</span>`).join('');
+  const title = k => PAGE_NAMES[k] || (reg?.items || []).find(x => x.slug === k)?.title || k;
+  $('#sPages').innerHTML = sRows(sMap(docs, 'p'), title, '#1D4ED8');
+  $('#sSrc').innerHTML = sRows(sMap(docs, 's'), k => SRC[k] || k, '#0F9D6E');
+  const f = [v, sTot(docs, 'f.guia'), sTot(docs, 'f.app'), acc], lab = ['Visitaram o site', 'Leram um guia', 'Abriram a app', 'Criaram conta'], cols = ['#0A2A66', '#1D4ED8', '#5B8DEF', '#0F9D6E'];
+  $('#sFun').innerHTML = f.map((x, i) => `<div style="margin-left:${i * 12}px;background:${cols[i]}"><span>${lab[i]}</span><span>${x}</span></div>`).join('');
+  $('#sDev').innerHTML = sRows(sMap(docs, 'c'), k => CTRY[k] || k, '#A8823F', 4) + sRows(sMap(docs, 'd'), k => DEV[k] || k, '#2C6E7A', 2) + sRows(sMap(docs, 'l'), k => LNG[k] || k, '#A8823F', 6);
+}
+$('#sPer').onclick = e => { const b = e.target.closest('[data-sp]'); if (b) { sPer = b.dataset.sp; renderStats(); } };
+
 boot();
 </script>
 </body>

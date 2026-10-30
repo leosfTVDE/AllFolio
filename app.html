@@ -2102,6 +2102,9 @@ function openTxForm(kind = 'buy', existing = null, fromCash = false) {
   const seg = existing ? '' : `<div class="flex gap-1 p-1 rounded-2xl bg-brand-50 mb-4">${[['buy', 'Compra'], ['sell', 'Venda'], ['div', 'Dividendo'], ['cash', 'Caixa']].map(([k, l]) =>
     `<button type="button" data-kind="${k}" class="flex-1 h-10 rounded-xl text-sm font-bold ${k === kind ? 'bg-white shadow-sm text-ink' : 'text-slate-500'}">${l}</button>`).join('')}</div>`;
   const cur = e.currency || 'EUR';
+  const owned = existing ? [] : TF.positions(TF.fifo(S.tx).lots, S.assets).sort((x, y) => (y.value ?? y.cost) - (x.value ?? x.cost));
+  const picks = owned.length ? `<div class="-mt-1"><div class="text-[11px] font-semibold text-slate-500 mb-1.5">${kind === 'buy' ? 'Comprar mais de:' : kind === 'sell' ? 'Vender:' : 'Dividendo de:'}</div>
+    <div id="fPicks" class="flex flex-wrap gap-1.5">${owned.map(p => `<button type="button" data-pick="${esc(p.ticker)}" class="h-8 px-3 rounded-full border border-brand-100 bg-white text-xs font-bold text-ink">${esc(p.ticker.replace(/\.[A-Z]+$/, ''))}${kind === 'sell' ? ` <span class="font-semibold text-slate-400">· ${fmtQ(p.qty)} un.</span>` : ''}</button>`).join('')}</div></div>` : '';
   const title = existing ? 'Editar ' + ({ buy: 'compra', sell: 'venda', div: 'dividendo' })[kind] : ({ buy: 'Nova compra', sell: 'Nova venda', div: 'Novo dividendo' })[kind];
   openModal(`${modalHead(title)}${seg}
   ${S.demo ? '<div class="mb-3 rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs font-semibold text-amber-900">Está no modo exemplo: este registo é apagado quando sair do exemplo.</div>' : ''}
@@ -2111,6 +2114,7 @@ function openTxForm(kind = 'buy', existing = null, fromCash = false) {
         <input id="fTicker" list="tkl" class="field uppercase" required value="${esc(e.ticker || '')}" placeholder="ex.: VWCE.DE" autocapitalize="characters"><datalist id="tkl">${tickers}</datalist></div>
       <div class="col-span-2 sm:col-span-1"><label class="lbl" for="fDate">Data</label><input id="fDate" type="date" class="field" required value="${e.date || today()}"></div>
     </div>
+    ${picks}
     ${isDiv ? `
     <div><label class="lbl" for="fGross">Valor bruto recebido (EUR)</label><input id="fGross" class="field num" inputmode="decimal" value="${e.gross ?? ''}" placeholder="0,00"></div>
     <div class="grid grid-cols-2 gap-3">
@@ -2134,6 +2138,19 @@ function openTxForm(kind = 'buy', existing = null, fromCash = false) {
       <button type="submit" class="flex-1 h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold">${existing ? 'Guardar alterações' : 'Registar ' + ({ buy: 'compra', sell: 'venda', div: 'dividendo' })[kind]}</button>
     </div>
   </form>`);
+  const fp = $('#fPicks');
+  if (fp) fp.onclick = ev => {
+    const b = ev.target.closest('[data-pick]'); if (!b) return;
+    const t = b.dataset.pick, as = S.assets[t] || {}, inp = $('#fTicker');
+    inp.value = t; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
+    fp.querySelectorAll('[data-pick]').forEach(x => { const on = x === b; x.classList.toggle('bg-brand-600', on); x.classList.toggle('text-white', on); x.classList.toggle('bg-white', !on); x.classList.toggle('text-ink', !on); });
+    if ($('#fName') && !$('#fName').value && as.name) $('#fName').value = as.name;
+    const last = [...S.tx].reverse().find(x => x.ticker === t);
+    if (last?.broker && $('#fBroker')) $('#fBroker').value = last.broker;
+    if (last?.currency && $('#fCur') && $('#fCur').value !== last.currency) { $('#fCur').value = last.currency; $('#fCur').dispatchEvent(new Event('change', { bubbles: true })); }
+    if (kind === 'sell' && $('#fQty')) { const p = owned.find(x => x.ticker === t); if (p) $('#fQty').placeholder = `até ${fmtQ(p.qty)}`; }
+    ($('#fQty') || $('#fGross'))?.focus();
+  };
 
   const f = $('#txForm');
   document.querySelectorAll('#modalBody [data-kind]').forEach(b => b.onclick = () => b.dataset.kind === 'cash' ? openCashForm('dep', null, true) : openTxForm(b.dataset.kind, null, fromCash));
@@ -2991,11 +3008,23 @@ async function cloudInit() {
   CLOUD.auth.getRedirectResult().catch(e => { const m = authMsg(e); if (m && $('#gErr')) $('#gErr').textContent = m; });
   CLOUD.auth.onAuthStateChanged(async u => {
     if (!u) { CLOUD.user = null; if (CLOUD.unsub) CLOUD.unsub(); CLOUD.unsub = null; render(); showGate('login'); return; }
-    CLOUD.user = u; showGate('sync');
+    CLOUD.user = u; countSignup(u); showGate('sync');
     try { await initialSync(u); } catch (e) { toast('Não foi possível sincronizar agora: a usar os dados deste aparelho'); }
     hideGate(); listenRemote(); render();
   });
   window.addEventListener('online', () => { if (syncMeta().dirty) cloudPush(true); });
+}
+
+// Conta nova: soma 1 ao total de contas criadas no dia (sem dados pessoais, só o total)
+function countSignup(u) {
+  try {
+    const k = 'af_acc_' + u.uid; if (localStorage.getItem(k)) return; localStorage.setItem(k, '1');
+    const made = Date.parse(u.metadata?.creationTime || ''); if (!made || Date.now() - made > 10 * 60e3) return;
+    if (localStorage.getItem('af_notrack') === '1') return;
+    const c = window.TAXFOLIO_FIREBASE, d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    fetch(`https://firestore.googleapis.com/v1/projects/${c.projectId}/databases/(default)/documents:commit?key=${c.apiKey}`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ writes: [{ transform: { document: `projects/${c.projectId}/databases/(default)/documents/stats/${day}`, fieldTransforms: [{ fieldPath: 'f.acc', increment: { integerValue: '1' } }] } }] }) }).catch(() => {});
+  } catch (e) {}
 }
 
 function accountCardHTML() {
