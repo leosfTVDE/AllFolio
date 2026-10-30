@@ -69,6 +69,20 @@
    "cta": true,
    "min": 3,
    "status": "pub"
+  },
+  {
+   "slug": "xtb-no-irs-como-completar-o-anexo-g-pre-preenchido-e-as-acoes-fraciona",
+   "type": "guia",
+   "title": "XTB no IRS: como completar o Anexo G pré-preenchido (e as ações fracionadas)",
+   "desc": "As vendas da XTB vêm pré-preenchidas no Anexo G sem os dados de compra. Veja como completar e dividir as linhas, e onde declarar as ações fracionadas.",
+   "teaser": "O Portal mostra a venda, mas não a compra. Veja como completar cada linha sem erros e o que fazer às frações.",
+   "tag": "IRS",
+   "date": "2026-10-30",
+   "updated": "",
+   "featured": false,
+   "cta": true,
+   "min": 4,
+   "status": "pub"
   }
  ]
 }
