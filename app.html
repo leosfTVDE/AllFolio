@@ -1332,6 +1332,7 @@ function infoTags(a) {
     + (a.note ? `<div class="text-xs text-slate-500 mt-1 truncate"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="inline -mt-0.5 mr-0.5" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>${esc(a.note)}</div>` : '');
 }
 function posRow(p, pv, pvEur) {
+  if (pvEur !== undefined && typeof pvEur !== 'number') pvEur = undefined;
   return `<button data-asset="${esc(p.ticker)}" class="w-full text-left p-4 flex items-center gap-3 hover:bg-brand-50/60">
     <div class="w-10 h-10 rounded-2xl bg-brand-50 text-brand-700 grid place-items-center text-xs font-extrabold shrink-0">${esc(p.ticker.slice(0, 4))}</div>
     <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="font-bold truncate">${esc(p.ticker)}</span>${kindBadge(p.kind)}</div>
@@ -2052,7 +2053,7 @@ function renderPortfolio() {
     const fpos = kf === 'all' ? pos : pos.filter(p => (p.kind === 'etf' ? 'etf' : 'acao') === kf);
     const kchip = (k, l) => `<button data-kf="${k}" class="h-8 px-3.5 rounded-full text-xs font-bold border ${kf === k ? 'bg-brand-600 text-white border-brand-600' : 'bg-white border-brand-100 text-slate-600'}">${l}</button>`;
     body = `<div class="flex gap-2 mb-3">${kchip('all', 'Todos')}${kchip('acao', 'Ações')}${kchip('etf', 'ETFs')}</div>`
-      + (fpos.length ? card(fpos.map(posRow).join(''), 'divide-y divide-brand-50 overflow-hidden') : card('<div class="p-6 text-sm text-slate-500 text-center">Sem posições abertas.</div>'))
+      + (fpos.length ? card(fpos.map(p => posRow(p)).join(''), 'divide-y divide-brand-50 overflow-hidden') : card('<div class="p-6 text-sm text-slate-500 text-center">Sem posições abertas.</div>'))
       + (closed.length ? `<h3 class="font-bold mt-6 mb-2 text-slate-600">Ativos sem posição</h3>${card(closed.map(k => `<button data-asset="${esc(k)}" class="w-full text-left px-4 py-3 flex justify-between hover:bg-brand-50/60"><span class="font-semibold">${esc(k)}</span><span class="text-xs text-slate-500">${esc(S.assets[k].name)}</span></button>`).join(''), 'divide-y divide-brand-50 overflow-hidden')}` : '');
   } else if (UI.ptab === 'charts') {
     body = renderChartsBody(pos);
