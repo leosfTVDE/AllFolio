@@ -151,6 +151,21 @@
   .ph .bar{height:5px;border-radius:9px;margin-top:3px}
   .extras{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
   .extras span{background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px 14px;font-size:15px;font-weight:600;color:var(--muted);max-width:100%}
+  .mk{background:#0A2A66;color:#fff}
+  .mk-row{display:flex;gap:8px;overflow-x:auto;padding:10px 24px 4px;max-width:1200px;margin:0 auto;scrollbar-width:none}
+  .mk-row::-webkit-scrollbar{display:none}
+  .mk-i{flex:none;min-width:104px;background:rgba(255,255,255,.08);border-radius:12px;padding:6px 10px;font-size:12px;line-height:1.3}
+  .mk-i span{opacity:.72}.mk-i b{display:block;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+  .mk-i i{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums}
+  .mk-up{color:#7EE2B8}.mk-dn{color:#FCA5A5}.mk-z{color:rgba(255,255,255,.6)}
+  .mk-note{max-width:1200px;margin:0 auto;padding:0 24px 8px;font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ind{margin-top:28px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px 20px}
+  .ind h3{margin:0;font-size:18px}
+  .ind-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+  @media (min-width:860px){.ind-g{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  .ind-g div{background:#F4F7FC;border-radius:14px;padding:10px 12px;min-height:76px}
+  .ind-g span{display:block;font-size:12px;color:var(--muted)}.ind-g b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+  .ind-tip{margin-top:12px;font-size:14px;background:#FFF7E6;border-radius:12px;padding:10px 12px;color:#334155}
 </style>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2352895338707924" crossorigin="anonymous"></script>
 </head>
@@ -170,6 +185,7 @@
     </div>
   </nav>
 </header>
+<div class="mk" aria-label="Mercados agora"><div class="mk-row" id="mk"><div class="mk-i" data-s="PSI20.LS"><span>PSI</span><b>—</b><i class="mk-z">&nbsp;</i></div><div class="mk-i" data-s="^STOXX"><span>Stoxx 600</span><b>—</b><i class="mk-z">&nbsp;</i></div><div class="mk-i" data-s="^GSPC"><span>S&amp;P 500</span><b>—</b><i class="mk-z">&nbsp;</i></div><div class="mk-i" data-s="^NDX"><span>Nasdaq 100</span><b>—</b><i class="mk-z">&nbsp;</i></div><div class="mk-i" data-s="EURUSD=X"><span>Euro/dólar</span><b>—</b><i class="mk-z">&nbsp;</i></div><div class="mk-i" data-s="BTC-EUR"><span>Bitcoin</span><b>—</b><i class="mk-z">&nbsp;</i></div><div class="mk-i" data-s="GC=F"><span>Ouro (onça)</span><b>—</b><i class="mk-z">&nbsp;</i></div></div><div class="mk-note" id="mkNote">Mercados agora · atraso de 15 min</div></div>
 
 <main id="topo">
   <div class="wrap">
@@ -190,25 +206,31 @@
       <p class="sub">Explicações claras, com exemplos e contas feitas, sobre as dúvidas mais comuns de quem investe.</p>
       <!--CMS:GUIAS-->
 <div class="gwrap">
-        <a class="gcard big" href="guia-bitcoin-direto-ou-etp"><span class="tag">Novo · Bitcoin · 7 min</span>
+        <a class="gcard big" href="guia-bitcoin-direto-ou-etp"><span class="tag">Novo · Bitcoin · 5 min</span>
           <h3>Bitcoin direto ou ETP de Bitcoin? O que é seu, o que paga de IRS e o que fica para a família</h3>
           <p>A história do Bitcoin, a diferença entre ter a criptomoeda e ter um produto de bolsa, e porque é que um pode pagar 0 € de IRS e o outro 28%.</p>
           <span class="go">Ler →</span></a>
-        <a class="gcard" href="xtb-no-irs-como-completar-o-anexo-g-pre-preenchido-e-as-acoes-fraciona"><span class="tag">IRS · 4 min</span>
-          <h3>XTB no IRS: como completar o Anexo G pré-preenchido (e as ações fracionadas)</h3>
-          <p>O Portal mostra a venda, mas não a compra. Veja como completar cada linha sem erros e o que fazer às frações.</p>
+        <a class="gcard" href="guia-irs-xtb"><span class="tag">IRS · 4 min</span>
+          <h3>Como declarar ações e ETFs da XTB no IRS</h3>
+          <p>Anexo G ou J, onde estão os documentos, dividendos, englobamento e os erros mais comuns.</p>
           <span class="go">Ler →</span></a>
-        <a class="gcard" href="semana-2026-10-29"><span class="tag">A semana do investidor · 3 min</span>
-          <h3>A semana do investidor: BCE em pausa, Lagarde de saída e a IA posta à prova</h3>
-          <p>Juros em pausa na Europa e nos EUA, gigantes da IA sob pressão e a agenda da próxima semana.</p>
-          <span class="go">Ler →</span></a>
-        <a class="gcard" href="acoes-ou-cfds-a-diferenca-que-pode-custar-caro-e-o-que-muda-no-irs"><span class="tag">Investir · 4 min</span>
-          <h3>Ações ou CFDs? A diferença que pode custar caro (e o que muda no IRS)</h3>
-          <p>Parecem iguais na app da corretora, mas um é seu e o outro é uma aposta com alavancagem. Saiba distinguir.</p>
+        <a class="gcard" href="guia-fifo-acoes-fracionadas"><span class="tag">IRS · 3 min</span>
+          <h3>Mais-valias com FIFO e ações fracionadas: exemplo passo a passo</h3>
+          <p>Um exemplo completo, passo a passo, com as linhas exatas a declarar.</p>
           <span class="go">Ler →</span></a>
       </div>
       <!--/CMS:GUIAS-->
       <a class="more" href="guias">Ver todos os guias →</a>
+      <div class="ind" aria-labelledby="t-ind">
+        <h3 id="t-ind">Indicadores oficiais</h3>
+        <div class="ind-g">
+          <div><span>Inflação em Portugal</span><b id="iPT">—</b><span id="iPTm">Eurostat</span></div>
+          <div><span>Inflação na zona euro</span><b id="iEA">—</b><span id="iEAm">Eurostat</span></div>
+          <div><span>Taxa de depósito do BCE</span><b id="iBCE">—</b><span id="iBCEm">BCE</span></div>
+          <div><span>Câmbio oficial do BCE</span><b id="iFX">—</b><span id="iFXm">dólares por 1 €</span></div>
+        </div>
+        <p class="ind-tip" id="iTip">💡 A inflação mostra quanto o dinheiro parado perde de poder de compra num ano. <a href="app" class="js-signup">Veja se a sua carteira ganha à inflação →</a></p>
+      </div>
     </div>
   </section>
   <!-- AdSense: espaço de anúncio 1 (a ativar) -->
@@ -351,6 +373,51 @@
     // Quem já tem conta neste aparelho vê "Abrir a app"
     try { var s = JSON.parse(localStorage.getItem('taxfolio.pt.v1.sync') || '{}'); if (s.uid) document.querySelectorAll('.js-open').forEach(function (a) { a.textContent = 'Abrir a app'; }); } catch (e) {}
   })();
+</script>
+<script>
+/* Mercados e indicadores: carregam depois da página, sem cookies; se falharem, ficam os traços. */
+(function () {
+  var API = 'https://taxfolio-pr.leonardospinasse.workers.dev';
+  var nf = function (v, d) { return Number(v).toLocaleString('pt-PT', { minimumFractionDigits: d, maximumFractionDigits: d }); };
+  var MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  var get = function (p) { return fetch(API + p).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); };
+  function quotes() {
+    var els = document.querySelectorAll('#mk [data-s]'); if (!els.length) return;
+    var syms = [].map.call(els, function (e) { return e.getAttribute('data-s'); });
+    get('/quote?symbols=' + encodeURIComponent(syms.join(','))).then(function (q) {
+      if (!q) return; var last = 0;
+      [].forEach.call(els, function (e) {
+        var d = q[e.getAttribute('data-s')]; if (!d || d.price == null) return;
+        var s = e.getAttribute('data-s'), dec = s === 'EURUSD=X' ? 4 : 2, cur = s === 'BTC-EUR' ? ' €' : s === 'GC=F' ? ' $' : '';
+        e.querySelector('b').textContent = nf(d.price, d.price >= 10000 ? 0 : dec) + cur;
+        var p = d.prev || d.prevClose, i = e.querySelector('i');
+        if (p) { var c = (d.price / p - 1) * 100; i.textContent = (c >= 0 ? '▲ ' : '▼ ') + nf(Math.abs(c), 2) + '%'; i.className = c >= 0 ? 'mk-up' : 'mk-dn'; }
+        if (d.time > last) last = d.time;
+      });
+      if (last) document.getElementById('mkNote').textContent = 'Mercados agora · às ' + new Date(last * 1000).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Lisbon' }) + ' · atraso de 15 min';
+    });
+  }
+  function yoy(j) {
+    if (!j || !j.pts || j.pts.length < 13) return null;
+    var lastP = j.pts[j.pts.length - 1], ym = lastP[0].slice(0, 7), y = Number(ym.slice(0, 4)) - 1 + ym.slice(4);
+    var prev = j.pts.filter(function (p) { return p[0].slice(0, 7) === y; })[0]; if (!prev) return null;
+    return { v: (lastP[1] / prev[1] - 1) * 100, m: MES[Number(ym.slice(5)) - 1] + ' de ' + ym.slice(0, 4) };
+  }
+  function indicators() {
+    get('/inflation?geo=PT').then(function (j) { var r = yoy(j); if (!r) return;
+      document.getElementById('iPT').textContent = nf(r.v, 1) + '%'; document.getElementById('iPTm').textContent = r.m + ' · Eurostat';
+      document.getElementById('iTip').innerHTML = '💡 Com a inflação a ' + nf(r.v, 1) + '%, o dinheiro parado perde cerca de ' + nf(r.v, 1) + '% de poder de compra num ano. <a href="app" class="js-signup">Veja se a sua carteira ganha à inflação →</a>'; });
+    get('/inflation?geo=EA').then(function (j) { var r = yoy(j); if (!r) return;
+      document.getElementById('iEA').textContent = nf(r.v, 1) + '%'; document.getElementById('iEAm').textContent = r.m + ' · Eurostat'; });
+    get('/bce').then(function (j) { if (!j) return;
+      if (j.dfr) { document.getElementById('iBCE').textContent = nf(j.dfr.rate, 2) + '%'; var d = j.dfr.since.split('-');
+        document.getElementById('iBCEm').textContent = 'desde ' + Number(d[2]) + ' de ' + MES[Number(d[1]) - 1] + ' de ' + d[0]; }
+      if (j.fx) { document.getElementById('iFX').textContent = nf(j.fx.usd, 4) + ' $'; var f = j.fx.date.split('-'); document.getElementById('iFXm').textContent = 'por 1 € · ' + f[2] + '/' + f[1] + '/' + f[0]; }
+    });
+  }
+  function start() { quotes(); indicators(); setInterval(function () { if (!document.hidden) quotes(); }, 5 * 60e3); }
+  if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 2000 }); else setTimeout(start, 600);
+})();
 </script>
 <script src="track.js" defer></script>
 </body>
