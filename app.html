@@ -1929,9 +1929,99 @@ function compareHTML() {
     <p class="text-[11px] text-slate-400 mt-3 leading-relaxed">Rentabilidade em euros, só pela variação dos preços (sem dividendos), com fechos semanais. Índices representados por ETFs que os replicam: S&amp;P 500 (SPY), Mundo (VWCE), Nasdaq 100 (QQQ). Escolha até 3.</p></div>`, 'mt-3');
 }
 
+
+/* ---------- Rendimento por mês (mapa de calor) ---------- */
+const mLast = m => { const [y, mm] = m.split('-').map(Number); return new Date(Date.UTC(y, mm, 0)).toISOString().slice(0, 10); };
+const mPrevLast = m => { const [y, mm] = m.split('-').map(Number); return new Date(Date.UTC(y, mm - 1, 0)).toISOString().slice(0, 10); };
+const mNext = m => { const [y, mm] = m.split('-').map(Number); return mm === 12 ? `${y + 1}-01` : `${y}-${String(mm + 1).padStart(2, '0')}`; };
+const MES3 = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const MESF = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+function monthlyReturns() {
+  const tx = S.tx.filter(t => t.type === 'buy' || t.type === 'sell').sort((a, b) => a.date.localeCompare(b.date));
+  if (!tx.length) return null;
+  const t0 = today(), cur = t0.slice(0, 7), months = [];
+  for (let m = tx[0].date.slice(0, 7); m <= cur; m = mNext(m)) months.push(m);
+  const tks = [...new Set(tx.map(t => t.ticker))];
+  const info = Object.fromEntries(tks.map(tk => { const h = S.hist?.[histKeyOf(tk)]; return [tk, { h, cur: h?.cur || quoteOf(tk).cur, tx: tx.filter(t => t.ticker === tk) }]; }));
+  const qtyAt = (tk, d) => info[tk].tx.reduce((q, t) => t.date <= d ? q + (t.type === 'buy' ? t.qty : -t.qty) : q, 0);
+  const px = (tk, d) => d >= t0 && S.assets[tk]?.price != null ? S.assets[tk].price : pxEUR(info[tk].h, info[tk].cur, d);
+  const infH = S.hist?.['INF:' + (S.settings.inflGeo || 'PT')];
+  const infMonth = m => { if (!infH?.pts) return null; const k = infH.pts.findIndex(p => p[0].startsWith(m)); return k > 0 ? (infH.pts[k][1] / infH.pts[k - 1][1] - 1) * 100 : null; };
+  return months.map(m => {
+    const s = mPrevLast(m), e = m === cur ? t0 : mLast(m);
+    let price = 0, base = 0; const per = [], miss = [];
+    for (const tk of tks) {
+      const q0 = qtyAt(tk, s), q1 = qtyAt(tk, e), mv = info[tk].tx.filter(t => t.date > s && t.date <= e);
+      if (q0 < 1e-9 && !mv.length) continue;
+      const p0 = q0 > 1e-9 ? px(tk, s) : 0, p1 = q1 > 1e-9 ? px(tk, e) : 0;
+      if (p0 == null || p1 == null) { miss.push(tk); continue; }
+      const buys = mv.filter(t => t.type === 'buy').reduce((x, t) => x + t.qty * t.price, 0), sells = mv.filter(t => t.type === 'sell').reduce((x, t) => x + t.qty * t.price, 0);
+      const g = q1 * p1 - q0 * p0 - buys + sells, b = q0 * p0 + buys;
+      price += g; base += b; if (b > 0) per.push({ tk, g, pct: g / b * 100 });
+    }
+    const div = S.div.filter(d => d.date > s && d.date <= e).reduce((x, d) => x + (d.gross || 0) - (d.taxForeign || 0) - (d.taxPT || 0), 0);
+    per.sort((x, y) => y.pct - x.pct);
+    const gain = price + div;
+    return { m, y: m.slice(0, 4), mi: Number(m.slice(5)) - 1, price, div, gain, base, pct: base > 0 ? gain / base * 100 : null, miss, best: per[0], worst: per.length > 1 ? per[per.length - 1] : null, infl: infMonth(m), current: m === cur };
+  });
+}
+function heatColor(v) {
+  return v == null ? ['#E2E8F0', '#94A3B8'] : v >= 6 ? ['#0F9D6E', '#FFFFFF'] : v >= 2 ? ['#4CC294', '#FFFFFF'] : v >= 0 ? ['#C8F0DE', '#0B5D41'] : v > -2 ? ['#FAD4D4', '#8F1D1D'] : v > -6 ? ['#F08A8A', '#FFFFFF'] : ['#DC2626', '#FFFFFF'];
+}
+function monthHeatHTML() {
+  const R = monthlyReturns(); if (!R || !R.length) return '';
+  const eur = S.settings.homeUnit === 'eur', byKey = Object.fromEntries(R.map(r => [r.m, r]));
+  const years = [...new Set(R.map(r => r.y))].sort().reverse();
+  const sel = byKey[UI.hm] || [...R].reverse().find(r => r.pct != null) || R[R.length - 1];
+  const yTot = y => { let f = 1, any = false; R.filter(r => r.y === y && r.pct != null).forEach(r => { f *= 1 + r.pct / 100; any = true; }); return any ? (f - 1) * 100 : null; };
+  const yEur = y => R.filter(r => r.y === y).reduce((s, r) => s + r.gain, 0);
+  const short = v => (v >= 0 ? '+' : '−') + (eur ? fmtN(Math.abs(v), Math.abs(v) >= 100 ? 0 : 2) : fmtN(Math.abs(v), 1));
+  const yearBlock = y => {
+    const t = yTot(y);
+    return `<div class="mt-3"><div class="flex justify-between text-sm"><b>${y}</b><span class="num font-bold ${t == null ? 'text-slate-400' : t >= 0 ? 'text-gain' : 'text-loss'}">${t == null ? '—' : eur ? plus(yEur(y)) : fmtPct(t)}</span></div>
+      <div class="grid grid-cols-6 gap-1.5 mt-1.5">${MES3.map((l, i) => {
+        const r = byKey[`${y}-${String(i + 1).padStart(2, '0')}`], v = r?.pct ?? null, [bg, fg] = heatColor(v), on = r && r.m === sel.m;
+        const val = v == null ? '—' : eur ? short(r.gain) : short(v);
+        return r ? `<button data-hm="${r.m}" class="rounded-xl py-1.5 text-center leading-tight num" style="background:${bg};color:${fg};${on ? 'outline:2px solid #0A2A66;outline-offset:1px' : ''}"><span class="block text-[10px] opacity-80">${l}${r.miss.length ? '*' : ''}</span><span class="text-xs font-bold">${val}</span></button>`
+          : `<div class="rounded-xl py-1.5 text-center leading-tight" style="background:#EEF2F7;color:#A0AEC0"><span class="block text-[10px]">${l}</span><span class="text-xs">—</span></div>`;
+      }).join('')}</div></div>`;
+  };
+  const nm = t => esc(String(t).replace(/\.[A-Z]+$/, ''));
+  const det = sel.pct == null ? `<b>${MESF[sel.mi][0].toUpperCase() + MESF[sel.mi].slice(1)} de ${sel.y}</b><div class="text-slate-500">Sem dados de preços para este mês. Toque em Atualizar histórico mais abaixo.</div>`
+    : `<div class="flex justify-between gap-2"><b>${MESF[sel.mi][0].toUpperCase() + MESF[sel.mi].slice(1)} de ${sel.y}${sel.current ? ' (até hoje)' : ''}</b><b class="num ${sel.gain >= 0 ? 'text-gain' : 'text-loss'}">${fmtPct(sel.pct)} · ${plus(sel.gain)}</b></div>
+      <div class="text-slate-500 mt-0.5">${sel.best ? `Melhor: ${nm(sel.best.tk)} ${eur ? plus(sel.best.g) : fmtPct(sel.best.pct)}` : ''}${sel.worst ? ` · Pior: ${nm(sel.worst.tk)} ${eur ? plus(sel.worst.g) : fmtPct(sel.worst.pct)}` : ''}${sel.div > 0.004 ? ` · Dividendos: ${fmtEUR(sel.div)}` : ''}${sel.infl != null ? ` · Inflação no mês: ${fmtPct(sel.infl)}` : ''}</div>
+      ${sel.miss.length ? `<div class="text-amber-700 mt-0.5">Sem histórico de preços para ${esc(sel.miss.map(nm).join(', '))}: o mês está incompleto.</div>` : ''}`;
+  const y = sel.y, YR = R.filter(r => r.y === y), pr = YR.reduce((s, r) => s + r.price, 0), dv = YR.reduce((s, r) => s + r.div, 0), tp = yTot(y);
+  const yEnd = y === today().slice(0, 4) ? today() : `${y}-12-31`;
+  const inv = (() => { try { return TF.positions(TF.fifo(S.tx.filter(t => t.date <= yEnd)).lots, S.assets).reduce((s, p) => s + p.cost, 0); } catch (e) { return null; } })();
+  const infY = (() => { const infH = S.hist?.['INF:' + (S.settings.inflGeo || 'PT')]; if (!infH?.pts?.length) return null; const pts = infH.pts.filter(p => p[0] <= yEnd);
+    const last = pts[pts.length - 1], startP = infH.pts.filter(p => p[0] < y + '-01-01').pop(); return last && startP ? { v: (last[1] / startP[1] - 1) * 100, until: last[0].slice(0, 7) } : null; })();
+  const real = tp != null && infY ? tp - infY.v : null;
+  const row = (l, v, cls = '') => `<div class="flex justify-between text-sm mt-1.5 ${cls}"><span>${l}</span><b class="num">${v}</b></div>`;
+  return card(`<div class="p-4">
+    <div class="flex items-center justify-between gap-2"><h2 class="font-extrabold">Rendimento por mês</h2>
+      <div class="flex rounded-xl p-0.5 bg-brand-50" role="group" aria-label="Mostrar em percentagem ou em euros">${['pct', 'eur'].map(k => `<button data-mhunit="${k}" class="h-7 w-9 rounded-lg text-xs font-extrabold ${(eur ? 'eur' : 'pct') === k ? 'bg-white text-ink shadow-sm' : 'text-slate-500'}">${k === 'pct' ? '%' : '€'}</button>`).join('')}</div></div>
+    <p class="text-[11px] text-slate-500 mt-1">Variação dos preços mais dividendos líquidos. Os aportes não contam como ganho.</p>
+    ${years.map(yearBlock).join('')}
+    <div class="mt-3 rounded-2xl bg-brand-50/70 p-3 text-xs">${det}</div>
+    <div class="flex items-center justify-center gap-2 mt-2 text-[10px] text-slate-400"><span>−6%</span>${['#DC2626', '#F08A8A', '#FAD4D4', '#C8F0DE', '#4CC294', '#0F9D6E'].map(c => `<i class="inline-block w-3.5 h-2 rounded-sm" style="background:${c}"></i>`).join('')}<span>+6%</span></div>
+    <div class="mt-3 pt-3 border-t border-brand-50">
+      <div class="font-bold text-sm">De onde veio o ganho em ${y}</div>
+      ${inv != null ? row('<span class="text-slate-500">Capital investido</span>', fmtEUR(inv)) : ''}
+      ${row('Valorização dos preços', plus(pr), pr >= 0 ? 'text-gain' : 'text-loss')}
+      ${row('Dividendos (líquidos)', plus(dv), dv > 0 ? 'text-gain' : '')}
+      <div class="border-t border-brand-50 mt-2"></div>
+      ${row('<b>Ganho total</b>', `${plus(pr + dv)}${tp != null ? ` (${fmtPct(tp)})` : ''}`)}
+      ${infY ? row(`<span class="text-slate-500">Inflação em ${esc(INF_GEO[S.settings.inflGeo || 'PT'] || 'Portugal')} no ano${infY.until < yEnd.slice(0, 7) ? ` (até ${esc(infMonth(infY.until))})` : ''}</span>`, fmtPct(infY.v)) : ''}
+      ${real != null ? row(real >= 0 ? 'Ganho real (acima da inflação)' : 'Abaixo da inflação', `${real >= 0 ? '+' : '−'}${fmtN(Math.abs(real), 1)} pontos`, real >= 0 ? 'text-gain' : 'text-loss') : ''}
+    </div>
+    ${R.some(r => r.miss.length) ? '<p class="text-[11px] text-slate-400 mt-2">* Mês incompleto: falta o histórico de preços de algum ativo. Toque em Atualizar histórico mais abaixo.</p>' : ''}
+  </div>`, 'mt-3');
+}
+
 function renderChartsBody(pos) {
   if (!pos.length && !S.tx.length) return card('<div class="p-6 text-sm text-slate-500 text-center">Registe ou importe compras para ver os gráficos.</div>');
-  return (pos.length ? donutHTML(pos) + barsHTML(pos) : '') + compareHTML();
+  return (pos.length ? donutHTML(pos) : '') + monthHeatHTML() + (pos.length ? barsHTML(pos) : '') + compareHTML();
 }
 
 function toggleBench(id) {
@@ -3336,9 +3426,11 @@ function accountCardHTML() {
 
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-hunit],[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-hm],[data-mhunit],[data-hunit],[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
+  if (d.hm) { UI.hm = d.hm; render(); return; }
+  if (d.mhunit) { S.settings.homeUnit = d.mhunit === 'eur' ? 'eur' : 'pct'; save(); render(); return; }
   if (d.hunit) { S.settings.homeUnit = d.hunit === 'eur' ? 'eur' : 'pct'; save(); renderHome(); return; }
   if ('hmore' in d) { S.settings.homeAllPos = !S.settings.homeAllPos; save(); renderHome(); return; }
   if (d.hper) { S.settings.homePer = d.hper; save(); renderHome(); return; }
