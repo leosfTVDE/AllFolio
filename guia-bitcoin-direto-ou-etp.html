@@ -49,10 +49,11 @@
   .note{background:#FFF7E6;border:1px solid #F5DDAE;border-radius:16px;padding:14px 18px;margin:18px 0}
   .note p{margin:0;color:#5C3D04;font-size:16px}
   .tbl{overflow-x:auto;border:1px solid #DCE7F8;border-radius:14px;background:#fff;margin:14px 0}
-  table{width:100%;border-collapse:collapse;font-size:15px;min-width:520px}
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  .tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:18px 0;max-width:100%}.tw table{margin:0}
   caption{text-align:left;padding:12px 14px 4px;font-weight:800}
-  th{background:#EEF3FB;color:#1A3FAE;padding:9px 12px;text-align:right;font-size:14px}
-  td{padding:10px 12px;border-top:1px solid #E6ECF5;text-align:right;font-variant-numeric:tabular-nums}
+  th{background:#EEF3FB;color:#1A3FAE;padding:9px 12px;text-align:left;font-size:14px}
+  td{padding:10px 12px;border-top:1px solid #E6ECF5;text-align:left;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
   th:first-child,td:first-child{text-align:left}
   .cta{background:#0A2A66;color:#fff;border-radius:22px;padding:24px;margin:36px 0 10px}
   .cta h2{color:#fff;margin:0 0 6px;font-size:22px}.cta p{color:#DCE7F8;margin:0 0 16px}
@@ -65,6 +66,12 @@
   figure{margin:20px 0}figure img,figure svg{display:block;max-width:100%;height:auto;border-radius:14px;margin:0 auto}figcaption{font-size:14px;color:#475569;margin-top:8px;text-align:center}
   .card .th{margin:-18px -20px 12px;border-radius:18px 18px 0 0;overflow:hidden}.card .th svg,.card .th img{display:block;width:100%;height:auto}
   .card .dt{display:block;font-size:13px;color:#475569;margin:0 0 4px;font-weight:600}
+  .ag-w{margin:18px 0 26px}.ag-l{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#1D4ED8;margin:0 0 8px}
+  .ag{background:#fff;border:1px solid #DCE7F8;border-radius:18px;overflow:hidden}.ag-r{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border-top:1px solid #EEF3FB}.ag-r:first-child{border-top:none}
+  .ag-d{flex:none;width:54px;text-align:center;border-radius:12px;background:#EEF3FB;padding:5px 0;line-height:1.15}.ag-d b{display:block;font-size:18px}.ag-d span{font-size:11px;color:#64748B;text-transform:uppercase}
+  .ag-e b{display:block;font-weight:700}.ag-e small{display:block;font-size:14px;color:#64748B}.ag-e a{font-size:14px}.ag-r.past{opacity:.45}.ag-r.past b{text-decoration:line-through}
+  .ag-r.today .ag-d{background:#1D4ED8;color:#fff}.ag-r.today .ag-d span{color:#DCE7F8}.ag-hoje{font-size:11px;background:#E7F6EF;color:#0B5D41;border-radius:99px;padding:1px 8px;margin-left:6px;font-weight:700}
+  .ag-f{font-size:13px;color:#64748B;margin:8px 0 0}
   .disc{font-size:14px;color:#475569;border-top:1px solid #DCE7F8;margin-top:30px;padding-top:14px}
   footer{border-top:1px solid #DCE7F8;background:#fff;padding-bottom:env(safe-area-inset-bottom,0px)}
   .foot{max-width:820px;margin:0 auto;padding:20px;display:flex;flex-wrap:wrap;gap:10px 20px;font-size:14px}
@@ -110,7 +117,7 @@
 <p>Na prática compram-se e vendem-se como um ETF. A diferença está por trás: os ativos não ficam separados do emitente como num fundo, por isso existe <strong>risco do emitente</strong>, reduzido pela garantia em Bitcoin. Estes produtos cobram também uma <strong>comissão anual</strong>, que vai sendo descontada ao valor.</p>
 
 <h2>3. Comparação rápida</h2>
-<table>
+<div class="tw"><table>
   <thead><tr><th></th><th>Bitcoin direto</th><th>ETP de Bitcoin</th></tr></thead>
   <tbody>
     <tr><td>O que tem</td><td>Bitcoin</td><td>Título de dívida garantido por Bitcoin</td></tr>
@@ -120,19 +127,19 @@
     <tr><td>Herança</td><td>Depende do acesso às chaves</td><td>Pela corretora</td></tr>
     <tr><td>Maior risco</td><td>Perder as chaves ou falência da plataforma</td><td>Risco do emitente</td></tr>
   </tbody>
-</table>
+</table></div>
 
 <h2>4. Impostos em Portugal</h2>
 <p><strong>Bitcoin direto:</strong> se vender antes de 365 dias, o ganho paga <strong>28%</strong>, ou pode optar pelo englobamento. A partir de <strong>365 dias</strong>, a mais-valia não é tributada, mas continua a ter de a <strong>declarar</strong> no IRS. Guarde os comprovativos das datas de compra: são eles que provam o prazo.</p>
 <p><strong>ETP de Bitcoin:</strong> é um valor mobiliário, como uma ação, por isso segue, em regra, as mesmas regras: <strong>28%</strong> sobre o ganho, seja qual for o tempo que o manteve.</p>
 
   Exemplo: ganho de 1.000 € depois de 2 anos
-  <table><thead><tr><th></th><th>IRS a pagar</th><th>Fica consigo</th></tr></thead>
+  <div class="tw"><table><thead><tr><th></th><th>IRS a pagar</th><th>Fica consigo</th></tr></thead>
   <tbody>
     <tr><td>Bitcoin direto</td><td>0 €</td><td>1.000 €</td></tr>
     <tr><td>ETP de Bitcoin</td><td>280 €</td><td>720 €</td></tr>
   </tbody>
-</table>
+</table></div>
 <div class="note"><p>Confirme com a sua contabilista a sua situação concreta, sobretudo se fizer muitas operações ou receber rendimentos de staking.</p></div>
 
 <h2>5. Herança</h2>
