@@ -174,7 +174,7 @@
 <div id="busy"><div id="busyT">A publicar…</div></div>
 <div id="toast" role="status"></div>
 
-<script src="cms.js"></script>
+<script src="cms.js?v=20261101"></script>
 <script src="cms-seed.js"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -486,6 +486,10 @@ function cleanBody(h) { return sanitize(h).replace(/<p>(\s|<br>)*<\/p>/g, '').tr
 
 /* ---------- Arranque ---------- */
 async function boot() {
+  if (typeof CMS === 'undefined' || typeof CMS.pointsOf !== 'function' || typeof CMS.semanaPage !== 'function') {
+    document.querySelector('main').innerHTML = '<div class="card"><h2 style="margin:0 0 8px;font-size:19px">Falta atualizar o cms.js</h2><p class="hint" style="font-size:15px">O painel é novo, mas o ficheiro <b>cms.js</b> que o site está a servir ainda é o antigo. Confirme que enviou o cms.js para o GitHub, espere 2 minutos e recarregue esta página.</p></div>';
+    return;
+  }
   if (!cfg?.token) {
     $('#hst').textContent = '';
     $('#cOwner').value = cfg?.owner || 'leosfTVDE'; $('#cRepo').value = cfg?.repo || 'AllFolio'; $('#cBranch').value = cfg?.branch || 'main'; $('#cToken').value = '';
