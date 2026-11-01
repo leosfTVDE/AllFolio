@@ -64,12 +64,16 @@
   .sbar{height:7px;border-radius:9px;background:var(--soft);margin-top:5px;overflow:hidden}.sbar i{display:block;height:100%;border-radius:9px}
   .fun div{color:#fff;border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;margin-top:8px;font-weight:700}
   pre.rules{white-space:pre-wrap;font-size:11.5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px;overflow:auto;margin:10px 0}
+  select{width:100%;min-height:46px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:16px;background:var(--card);color:var(--ink)}
+  .cvprev{margin-top:8px}.cvprev svg,.cvprev img{display:block;width:100%;max-width:360px;height:auto;border-radius:12px;border:1px solid var(--line)}
+  #ed figure{margin:12px 0}#ed figure img{max-width:100%;height:auto;border-radius:10px;display:block}#ed figcaption{font-size:13px;color:var(--muted);text-align:center}
   .hidden{display:none!important}
 </style>
 </head>
 <body>
 <header><h1>Painel · AllFolio.pt</h1><span id="hst" class="st"></span></header>
 <main>
+<input type="file" id="eImgFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
 <div id="nav" class="nav hidden"><button data-nav="list" class="on">Artigos</button><button data-nav="stats">📊 Visitas</button></div>
 
 <section id="vSetup" class="hidden">
@@ -134,6 +138,10 @@
     <label for="eDesc">Resumo para o Google <span id="eDescN"></span></label><textarea id="eDesc" maxlength="200"></textarea>
     <label for="eTeaser">Frase do cartão (lista de guias)</label><textarea id="eTeaser" maxlength="220" placeholder="Se ficar vazio, usa o resumo"></textarea>
     <div id="eTagBox"><label for="eTag">Etiqueta</label><input id="eTag" type="text" placeholder="ex.: IRS, Bitcoin, ETFs"></div>
+    <label for="eCover">Imagem de capa</label>
+    <select id="eCover"><option value="auto">Ilustração automática do tema</option><option value="none">Sem imagem</option><option value="upload">Carregar uma imagem minha…</option></select>
+    <input type="file" id="eCoverFile" accept="image/png,image/jpeg,image/webp" class="hidden">
+    <div id="eCoverPrev" class="cvprev"></div>
     <label for="eDate">Data</label><input id="eDate" type="date">
     <label class="check"><input id="eFeat" type="checkbox"> Destaque na página inicial</label>
     <label class="check"><input id="eCta" type="checkbox" checked> Convite para a app no fim</label>
@@ -142,7 +150,7 @@
   <div class="tools" id="tools">
     <button data-cmd="h2">Título</button><button data-cmd="h3">Subtítulo</button><button data-cmd="p">Normal</button>
     <button data-cmd="bold"><b>N</b></button><button data-cmd="italic"><i>I</i></button>
-    <button data-cmd="ul">• Lista</button><button data-cmd="ol">1. Lista</button><button data-cmd="link">Link</button>
+    <button data-cmd="ul">• Lista</button><button data-cmd="ol">1. Lista</button><button data-cmd="link">Link</button><button data-cmd="img">Imagem</button>
     <button data-cmd="note">Destaque</button><button data-cmd="summary">Resumo</button><button data-cmd="table">Tabela</button><button data-cmd="md" title="Converte ## títulos, **negrito**, tabelas com | e links">Converter Markdown</button>
   </div>
   <div id="ed" contenteditable="true"></div>
@@ -199,7 +207,7 @@ async function commit(files, message) {
   const tree = [];
   for (const [path, content] of Object.entries(files)) {
     if (content === null) tree.push({ path, mode: '100644', type: 'blob', sha: null });
-    else { const b = await gh(`${R()}/git/blobs`, { method: 'POST', body: JSON.stringify({ content: b64enc(content), encoding: 'base64' }) }); tree.push({ path, mode: '100644', type: 'blob', sha: b.sha }); }
+    else { const b = await gh(`${R()}/git/blobs`, { method: 'POST', body: JSON.stringify({ content: content && content.b64 ? content.b64 : b64enc(content), encoding: 'base64' }) }); tree.push({ path, mode: '100644', type: 'blob', sha: b.sha }); }
   }
   const t = await gh(`${R()}/git/trees`, { method: 'POST', body: JSON.stringify({ base_tree: c.tree.sha, tree }) });
   const nc = await gh(`${R()}/git/commits`, { method: 'POST', body: JSON.stringify({ message, tree: t.sha, parents: [head] }) });
@@ -221,7 +229,7 @@ async function loadReg() {
 const findItem = slug => reg.items.find(x => x.slug === slug);
 async function siteFiles(regNext) {
   const idx = await getFile('index.html'); if (idx == null) throw new Error('index.html não encontrado no repositório.');
-  return { 'index.html': CMS.applyIndex(idx, regNext, today()), 'guias.html': CMS.guiasPage(regNext), 'sitemap.xml': CMS.sitemap(regNext, today()), 'cms/artigos.json': JSON.stringify(regNext, null, 1) };
+  return { 'index.html': CMS.applyIndex(idx, regNext, today()), 'guias.html': CMS.guiasPage(regNext), 'semana.html': CMS.semanaPage(regNext), 'sitemap.xml': CMS.sitemap(regNext, today()), 'cms/artigos.json': JSON.stringify(regNext, null, 1) };
 }
 
 /* ---------- Lista ---------- */
@@ -280,7 +288,12 @@ $('#bSeed').onclick = async () => {
 /* ---------- Editor ---------- */
 let eType = 'guia', eExisting = false, eOrigStatus = null;
 function setType(t) { eType = t; document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('on', b.dataset.type === t)); $('#eTagBox').classList.toggle('hidden', t === 'semana');
-  if (!eExisting && t === 'semana' && !$('#eTitle').value) $('#eTitle').value = 'A semana do investidor: '; syncSlug(); }
+  if (!eExisting && t === 'semana' && (!$('#eTitle').value || /^A semana do investidor: $/.test($('#eTitle').value))) $('#eTitle').value = weekTitle($('#eDate').value || today()); syncSlug(); if (typeof coverPreview === 'function') coverPreview(); }
+function weekTitle(iso) {
+  const M = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const d = new Date(iso + 'T12:00:00Z'), dow = (d.getUTCDay() + 6) % 7, mon = new Date(d.getTime() - dow * 864e5), fri = new Date(mon.getTime() + 4 * 864e5);
+  return mon.getUTCMonth() === fri.getUTCMonth() ? `Semana de ${mon.getUTCDate()} a ${fri.getUTCDate()} de ${M[fri.getUTCMonth()]}: ` : `Semana de ${mon.getUTCDate()} de ${M[mon.getUTCMonth()]} a ${fri.getUTCDate()} de ${M[fri.getUTCMonth()]}: `;
+}
 document.querySelectorAll('[data-type]').forEach(b => b.onclick = () => setType(b.dataset.type));
 function syncSlug() {
   if (eExisting) return;
@@ -297,16 +310,64 @@ function openEditor(a, existing) {
   $('#ed').innerHTML = a?.body || ''; delete $('#eSlug').dataset.touched;
   $('#eSlug').value = a?.slug || ''; $('#eSlug').readOnly = existing; $('#eSlug').style.opacity = existing ? .6 : 1;
   setType(a?.type || 'guia'); $('#eDesc').oninput(); syncSlug();
+  eCover = a?.cover || 'auto'; $('#eCover').value = eCover === 'auto' || eCover === 'none' ? eCover : 'upload'; coverPreview();
   $('#eSlugHint').textContent = 'allfolio.pt/' + ($('#eSlug').value || '…') + (existing ? ' · o endereço não muda depois de criado' : '');
   $('#eDraft').classList.toggle('hidden', eOrigStatus === 'pub');
   $('#ePub').textContent = eOrigStatus === 'pub' ? 'Guardar e publicar' : 'Publicar';
   show('vEdit');
 }
 $('#eBack').onclick = () => { if (confirm('Voltar à lista? As alterações não guardadas perdem-se.')) { show('vList'); renderList(); } };
+let eCover = 'auto';
+const pending = {}, pendingURL = {};
+const fileSlug = () => ($('#eSlug').value.trim() || 'artigo').replace(/[^a-z0-9-]/g, '');
+function readAsDataURL(f) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); }); }
+async function prepImage(f, maxW = 1600) {
+  // Reduz a imagem (máx. 1600 px) e converte para JPEG; as SVG ficam como estão
+  if (f.size > 15e6) throw new Error('Imagem demasiado grande (máx. 15 MB).');
+  if (/svg/.test(f.type)) { const t = await f.text(); if (/<script|on\w+\s*=/i.test(t)) throw new Error('Esta SVG tem código e não pode ser usada.'); return { ext: 'svg', b64: btoa(unescape(encodeURIComponent(t))), url: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(t))) }; }
+  const url = await readAsDataURL(f), img = new Image(); await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('Não consegui ler esta imagem.')); img.src = url; });
+  const k = Math.min(1, maxW / img.width), cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+  const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(img, 0, 0, cv.width, cv.height);
+  const out = cv.toDataURL('image/jpeg', 0.84); return { ext: 'jpg', b64: out.split(',')[1], url: out };
+}
+function coverPreview() {
+  const box = $('#eCoverPrev'); if (eCover === 'none') { box.innerHTML = ''; return; }
+  if (eCover !== 'auto') { box.innerHTML = `<img src="${pendingURL[eCover] || eCover}" alt="">`; return; }
+  box.innerHTML = CMS.coverSVG({ type: eType, title: $('#eTitle').value, tag: $('#eTag').value, date: $('#eDate').value || today() });
+}
+$('#eCover').onchange = e => { if (e.target.value === 'upload') { $('#eCoverFile').click(); e.target.value = eCover === 'auto' || eCover === 'none' ? eCover : 'upload'; } else { eCover = e.target.value; coverPreview(); } };
+['#eTitle', '#eTag', '#eDate'].forEach(s => $(s).addEventListener('input', () => { if (eCover === 'auto') coverPreview(); }));
+$('#eCoverFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { const im = await prepImage(f), p = `img/uploads/${fileSlug()}-capa-${Date.now().toString(36)}.${im.ext}`; pending[p] = { b64: im.b64 }; pendingURL[p] = im.url; eCover = p; $('#eCover').value = 'upload'; coverPreview(); }
+  catch (er) { toast(er.message, 4000); }
+};
+$('#eImgFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const im = await prepImage(f), p = `img/uploads/${fileSlug()}-${Date.now().toString(36)}.${im.ext}`; pending[p] = { b64: im.b64 }; pendingURL[p] = im.url;
+    const alt = (prompt('Descreva a imagem numa frase (aparece por baixo e ajuda o Google e quem usa leitores de ecrã):') || '').trim();
+    insertHTML(`<figure><img src="${im.url}" data-path="${p}" alt="${CMS.esc(alt)}">${alt ? `<figcaption>${CMS.esc(alt)}</figcaption>` : ''}</figure><p><br></p>`);
+  } catch (er) { toast(er.message, 4000); }
+};
+async function svgPngB64(svg, w = 1200, h = 600) {
+  const img = new Image(); await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d').drawImage(img, 0, 0, w, h); return cv.toDataURL('image/png').split(',')[1];
+}
+// Ficheiros de imagem que acompanham o artigo: imagens novas usadas no texto ou na capa, e a imagem para as redes sociais
+async function articleFiles(a) {
+  const files = {};
+  Object.keys(pending).forEach(p => { if (a.body.includes(p) || a.cover === p) files[p] = pending[p]; });
+  a.ogimg = '';
+  if (a.cover === 'auto' || !a.cover) { try { const p = `img/capas/${a.slug}.png`; files[p] = { b64: await svgPngB64(CMS.coverSVG(a)) }; a.ogimg = p; } catch (e) {} }
+  else if (/\.(jpe?g|png|webp)$/i.test(a.cover)) a.ogimg = a.cover;
+  return files;
+}
 function collect() {
   const body = cleanBody($('#ed').innerHTML);
   return { slug: $('#eSlug').value.trim(), type: eType, title: $('#eTitle').value.trim(), desc: $('#eDesc').value.trim(), teaser: $('#eTeaser').value.trim(),
     tag: eType === 'semana' ? '' : $('#eTag').value.trim(), date: $('#eDate').value || today(), featured: $('#eFeat').checked, cta: $('#eCta').checked, body,
+    cover: eCover, points: eType === 'semana' ? CMS.pointsOf(body) : [],
     updated: eExisting && eOrigStatus === 'pub' && cur?.date && today() > cur.date ? today() : (cur?.updated || '') };
 }
 function validate(a, pub) {
@@ -322,10 +383,12 @@ async function saveArticle(pub) {
   const a = collect(), err = validate(a, pub); if (err) return toast(err, 4000);
   busy(true, pub ? 'A publicar…' : 'A guardar…');
   try {
-    const next = JSON.parse(JSON.stringify(reg)), meta = { slug: a.slug, type: a.type, title: a.title, desc: a.desc, teaser: a.teaser, tag: a.tag, date: a.date, updated: a.updated, featured: a.featured, cta: a.cta, min: CMS.readMin(a.body), status: pub ? 'pub' : (eOrigStatus === 'hidden' ? 'hidden' : 'draft') };
+    const imgFiles = await articleFiles(a);
+    const next = JSON.parse(JSON.stringify(reg)), meta = { slug: a.slug, type: a.type, title: a.title, desc: a.desc, teaser: a.teaser, tag: a.tag, date: a.date, updated: a.updated, featured: a.featured, cta: a.cta, min: CMS.readMin(a.body),
+      cover: a.cover, ogimg: a.ogimg, points: a.points, status: pub ? 'pub' : (eOrigStatus === 'hidden' ? 'hidden' : 'draft') };
     if (a.featured) next.items.forEach(x => { x.featured = false; });
     const i = next.items.findIndex(x => x.slug === a.slug); if (i >= 0) next.items[i] = meta; else next.items.push(meta);
-    const files = { [`cms/fontes/${a.slug}.json`]: JSON.stringify(a, null, 1) };
+    const files = { ...imgFiles, [`cms/fontes/${a.slug}.json`]: JSON.stringify(a, null, 1) };
     if (pub) files[`${a.slug}.html`] = CMS.articlePage(a);
     Object.assign(files, pub || eOrigStatus === 'pub' || a.featured !== !!cur?.featured ? await siteFiles(next) : { 'cms/artigos.json': JSON.stringify(next, null, 1) });
     await commit(files, `Painel: ${pub ? 'publicar' : 'rascunho'} ${a.slug}`);
@@ -333,7 +396,7 @@ async function saveArticle(pub) {
     if (pub) {
       $('#dTitle').textContent = 'Artigo publicado';
       $('#dText').innerHTML = `Fica online em cerca de 1 minuto em<br><b>allfolio.pt/${CMS.esc(a.slug)}</b>`;
-      $('#dList').innerHTML = '✓ Página do artigo<br>✓ Lista de guias<br>✓ Página inicial<br>✓ Sitemap do Google';
+      $('#dList').innerHTML = `✓ Página do artigo<br>✓ ${a.type === 'semana' ? 'Destaque "Esta semana" e arquivo da semana' : 'Lista de guias'}<br>✓ Página inicial<br>✓ Sitemap do Google${a.ogimg ? '<br>✓ Imagem para as redes sociais' : ''}`;
       $('#dView').href = './' + a.slug; show('vDone');
     } else { toast('Rascunho guardado.'); $('#eSlug').readOnly = true; $('#eSlug').style.opacity = .6; }
   } catch (er) { toast(errMsg(er), 5000); } finally { busy(false); }
@@ -343,7 +406,8 @@ $('#ePub').onclick = () => saveArticle(true);
 $('#dBack').onclick = () => { tab = 'pub'; show('vList'); renderList(); };
 $('#ePrev').onclick = () => {
   const a = collect(); a.slug = a.slug || 'pre-visualizacao';
-  const html = CMS.articlePage(a).replace('<head>', '<head><base href="https://allfolio.pt/">');
+  let html = CMS.articlePage(a).replace('<head>', '<head><base href="https://allfolio.pt/">');
+  Object.keys(pendingURL).forEach(p => { html = html.split(`src="${p}"`).join(`src="${pendingURL[p]}"`); });
   $('#pvFrame').srcdoc = html; $('#pv').style.display = 'flex';
 };
 $('#pvClose').onclick = () => { $('#pv').style.display = 'none'; };
@@ -361,6 +425,7 @@ $('#tools').onclick = e => {
   else if (c === 'link') { const u = prompt('Endereço do link (https://… ou o nome de outro guia, ex.: guia-irs-xtb)'); if (u) document.execCommand('createLink', false, u.trim()); }
   else if (c === 'note' || c === 'summary') { const t = String(window.getSelection() || '').trim(); insertHTML(`<div class="${c}"><p>${CMS.esc(t || (c === 'note' ? 'Texto em destaque' : 'Em resumo: …'))}</p></div><p><br></p>`); }
   else if (c === 'md') { if (!looksMd(ed.innerText)) return toast('Não encontrei marcas de Markdown (##, **, | ou links) no texto.'); ed.innerHTML = mdToHtml(ed.innerText); toast('Formatação aplicada. Reveja e publique.'); }
+  else if (c === 'img') $('#eImgFile').click();
   else if (c === 'table') insertHTML('<table><thead><tr><th>Coluna</th><th>Coluna</th><th>Coluna</th></tr></thead><tbody><tr><td>…</td><td>…</td><td>…</td></tr><tr><td>…</td><td>…</td><td>…</td></tr></tbody></table><p><br></p>');
 };
 ed.addEventListener('paste', e => {
@@ -368,7 +433,7 @@ ed.addEventListener('paste', e => {
   const h = e.clipboardData.getData('text/html'), t = e.clipboardData.getData('text/plain');
   insertHTML(looksMd(t) || !h ? mdToHtml(t) : sanitize(h));
 });
-const BLOCK = { H1: 'h2', H2: 'h2', H3: 'h3', H4: 'h3', H5: 'h3', H6: 'h3', P: 'p', UL: 'ul', OL: 'ol', LI: 'li', TABLE: 'table', THEAD: 'thead', TBODY: 'tbody', TR: 'tr', TH: 'th', TD: 'td', BLOCKQUOTE: 'div' };
+const BLOCK = { FIGCAPTION: 'figcaption', H1: 'h2', H2: 'h2', H3: 'h3', H4: 'h3', H5: 'h3', H6: 'h3', P: 'p', UL: 'ul', OL: 'ol', LI: 'li', TABLE: 'table', THEAD: 'thead', TBODY: 'tbody', TR: 'tr', TH: 'th', TD: 'td', BLOCKQUOTE: 'div' };
 const INLINE = { STRONG: 'strong', B: 'strong', EM: 'em', I: 'em' };
 function sanitize(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -376,7 +441,9 @@ function sanitize(html) {
     if (n.nodeType === 3) return CMS.esc(n.nodeValue.replace(/\u00a0/g, ' '));
     if (n.nodeType !== 1) return '';
     const tag = n.tagName, kids = () => [...n.childNodes].map(walk).join('');
-    if (['SCRIPT', 'STYLE', 'META', 'LINK', 'TITLE', 'HEAD', 'NOSCRIPT', 'IFRAME', 'svg', 'SVG', 'IMG', 'BUTTON', 'INPUT'].includes(tag)) return '';
+    if (tag === 'IMG') { const src = n.getAttribute('data-path') || n.getAttribute('src') || ''; return /^(img\/[a-z0-9\/_.-]+\.(png|jpe?g|webp|svg)|https:\/\/[^"'\s]+)$/i.test(src) ? `<img src="${CMS.esc(src)}" alt="${CMS.esc(n.getAttribute('alt') || '')}" loading="lazy" decoding="async">` : ''; }
+    if (tag === 'FIGURE') { const k = kids(); return k.includes('<img') ? `<figure>${k}</figure>` : k; }
+    if (['SCRIPT', 'STYLE', 'META', 'LINK', 'TITLE', 'HEAD', 'NOSCRIPT', 'IFRAME', 'svg', 'SVG', 'BUTTON', 'INPUT'].includes(tag)) return '';
     if (tag === 'BR') return '<br>';
     if (tag === 'A') { const href = (n.getAttribute('href') || '').trim(); return /^(https?:\/\/|[a-z0-9-]+(\.html)?(#.*)?$|#)/i.test(href) ? `<a href="${CMS.esc(href)}">${kids()}</a>` : kids(); }
     if (INLINE[tag]) { const k = kids(); return k.trim() ? `<${INLINE[tag]}>${k}</${INLINE[tag]}>` : k; }
@@ -445,8 +512,16 @@ $('#bRepub').onclick = async () => {
   busy(true, 'A republicar…');
   try {
     await loadReg(); const files = {};
-    for (const it of reg.items.filter(x => x.status === 'pub')) { const t = await getFile(`cms/fontes/${it.slug}.json`); if (t) files[`${it.slug}.html`] = CMS.articlePage(JSON.parse(t)); }
-    Object.assign(files, await siteFiles(reg));
+    const next = JSON.parse(JSON.stringify(reg));
+    for (const it of next.items.filter(x => x.status === 'pub')) {
+      const t = await getFile(`cms/fontes/${it.slug}.json`); if (!t) continue;
+      const art = JSON.parse(t); art.cover = art.cover || it.cover || 'auto';
+      if (art.type === 'semana') art.points = CMS.pointsOf(art.body);
+      Object.assign(files, await articleFiles(art));
+      Object.assign(it, { cover: art.cover, ogimg: art.ogimg, points: art.points || [] });
+      files[`cms/fontes/${it.slug}.json`] = JSON.stringify(art, null, 1); files[`${it.slug}.html`] = CMS.articlePage(art);
+    }
+    Object.assign(files, await siteFiles(next)); reg = next;
     await commit(files, 'Painel: republicar todas as páginas');
     renderList(); toast('Feito. O site atualiza em cerca de 1 minuto.');
   } catch (er) { toast(errMsg(er), 5000); } finally { busy(false); }

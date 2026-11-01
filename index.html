@@ -166,6 +166,23 @@
   .ind-g div{background:#F4F7FC;border-radius:14px;padding:10px 12px;min-height:76px}
   .ind-g span{display:block;font-size:12px;color:var(--muted)}.ind-g b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
   .ind-tip{margin-top:12px;font-size:14px;background:#FFF7E6;border-radius:12px;padding:10px 12px;color:#334155}
+  .hero2{padding:26px 0 6px}
+  .hero2 h1{font-size:clamp(24px,4.6vw,38px);line-height:1.2;max-width:820px}
+  .hero-link{display:inline-block;margin-top:10px;font-weight:700;font-size:16px}
+  .wk-sec{padding:10px 0 0}
+  .lab{margin:0 0 10px;font-size:13px!important;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)!important;font-weight:800}
+  .wk{display:grid;text-decoration:none;color:#fff;background:#0A2A66;border-radius:24px;overflow:hidden}
+  @media (min-width:860px){.wk{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:center}}
+  .wk:hover{color:#fff;box-shadow:0 14px 34px rgba(10,42,102,.22)}
+  .wk-cv svg,.wk-cv img{display:block;width:100%;height:auto}
+  .wk-b{padding:18px 20px 22px}
+  .wk-l{font-size:13px;opacity:.75;font-weight:600}
+  .wk h3{margin:6px 0 4px;font-size:clamp(20px,3.4vw,26px);line-height:1.25;font-weight:800;color:#fff}
+  .wk ul{margin:8px 0 0;padding-left:20px}.wk li{font-size:15px;line-height:1.5;margin-top:4px;color:#E6EEFC}
+  .wk p{color:#E6EEFC;margin:8px 0 0}
+  .wk-go{display:inline-block;margin-top:14px;background:#fff;color:#0A2A66;border-radius:12px;padding:9px 14px;font-weight:800;font-size:15px}
+  .gcv{margin:-20px -20px 14px;border-radius:22px 22px 0 0;overflow:hidden}
+  .gcv svg,.gcv img{display:block;width:100%;height:auto}
 </style>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2352895338707924" crossorigin="anonymous"></script>
 </head>
@@ -177,11 +194,10 @@
       <span>AllFolio<small>.pt</small></span>
     </a>
     <div class="links">
-      <a href="#guias">Guias</a><a href="#app">A app</a><a href="#perguntas">Perguntas</a><a href="#apoie">Apoie</a>
+      <a href="semana">Semana</a><a href="#guias">Guias</a><a href="#app">A app</a><a href="#perguntas">Perguntas</a>
     </div>
     <div class="ctas" style="margin:0">
-      <a class="btn btn-ghost js-open" href="app">Entrar</a>
-      <a class="btn btn-primary js-signup" href="app">Criar conta</a>
+      <a class="btn btn-primary js-open" href="app">Abrir a app</a>
     </div>
   </nav>
 </header>
@@ -190,19 +206,32 @@
 <main id="topo">
   <div class="wrap">
     <section class="hero2" aria-labelledby="titulo">
-      <span class="pill">Para investidores em Portugal</span>
-      <h1 id="titulo">Investir e declarar no IRS, sem complicações</h1>
-      <p class="lead">Guias práticos sobre ações, ETFs, dividendos e Bitcoin, escritos para quem investe a partir de Portugal, e uma app gratuita que faz as contas do IRS por si.</p>
-      <div class="ctas">
-        <a class="btn btn-primary btn-lg js-signup" href="app">Experimentar a app grátis</a>
-        <a class="btn btn-ghost btn-lg" href="#guias">Ver os guias</a>
-      </div>
+      <h1 id="titulo">Notícias, guias de IRS e uma app para quem investe a partir de Portugal</h1>
+      <a class="hero-link js-signup" href="app">Experimentar a app grátis →</a>
     </section>
   </div>
 
+  <section id="semana" class="wk-sec" aria-labelledby="t-semana">
+    <div class="wrap">
+      <h2 id="t-semana" class="lab">Esta semana</h2>
+      <!--CMS:SEMANA-->
+      <!--/CMS:SEMANA-->
+      <div class="ind" aria-labelledby="t-ind">
+        <h3 id="t-ind">Indicadores oficiais</h3>
+        <div class="ind-g">
+          <div><span>Inflação em Portugal</span><b id="iPT">—</b><span id="iPTm">Eurostat</span></div>
+          <div><span>Inflação na zona euro</span><b id="iEA">—</b><span id="iEAm">Eurostat</span></div>
+          <div><span>Taxa de depósito do BCE</span><b id="iBCE">—</b><span id="iBCEm">BCE</span></div>
+          <div><span>Câmbio oficial do BCE</span><b id="iFX">—</b><span id="iFXm">dólares por 1 €</span></div>
+        </div>
+        <p class="ind-tip" id="iTip">💡 A inflação mostra quanto o dinheiro parado perde de poder de compra num ano. <a href="app" class="js-signup">Veja se a sua carteira ganha à inflação →</a></p>
+      </div>
+    </div>
+  </section>
+
   <section id="guias" aria-labelledby="t-guias" style="padding-top:8px">
     <div class="wrap">
-      <h2 id="t-guias">Guias</h2>
+      <h2 id="t-guias">Guias em destaque</h2>
       <p class="sub">Explicações claras, com exemplos e contas feitas, sobre as dúvidas mais comuns de quem investe.</p>
       <!--CMS:GUIAS-->
 <div class="gwrap">
@@ -221,16 +250,6 @@
       </div>
       <!--/CMS:GUIAS-->
       <a class="more" href="guias">Ver todos os guias →</a>
-      <div class="ind" aria-labelledby="t-ind">
-        <h3 id="t-ind">Indicadores oficiais</h3>
-        <div class="ind-g">
-          <div><span>Inflação em Portugal</span><b id="iPT">—</b><span id="iPTm">Eurostat</span></div>
-          <div><span>Inflação na zona euro</span><b id="iEA">—</b><span id="iEAm">Eurostat</span></div>
-          <div><span>Taxa de depósito do BCE</span><b id="iBCE">—</b><span id="iBCEm">BCE</span></div>
-          <div><span>Câmbio oficial do BCE</span><b id="iFX">—</b><span id="iFXm">dólares por 1 €</span></div>
-        </div>
-        <p class="ind-tip" id="iTip">💡 A inflação mostra quanto o dinheiro parado perde de poder de compra num ano. <a href="app" class="js-signup">Veja se a sua carteira ganha à inflação →</a></p>
-      </div>
     </div>
   </section>
   <!-- AdSense: espaço de anúncio 1 (a ativar) -->
@@ -361,7 +380,7 @@
 <footer>
   <div class="wrap foot">
     <strong style="color:#0A2A66">AllFolio.pt</strong>
-    <a href="privacidade.html" style="color:#334155">Política de privacidade</a><a href="termos.html" style="color:#334155">Termos de utilização</a><a href="como-ganhamos-dinheiro.html" style="color:#334155">Como ganhamos dinheiro</a><a href="mailto:taxfolio.suporte@gmail.com" style="color:#334155">Contacto</a>
+    <a href="semana" style="color:#334155">A semana do investidor</a><a href="guias" style="color:#334155">Guias</a><a href="https://ko-fi.com/allfolio" rel="noopener" style="color:#334155">Apoie o AllFolio</a><a href="privacidade.html" style="color:#334155">Política de privacidade</a><a href="termos.html" style="color:#334155">Termos de utilização</a><a href="como-ganhamos-dinheiro.html" style="color:#334155">Como ganhamos dinheiro</a><a href="mailto:taxfolio.suporte@gmail.com" style="color:#334155">Contacto</a>
     <span class="disc">Informação de apoio. Não constitui aconselhamento fiscal ou financeiro.</span>
   </div>
 </footer>
