@@ -2597,7 +2597,7 @@ function renderTax() {
 
 
 /* ---------- Planear aporte: que ações inteiras comprar com um valor ---------- */
-function aportePlan(amount) {
+function aportePlan(amount, withCash = false) {
   const al = S.settings.goals?.alloc || {}, t = al.targets || {};
   const pos = TF.positions(TF.fifo(S.tx).lots, S.assets), val = p => p.value ?? p.cost;
   const tg = {};
@@ -2608,9 +2608,14 @@ function aportePlan(amount) {
   }
   if (!Object.keys(tg).length) return { err: 'Defina primeiro a distribuição desejada nas Metas (por ativo).' };
   const cashNow = Math.max(0, cashState().saldo || 0), cashT = Number(t.__cash) || 0;
-  const inv = pos.reduce((s, p) => s + val(p), 0), tot = inv + cashNow + amount;
-  const reserve = cashT > 0 ? Math.min(amount, Math.max(0, cashT / 100 * tot - cashNow)) : 0;
+  const inv = pos.reduce((s, p) => s + val(p), 0);
+  // 1) Caixa: reserva a % alvo do aporte, exceto se a caixa já estiver no alvo (ou se o utilizador desligar)
+  const cashFull = cashNow >= cashT / 100 * (inv + cashNow + amount) - 0.005;
+  const reserve = withCash && cashT > 0 && !cashFull ? TF.r2(Math.min(amount, cashT / 100 * amount, cashT / 100 * (inv + cashNow + amount) - cashNow)) : 0;
+  // 2) Os alvos dos ativos contam só entre eles (somam 100%), sobre o valor investido depois do aporte
+  const sum = Object.values(tg).reduce((s, v) => s + v, 0); if (sum > 0) Object.keys(tg).forEach(k => tg[k] = tg[k] * 100 / sum);
   let left = amount - reserve;
+  const tot = inv + left;
   const rows = Object.keys(tg).map(tk => { const p = pos.find(x => x.ticker === tk); return { tk, target: tg[tk], price: S.assets[tk]?.price ?? null, cur: p ? val(p) : 0, n: 0 }; });
   for (let k = 0; k < 2000; k++) {
     let best = null, bs = 0;
@@ -2621,36 +2626,51 @@ function aportePlan(amount) {
     }
     if (!best) break; best.n++; left -= best.price;
   }
+  // Ainda sobra para mais ações: compra a que fica menos acima do alvo, até o dinheiro não chegar para nenhuma
+  for (let k = 0; k < 2000; k++) {
+    const totAfter = inv + rows.reduce((s, r) => s + r.n * (r.price || 0), 0);
+    let best = null, bo = Infinity;
+    for (const r of rows) {
+      if (!r.price || r.price > left + 1e-9) continue;
+      const over = ((r.cur + (r.n + 1) * r.price) / (totAfter + r.price) * 100 - r.target) / r.target;
+      if (over < bo) { bo = over; best = r; }
+    }
+    if (!best) break; best.n++; left -= best.price;
+  }
   const spent = rows.reduce((s, r) => s + r.n * r.price, 0);
-  rows.forEach(r => { r.after = (r.cur + r.n * (r.price || 0)) / (inv + spent + cashNow + reserve) * 100; });
+  rows.forEach(r => { r.after = (r.cur + r.n * (r.price || 0)) / (inv + spent) * 100; r.targetShown = tg[r.tk]; });
   rows.sort((x, y) => (y.n * (y.price || 0)) - (x.n * (x.price || 0)) || y.target - x.target);
-  return { rows, spent, left: Math.max(0, left), reserve, noPrice: rows.filter(r => !r.price).map(r => r.tk), oldest: Math.min(...rows.filter(r => r.price).map(r => S.assets[r.tk]?.priceAt || Date.now())) };
+  return { rows, spent, left: Math.max(0, left), reserve, cashT, cashFull, noPrice: rows.filter(r => !r.price).map(r => r.tk), oldest: Math.min(...rows.filter(r => r.price).map(r => S.assets[r.tk]?.priceAt || Date.now())) };
 }
 function openAporte() {
   openModal(`${modalHead('Planear aporte')}
     <label class="lbl" for="apAmt">Quanto vai investir agora?</label>
     <div class="flex items-center gap-2 rounded-2xl border-2 border-brand-600 bg-white px-3"><input id="apAmt" class="w-full h-14 text-2xl font-extrabold num outline-none bg-transparent" inputmode="decimal" placeholder="0" value="${UI.apAmt || ''}"><span class="text-xl font-bold text-slate-500">€</span></div>
+    <div id="apOpt" class="mt-2"></div>
     <div id="apRes" class="mt-3"></div>`);
-  const inp = $('#apAmt'), out = $('#apRes');
+  const inp = $('#apAmt'), out = $('#apRes'), cashT = Number(S.settings.goals?.alloc?.targets?.__cash) || 0;
+  if (UI.apCash === undefined) UI.apCash = true;
+  const opt = () => { $('#apOpt').innerHTML = cashT > 0 ? `<button id="apCash" class="h-8 px-3 rounded-full text-xs font-bold border ${UI.apCash ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-600 border-brand-100'}">${UI.apCash ? '✓' : '+'} ${fmtN(cashT, 0)}% do aporte para a caixa de oportunidade</button>` : '';
+    const b = $('#apCash'); if (b) b.onclick = () => { UI.apCash = !UI.apCash; opt(); draw(); }; };
   const draw = () => {
     const amt = TF.num(inp.value) || 0; UI.apAmt = inp.value;
     if (amt <= 0) { out.innerHTML = '<p class="text-sm text-slate-500">Escreva o valor e a app diz que ações inteiras comprar para se aproximar da distribuição desejada.</p>'; return; }
-    const P = aportePlan(amt);
+    const P = aportePlan(amt, !!UI.apCash);
     if (P.err) { out.innerHTML = `<div class="rounded-2xl bg-amber-50 text-amber-900 text-sm p-3">${esc(P.err)}</div><button data-goalcfg class="w-full mt-2 h-11 rounded-2xl bg-brand-50 text-brand-700 font-bold text-sm">Definir a distribuição</button>`; return; }
     const buy = P.rows.filter(r => r.n), nm = t => esc(t.replace(/\.[A-Z]+$/, ''));
     out.innerHTML = `${buy.length ? `<div class="rounded-2xl border border-brand-100 bg-white divide-y divide-brand-50">${buy.map(r => `<div class="flex items-center justify-between gap-2 px-3 py-2.5">
-        <div><div class="font-extrabold">${nm(r.tk)} <span class="text-gain">× ${r.n}</span></div><div class="text-[11px] text-slate-500 num">${fmtEUR(r.price)}/un. · fica ${fmtN(r.after, 1)}% (alvo ${fmtN(r.target, 1)}%)</div></div>
+        <div><div class="font-extrabold">${nm(r.tk)} <span class="text-gain">× ${r.n}</span></div><div class="text-[11px] text-slate-500 num">${fmtEUR(r.price)}/un. · fica ${fmtN(r.after, 1)}% dos investimentos (alvo ${fmtN(r.targetShown ?? r.target, 1)}%)</div></div>
         <b class="num">${fmtEUR(r.n * r.price)}</b></div>`).join('')}</div>`
       : '<div class="rounded-2xl bg-amber-50 text-amber-900 text-sm p-3">Com este valor não dá para comprar nenhuma ação inteira de um ativo abaixo do alvo.</div>'}
       <div class="rounded-2xl bg-ink text-white p-3 mt-2 text-sm num space-y-0.5">
         <div class="flex justify-between"><span class="text-brand-100">A investir</span><b>${fmtEUR(P.spent)}</b></div>
-        ${P.reserve > 0.004 ? `<div class="flex justify-between"><span class="text-brand-100">Para a caixa de oportunidade</span><b>${fmtEUR(P.reserve)}</b></div>` : ''}
+        ${P.reserve > 0.004 ? `<div class="flex justify-between"><span class="text-brand-100">Para a caixa de oportunidade (${fmtN(P.cashT, 0)}%)</span><b>${fmtEUR(P.reserve)}</b></div>` : UI.apCash && P.cashT > 0 && P.cashFull ? `<div class="flex justify-between"><span class="text-brand-100">Caixa de oportunidade</span><b>já no alvo</b></div>` : ''}
         <div class="flex justify-between text-emerald-200"><span>Sobra</span><b>${fmtEUR(P.left)}</b></div></div>
       ${P.rows.some(r => !r.n && r.price) ? `<p class="text-[11px] text-slate-500 mt-2">Não comprar agora: ${P.rows.filter(r => !r.n && r.price).map(r => nm(r.tk)).join(', ')} (já no alvo ou o preço não cabe no valor).</p>` : ''}
       ${P.noPrice.length ? `<p class="text-[11px] text-amber-700 mt-1">Sem preço atual: ${P.noPrice.map(nm).join(', ')}. Toque em Preços no Início.</p>` : ''}
       <p class="text-[11px] text-slate-400 mt-2">Preços ${P.oldest ? ago(P.oldest) : ''}, com cerca de 15 minutos de atraso: na corretora o valor pode ser ligeiramente diferente. Nada é registado na app.</p>`;
   };
-  inp.oninput = draw; draw(); setTimeout(() => inp.focus(), 60);
+  inp.oninput = draw; opt(); draw(); setTimeout(() => inp.focus(), 60);
 }
 
 /* ---------- Relatório anual da XTB → guia para completar o pré-preenchimento do Portal ---------- */
