@@ -9,7 +9,7 @@
   const slugify = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70).replace(/-+$/, '');
   const TYPE_LABEL = { guia: 'Guias', semana: 'A semana do investidor' };
-  const CSS = "\n  *{box-sizing:border-box}\n  html{scroll-padding-top:80px}\n  body{margin:0;font-family:Manrope,system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;color:#0A2A66;background:#F4F7FC;-webkit-font-smoothing:antialiased}\n  a{color:#1D4ED8}a:hover{color:#0A2A66}\n  :focus-visible{outline:3px solid #5B8DEF;outline-offset:2px;border-radius:8px}\n  header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.97);border-bottom:1px solid #DCE7F8;padding-top:env(safe-area-inset-top,0px)}\n  .bar{max-width:820px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}\n  .brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:#0A2A66;font-weight:800;font-size:19px;margin-right:auto}\n  .brand small{font-size:inherit;font-weight:600;color:#475569}\n  .nav a{font-weight:600;font-size:15px;text-decoration:none;color:#334155;margin-left:14px}\n  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 20px;border-radius:14px;font-weight:700;text-decoration:none;background:#1D4ED8;color:#fff}\n  .btn:hover{background:#1A3FAE;color:#fff}\n  main{max-width:760px;margin:0 auto;padding:28px 20px 56px}\n  .crumbs{font-size:13px;color:#475569;margin:0 0 10px}.crumbs a{color:#475569}\n  h1{font-size:clamp(28px,6vw,40px);line-height:1.15;margin:0;letter-spacing:-.02em}\n  .meta{color:#475569;font-size:14px;margin:10px 0 0}\n  h2{font-size:23px;margin:34px 0 8px;letter-spacing:-.01em}\n  h3{font-size:18px;margin:22px 0 6px}\n  p,li{font-size:17px;line-height:1.75;color:#1E293B}\n  ul,ol{padding-left:22px}\n  .summary{background:#E6EEFC;border:1px solid #CFDDF8;border-radius:18px;padding:16px 20px;margin:22px 0 6px}\n  .summary p,.summary li{color:#0A2A66;margin:6px 0}\n  .note{background:#FFF7E6;border:1px solid #F5DDAE;border-radius:16px;padding:14px 18px;margin:18px 0}\n  .note p{margin:0;color:#5C3D04;font-size:16px}\n  .tbl{overflow-x:auto;border:1px solid #DCE7F8;border-radius:14px;background:#fff;margin:14px 0}\n  table{width:100%;border-collapse:collapse;font-size:15px;min-width:520px}\n  caption{text-align:left;padding:12px 14px 4px;font-weight:800}\n  th{background:#EEF3FB;color:#1A3FAE;padding:9px 12px;text-align:right;font-size:14px}\n  td{padding:10px 12px;border-top:1px solid #E6ECF5;text-align:right;font-variant-numeric:tabular-nums}\n  th:first-child,td:first-child{text-align:left}\n  .cta{background:#0A2A66;color:#fff;border-radius:22px;padding:24px;margin:36px 0 10px}\n  .cta h2{color:#fff;margin:0 0 6px;font-size:22px}.cta p{color:#DCE7F8;margin:0 0 16px}\n  .cta .btn{background:#fff;color:#0A2A66}\n  .cards{display:grid;gap:14px;margin-top:20px}\n  .card{display:block;background:#fff;border:1px solid #DCE7F8;border-radius:18px;padding:18px 20px;text-decoration:none}\n  .card h2{margin:0 0 6px;font-size:20px;color:#0A2A66}.card p{margin:0;font-size:16px;color:#334155}\n  .card span{display:inline-block;margin-top:10px;font-weight:700;color:#1D4ED8}\n  .cv{margin:22px 0 4px}.cv svg,.cv img{display:block;width:100%;height:auto;border-radius:18px}\n  figure{margin:20px 0}figure img,figure svg{display:block;max-width:100%;height:auto;border-radius:14px;margin:0 auto}figcaption{font-size:14px;color:#475569;margin-top:8px;text-align:center}\n  .card .th{margin:-18px -20px 12px;border-radius:18px 18px 0 0;overflow:hidden}.card .th svg,.card .th img{display:block;width:100%;height:auto}\n  .card .dt{display:block;font-size:13px;color:#475569;margin:0 0 4px;font-weight:600}\n  .disc{font-size:14px;color:#475569;border-top:1px solid #DCE7F8;margin-top:30px;padding-top:14px}\n  footer{border-top:1px solid #DCE7F8;background:#fff;padding-bottom:env(safe-area-inset-bottom,0px)}\n  .foot{max-width:820px;margin:0 auto;padding:20px;display:flex;flex-wrap:wrap;gap:10px 20px;font-size:14px}\n  .foot a{color:#475569}\n";
+  const CSS = "\n  *{box-sizing:border-box}\n  html{scroll-padding-top:80px}\n  body{margin:0;font-family:Manrope,system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;color:#0A2A66;background:#F4F7FC;-webkit-font-smoothing:antialiased}\n  a{color:#1D4ED8}a:hover{color:#0A2A66}\n  :focus-visible{outline:3px solid #5B8DEF;outline-offset:2px;border-radius:8px}\n  header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.97);border-bottom:1px solid #DCE7F8;padding-top:env(safe-area-inset-top,0px)}\n  .bar{max-width:820px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}\n  .brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:#0A2A66;font-weight:800;font-size:19px;margin-right:auto}\n  .brand small{font-size:inherit;font-weight:600;color:#475569}\n  .nav a{font-weight:600;font-size:15px;text-decoration:none;color:#334155;margin-left:14px}\n  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 20px;border-radius:14px;font-weight:700;text-decoration:none;background:#1D4ED8;color:#fff}\n  .btn:hover{background:#1A3FAE;color:#fff}\n  main{max-width:760px;margin:0 auto;padding:28px 20px 56px}\n  .crumbs{font-size:13px;color:#475569;margin:0 0 10px}.crumbs a{color:#475569}\n  h1{font-size:clamp(28px,6vw,40px);line-height:1.15;margin:0;letter-spacing:-.02em}\n  .meta{color:#475569;font-size:14px;margin:10px 0 0}\n  h2{font-size:23px;margin:34px 0 8px;letter-spacing:-.01em}\n  h3{font-size:18px;margin:22px 0 6px}\n  p,li{font-size:17px;line-height:1.75;color:#1E293B}\n  ul,ol{padding-left:22px}\n  .summary{background:#E6EEFC;border:1px solid #CFDDF8;border-radius:18px;padding:16px 20px;margin:22px 0 6px}\n  .summary p,.summary li{color:#0A2A66;margin:6px 0}\n  .note{background:#FFF7E6;border:1px solid #F5DDAE;border-radius:16px;padding:14px 18px;margin:18px 0}\n  .note p{margin:0;color:#5C3D04;font-size:16px}\n  .tbl{overflow-x:auto;border:1px solid #DCE7F8;border-radius:14px;background:#fff;margin:14px 0}\n  table{width:100%;border-collapse:collapse;font-size:15px}\n  .tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:18px 0;max-width:100%}.tw table{margin:0}\n  caption{text-align:left;padding:12px 14px 4px;font-weight:800}\n  th{background:#EEF3FB;color:#1A3FAE;padding:9px 12px;text-align:left;font-size:14px}\n  td{padding:10px 12px;border-top:1px solid #E6ECF5;text-align:left;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}\n  th:first-child,td:first-child{text-align:left}\n  .cta{background:#0A2A66;color:#fff;border-radius:22px;padding:24px;margin:36px 0 10px}\n  .cta h2{color:#fff;margin:0 0 6px;font-size:22px}.cta p{color:#DCE7F8;margin:0 0 16px}\n  .cta .btn{background:#fff;color:#0A2A66}\n  .cards{display:grid;gap:14px;margin-top:20px}\n  .card{display:block;background:#fff;border:1px solid #DCE7F8;border-radius:18px;padding:18px 20px;text-decoration:none}\n  .card h2{margin:0 0 6px;font-size:20px;color:#0A2A66}.card p{margin:0;font-size:16px;color:#334155}\n  .card span{display:inline-block;margin-top:10px;font-weight:700;color:#1D4ED8}\n  .cv{margin:22px 0 4px}.cv svg,.cv img{display:block;width:100%;height:auto;border-radius:18px}\n  figure{margin:20px 0}figure img,figure svg{display:block;max-width:100%;height:auto;border-radius:14px;margin:0 auto}figcaption{font-size:14px;color:#475569;margin-top:8px;text-align:center}\n  .card .th{margin:-18px -20px 12px;border-radius:18px 18px 0 0;overflow:hidden}.card .th svg,.card .th img{display:block;width:100%;height:auto}\n  .card .dt{display:block;font-size:13px;color:#475569;margin:0 0 4px;font-weight:600}\n  .ag-w{margin:18px 0 26px}.ag-l{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#1D4ED8;margin:0 0 8px}\n  .ag{background:#fff;border:1px solid #DCE7F8;border-radius:18px;overflow:hidden}.ag-r{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border-top:1px solid #EEF3FB}.ag-r:first-child{border-top:none}\n  .ag-d{flex:none;width:54px;text-align:center;border-radius:12px;background:#EEF3FB;padding:5px 0;line-height:1.15}.ag-d b{display:block;font-size:18px}.ag-d span{font-size:11px;color:#64748B;text-transform:uppercase}\n  .ag-e b{display:block;font-weight:700}.ag-e small{display:block;font-size:14px;color:#64748B}.ag-e a{font-size:14px}.ag-r.past{opacity:.45}.ag-r.past b{text-decoration:line-through}\n  .ag-r.today .ag-d{background:#1D4ED8;color:#fff}.ag-r.today .ag-d span{color:#DCE7F8}.ag-hoje{font-size:11px;background:#E7F6EF;color:#0B5D41;border-radius:99px;padding:1px 8px;margin-left:6px;font-weight:700}\n  .ag-f{font-size:13px;color:#64748B;margin:8px 0 0}\n  .disc{font-size:14px;color:#475569;border-top:1px solid #DCE7F8;margin-top:30px;padding-top:14px}\n  footer{border-top:1px solid #DCE7F8;background:#fff;padding-bottom:env(safe-area-inset-bottom,0px)}\n  .foot{max-width:820px;margin:0 auto;padding:20px;display:flex;flex-wrap:wrap;gap:10px 20px;font-size:14px}\n  .foot a{color:#475569}\n";
   const HEADER = "<header><div class=\"bar\">\n  <a class=\"brand\" href=\"./\"><svg width=\"32\" height=\"32\" viewBox=\"0 0 48 48\" aria-hidden=\"true\"><rect x=\"8\" y=\"30\" width=\"8\" height=\"12\" rx=\"2\" fill=\"#0A2A66\"/><rect x=\"19\" y=\"24\" width=\"8\" height=\"18\" rx=\"2\" fill=\"#0A2A66\"/><rect x=\"30\" y=\"18\" width=\"8\" height=\"24\" rx=\"2\" fill=\"#0A2A66\"/><path d=\"M6 23 L42 7\" fill=\"none\" stroke=\"#5B8DEF\" stroke-width=\"3.4\" stroke-linecap=\"round\"/><path d=\"M34.3 4.8 L42 7 L38.5 14.2\" fill=\"none\" stroke=\"#5B8DEF\" stroke-width=\"3.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><text x=\"3\" y=\"15\" font-size=\"14\" font-weight=\"800\" fill=\"#0F9D6E\" font-family=\"system-ui, sans-serif\">$</text></svg><span>AllFolio<small>.pt</small></span></a>\n  <nav class=\"nav\" aria-label=\"Principal\"><a href=\"semana\">Semana</a><a href=\"guias\">Guias</a><a href=\"app\">Abrir a app</a></nav>\n</div></header>";
   const FOOT = `
 </main>
@@ -118,6 +118,30 @@ ${T(96, 120, 15, 800, '#0B5D41', 'Ação')}${T(264, 120, 15, 800, '#991B1B', 'CF
     const num = h.filter(t => /^\d+[.)]\s*/.test(t)).map(t => t.replace(/^\d+[.)]\s*/, ''));
     return (num.length ? num : h.filter(t => !/números|vigiar|resumo/i.test(t))).slice(0, 3);
   }
+
+  const wrapTables = h => String(h || '').replace(/<table>/g, '<div class="tw"><table>').replace(/<\/table>/g, '</table></div>');
+  /* ---------- Agenda "O que vigiar esta semana" ---------- */
+  const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  function agendaWeek(ag) {
+    const ds = (ag.items || []).map(x => x.date).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d || '')).sort(); if (!ds.length) return '';
+    const p = d => d.split('-').map(Number), [, m1, d1] = p(ds[0]), [, m2, d2] = p(ds[ds.length - 1]);
+    return m1 === m2 ? (d1 === d2 ? `${d1} de ${MESES[m1 - 1]}` : `${d1} a ${d2} de ${MESES[m1 - 1]}`) : `${d1} de ${MESES[m1 - 1]} a ${d2} de ${MESES[m2 - 1]}`;
+  }
+  const safeUrl = u => /^https:\/\/[^\s"'<>]+$/i.test(u || '') ? u : '';
+  function agendaBlock(ag) {
+    const items = (ag && ag.items || []).filter(x => x.text);
+    if (!items.length) return '';
+    const sorted = [...items].sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+    const row = x => {
+      const ok = /^\d{4}-\d{2}-\d{2}$/.test(x.date || ''), dt = ok ? new Date(x.date + 'T12:00:00Z') : null, u = safeUrl(x.url);
+      return `<div class="ag-r"${ok ? ` data-d="${x.date}"` : ''}><div class="ag-d"><span>${ok ? DIAS[dt.getUTCDay()] : 'toda'}</span><b>${ok ? dt.getUTCDate() : 'sem.'}</b></div>
+          <div class="ag-e"><b>${esc(x.text)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}${u ? `<a href="${esc(u)}" rel="noopener" target="_blank">${esc(x.linkText || 'Ver na página oficial')} →</a>` : ''}</div></div>`;
+    };
+    return `<div class="ag-w"><p class="ag-l">O que vigiar esta semana${agendaWeek(ag) ? ' · ' + esc(agendaWeek(ag)) : ''}</p>
+        <div class="ag">${sorted.map(row).join('')}</div>
+        ${ag.updated ? `<p class="ag-f">Atualizado a ${esc(fmtDate(ag.updated))}</p>` : ''}</div>
+        <script>(function(){var t=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Lisbon'});document.querySelectorAll('.ag-r[data-d]').forEach(function(r){var d=r.getAttribute('data-d');if(d<t)r.classList.add('past');else if(d===t){r.classList.add('today');var b=r.querySelector('b+b,.ag-e b');if(b)b.insertAdjacentHTML('beforeend',' <span class="ag-hoje">hoje</span>');}});})();</script>`;
+  }
   function articlePage(a) {
     const type = a.type === 'semana' ? 'semana' : 'guia', min = readMin(a.body), section = type === 'semana' ? 'A semana do investidor' : (a.tag || 'Guia');
     const art = { '@context': 'https://schema.org', '@type': type === 'semana' ? 'NewsArticle' : 'Article', headline: a.title, description: a.desc, inLanguage: 'pt-PT',
@@ -130,7 +154,7 @@ ${T(96, 120, 15, 800, '#0B5D41', 'Ação')}${T(264, 120, 15, 800, '#991B1B', 'CF
 <h1>${esc(a.title)}</h1>
 <p class="meta">${a.updated && a.updated !== a.date ? 'Atualizado' : 'Publicado'} em ${fmtDate(a.updated || a.date)} · ${min} min de leitura</p>
 ${coverHTML(a, 'cv', false)}
-${relLinks(a.body)}
+${wrapTables(relLinks(a.body))}
 <!-- AdSense: anúncio no fim do artigo (a ativar) -->
 ${a.cta === false ? '' : CTA}
 ${DISC[type](a.updated || a.date)}` + FOOT;
@@ -156,13 +180,13 @@ ${DISC[type](a.updated || a.date)}` + FOOT;
           <span class="go">Ler →</span></a>`;
     return `<div class="gwrap">\n${[card(feat, true), ...rest.map(a => card(a, false))].join('\n')}\n      </div>`;
   }
-  function applyIndex(html, reg, now) {
+  function applyIndex(html, reg, now, agenda) {
     const put = (h, name, content, required) => {
       const a = `<!--CMS:${name}-->`, b = `<!--/CMS:${name}-->`, i = h.indexOf(a), j = h.indexOf(b);
       if (i < 0 || j < i) { if (required) throw new Error('A página inicial não tem os marcadores dos guias.'); return h; }
       return h.slice(0, i + a.length) + '\n' + content + '\n      ' + h.slice(j);
     };
-    return put(put(html, 'GUIAS', indexBlock(reg, now), true), 'SEMANA', semanaBlock(reg), false);
+    return put(put(put(html, 'GUIAS', indexBlock(reg, now), true), 'SEMANA', semanaBlock(reg), false), 'AGENDA', agendaBlock(agenda), false);
   }
   const listCard = (a, withDate) => `  <a class="card" href="${esc(a.slug)}">${coverHTML(a, 'th')}${withDate ? `<span class="dt">${esc(fmtDate(a.date))}</span>` : ''}<h2>${esc(a.title)}</h2><p>${esc(a.teaser || a.desc)}</p><span>Ler →</span></a>`;
   const CTA_LIST = `\n<section class="cta" aria-labelledby="cta-t">\n  <h2 id="cta-t">Faça isto em poucos minutos</h2>\n  <p>O AllFolio importa os extratos da sua corretora, aplica o FIFO e prepara as tabelas do IRS. Gratuito.</p>\n  <a class="btn" href="app">Experimentar o AllFolio grátis</a>\n</section>`;
@@ -178,13 +202,14 @@ ${list.map(a => listCard(a, false)).join('\n')}
 </div>
 ${wk ? `<p style="margin-top:26px">Procura as notícias da semana? Veja <a href="semana">A semana do investidor</a>.</p>` : ''}${CTA_LIST}` + FOOT;
   }
-  function semanaPage(reg) {
+  function semanaPage(reg, agenda) {
     const list = pubList(reg).filter(x => x.type === 'semana');
     return head({ title: 'A semana do investidor – AllFolio.pt', desc: 'Todas as sextas: o que aconteceu nos mercados, o que significa para quem investe a partir de Portugal e o que vigiar na semana seguinte.', path: 'semana', ogtype: 'website',
       jsonld: ld({ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'A semana do investidor', url: SITE + 'semana', inLanguage: 'pt-PT' }, crumbsLD([['Início', ''], ['A semana do investidor', 'semana']])) })
       + `<p class="crumbs"><a href="./">Início</a> › A semana do investidor</p>
 <h1>A semana do investidor</h1>
 <p class="meta">Todas as sextas: o que aconteceu nos mercados, o que significa para quem investe a partir de Portugal e o que vigiar a seguir.</p>
+${agendaBlock(agenda)}
 <div class="cards">
 ${list.length ? list.map(a => listCard(a, true)).join('\n') : '<p>A primeira edição sai na próxima sexta-feira.</p>'}
 </div>${CTA_LIST}` + FOOT;
@@ -198,5 +223,5 @@ ${[u('', now, 'weekly', '1.0'), u('guias', now, 'weekly', '0.7'), u('semana', no
 </urlset>
 `;
   }
-  G.CMS = { esc, fmtDate, readMin, slugify, articlePage, indexBlock, semanaBlock, applyIndex, guiasPage, semanaPage, sitemap, pubList, TYPE_LABEL, coverSVG, coverHTML, themeOf, pointsOf, ogImage };
+  G.CMS = { esc, fmtDate, readMin, slugify, articlePage, indexBlock, semanaBlock, applyIndex, guiasPage, semanaPage, agendaBlock, agendaWeek, sitemap, pubList, TYPE_LABEL, coverSVG, coverHTML, themeOf, pointsOf, ogImage };
 })(typeof window !== 'undefined' ? window : globalThis);

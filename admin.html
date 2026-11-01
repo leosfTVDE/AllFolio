@@ -53,7 +53,7 @@
   #pv{position:fixed;inset:0;background:var(--bg);z-index:12;display:none;flex-direction:column}
   #pv iframe{flex:1;border:0;width:100%;background:#fff}
   .ok{width:58px;height:58px;border-radius:50%;background:var(--greenbg);color:var(--green);display:grid;place-items:center;font-size:28px;margin:6px auto 10px}
-  .nav{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+  .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:12px}
   .nav button{min-height:40px;font-size:14px}.nav button.on{background:var(--soft);color:var(--blue);border-color:var(--blue)}
   .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
@@ -67,6 +67,11 @@
   select{width:100%;min-height:46px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:16px;background:var(--card);color:var(--ink)}
   .cvprev{margin-top:8px}.cvprev svg,.cvprev img{display:block;width:100%;max-width:360px;height:auto;border-radius:12px;border:1px solid var(--line)}
   #ed figure{margin:12px 0}#ed figure img{max-width:100%;height:auto;border-radius:10px;display:block}#ed figcaption{font-size:13px;color:var(--muted);text-align:center}
+  .agr{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-top:10px}
+  .agr .g2{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
+  .agprev .ag-w{margin:0}.agprev .ag-l{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin:0 0 8px}
+  .agprev .ag-r{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line)}.agprev .ag-d{width:48px;text-align:center;background:var(--soft);border-radius:10px;padding:3px 0;line-height:1.15}.agprev .ag-d span{font-size:10px;text-transform:uppercase;color:var(--muted)}.agprev .ag-d b{display:block}
+  .agprev .ag-e b{display:block}.agprev .ag-e small{display:block;color:var(--muted)}.agprev .ag-e a{font-size:13px}.agprev .ag-f{font-size:12px;color:var(--muted)}
   .hidden{display:none!important}
 </style>
 </head>
@@ -74,7 +79,7 @@
 <header><h1>Painel · AllFolio.pt</h1><span id="hst" class="st"></span></header>
 <main>
 <input type="file" id="eImgFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
-<div id="nav" class="nav hidden"><button data-nav="list" class="on">Artigos</button><button data-nav="stats">📊 Visitas</button></div>
+<div id="nav" class="nav hidden"><button data-nav="list" class="on">Artigos</button><button data-nav="agenda">📅 Agenda</button><button data-nav="stats">📊 Visitas</button></div>
 
 <section id="vSetup" class="hidden">
   <div class="card">
@@ -100,6 +105,20 @@
   <div class="row" style="margin-top:6px"><a class="btn" href="./" target="_blank" rel="noopener">Ver o site</a><button id="bOut">Desligar</button></div>
   <button id="bRepub" class="full" style="margin-top:16px">Republicar todas as páginas</button>
   <p class="hint">Volta a gerar todos os artigos publicados, a lista de guias, a página inicial e o sitemap, num só envio. Use depois de enviar ficheiros novos do site para o GitHub.</p>
+</section>
+<section id="vAgenda" class="hidden">
+  <p class="hint" style="font-size:14px;margin-top:0">"O que vigiar esta semana": aparece na página inicial e no topo da página da semana. Os dias que já passaram ficam a cinzento sozinhos e o do dia fica destacado.</p>
+  <div class="card">
+    <label for="agPaste" style="margin-top:0">Colar a lista (opcional)</label>
+    <textarea id="agPaste" rows="4" placeholder="2026-11-06 | Relatório de emprego dos EUA (outubro) | nota opcional | https://..."></textarea>
+    <p class="hint">Uma linha por evento: data | evento | nota | link. Para "toda a semana", escreva "semana" no lugar da data.</p>
+    <button id="agFill" class="full">Preencher com a lista colada</button>
+  </div>
+  <div id="agRows"></div>
+  <button id="agAdd" class="full" style="margin-top:10px">+ Acrescentar evento</button>
+  <div class="card agprev" style="margin-top:12px"><div id="agPrev"></div></div>
+  <button id="agPub" class="primary full" style="margin-top:12px">Publicar a agenda</button>
+  <button id="agClear" class="link grey" style="margin-top:8px">Limpar a agenda (tirar do site)</button>
 </section>
 <section id="vStats" class="hidden">
   <p class="hint" style="font-size:14px;margin-top:0">Visitas ao site, contadas sem cookies e sem dados pessoais (só totais por dia). Complementa o Search Console, que mostra as pesquisas do Google. Conta a partir do dia em que o contador foi publicado.</p>
@@ -174,7 +193,7 @@
 <div id="busy"><div id="busyT">A publicar…</div></div>
 <div id="toast" role="status"></div>
 
-<script src="cms.js?v=20261101"></script>
+<script src="cms.js?v=20261102"></script>
 <script src="cms-seed.js"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -185,8 +204,8 @@ const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOff
 
 function toast(t, ms = 3200) { const el = $('#toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = 'none', ms); }
 function busy(on, t) { $('#busy').style.display = on ? 'grid' : 'none'; if (t) $('#busyT').textContent = t; }
-function show(v) { ['vSetup', 'vList', 'vEdit', 'vDone', 'vStats'].forEach(id => $('#' + id).classList.toggle('hidden', id !== v)); $('#nav').classList.toggle('hidden', !['vList', 'vStats'].includes(v));
-  document.querySelectorAll('[data-nav]').forEach(x => x.classList.toggle('on', x.dataset.nav === (v === 'vStats' ? 'stats' : 'list'))); window.scrollTo(0, 0); }
+function show(v) { ['vSetup', 'vList', 'vEdit', 'vDone', 'vStats', 'vAgenda'].forEach(id => $('#' + id).classList.toggle('hidden', id !== v)); $('#nav').classList.toggle('hidden', !['vList', 'vStats', 'vAgenda'].includes(v));
+  document.querySelectorAll('[data-nav]').forEach(x => x.classList.toggle('on', x.dataset.nav === (v === 'vStats' ? 'stats' : v === 'vAgenda' ? 'agenda' : 'list'))); window.scrollTo(0, 0); }
 
 /* ---------- GitHub ---------- */
 const b64enc = s => { const b = new TextEncoder().encode(s); let x = ''; for (let i = 0; i < b.length; i += 0x8000) x += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(x); };
@@ -227,9 +246,12 @@ async function loadReg() {
   regMissing = t == null; reg = t ? JSON.parse(t) : { items: [] };
 }
 const findItem = slug => reg.items.find(x => x.slug === slug);
+let agenda = null;
+async function loadAgenda() { const t = await getFile('cms/agenda.json'); try { agenda = t ? JSON.parse(t) : { items: [] }; } catch (e) { agenda = { items: [] }; } return agenda; }
 async function siteFiles(regNext) {
   const idx = await getFile('index.html'); if (idx == null) throw new Error('index.html não encontrado no repositório.');
-  return { 'index.html': CMS.applyIndex(idx, regNext, today()), 'guias.html': CMS.guiasPage(regNext), 'semana.html': CMS.semanaPage(regNext), 'sitemap.xml': CMS.sitemap(regNext, today()), 'cms/artigos.json': JSON.stringify(regNext, null, 1) };
+  if (!agenda) await loadAgenda();
+  return { 'index.html': CMS.applyIndex(idx, regNext, today(), agenda), 'guias.html': CMS.guiasPage(regNext), 'semana.html': CMS.semanaPage(regNext, agenda), 'sitemap.xml': CMS.sitemap(regNext, today()), 'cms/artigos.json': JSON.stringify(regNext, null, 1) };
 }
 
 /* ---------- Lista ---------- */
@@ -486,7 +508,7 @@ function cleanBody(h) { return sanitize(h).replace(/<p>(\s|<br>)*<\/p>/g, '').tr
 
 /* ---------- Arranque ---------- */
 async function boot() {
-  if (typeof CMS === 'undefined' || typeof CMS.pointsOf !== 'function' || typeof CMS.semanaPage !== 'function') {
+  if (typeof CMS === 'undefined' || typeof CMS.pointsOf !== 'function' || typeof CMS.semanaPage !== 'function' || typeof CMS.agendaBlock !== 'function') {
     document.querySelector('main').innerHTML = '<div class="card"><h2 style="margin:0 0 8px;font-size:19px">Falta atualizar o cms.js</h2><p class="hint" style="font-size:15px">O painel é novo, mas o ficheiro <b>cms.js</b> que o site está a servir ainda é o antigo. Confirme que enviou o cms.js para o GitHub, espere 2 minutos e recarregue esta página.</p></div>';
     return;
   }
@@ -534,7 +556,7 @@ $('#bRepub').onclick = async () => {
 /* ---------- Visitas ---------- */
 const FBV = '10.12.2'; let FB = null, sDocs = [], sPer = '7';
 if (localStorage.getItem('af_notrack') === null) localStorage.setItem('af_notrack', '1');
-$('#nav').onclick = e => { const b = e.target.closest('[data-nav]'); if (!b) return; if (b.dataset.nav === 'stats') openStats(); else { show('vList'); renderList(); } };
+$('#nav').onclick = e => { const b = e.target.closest('[data-nav]'); if (!b) return; if (b.dataset.nav === 'stats') openStats(); else if (b.dataset.nav === 'agenda') openAgenda(); else { show('vList'); renderList(); } };
 const loadScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Não foi possível ligar ao Firebase. Verifique a internet.')); document.head.appendChild(s); });
 async function fbInit() {
   if (FB) return FB;
@@ -631,6 +653,55 @@ function renderStats() {
   $('#sDev').innerHTML = sRows(sMap(docs, 'c'), k => CTRY[k] || k, '#A8823F', 4) + sRows(sMap(docs, 'd'), k => DEV[k] || k, '#2C6E7A', 2) + sRows(sMap(docs, 'l'), k => LNG[k] || k, '#A8823F', 6);
 }
 $('#sPer').onclick = e => { const b = e.target.closest('[data-sp]'); if (b) { sPer = b.dataset.sp; renderStats(); } };
+
+/* ---------- Agenda da semana ---------- */
+let agRows = [];
+const agRowHTML = (r, i) => `<div class="agr" data-i="${i}">
+  <div class="g2"><div><label for="agD${i}" style="margin-top:0">Data <span class="hint">(vazio = toda a semana)</span></label><input id="agD${i}" type="date" value="${CMS.esc(r.date || '')}" data-f="date"></div>
+  <button class="link grey" data-agdel="${i}" style="margin-bottom:12px">Remover</button></div>
+  <label for="agT${i}">Evento</label><input id="agT${i}" type="text" value="${CMS.esc(r.text || '')}" data-f="text" placeholder="ex.: Relatório de emprego dos EUA (outubro)">
+  <label for="agN${i}">Nota (opcional)</label><input id="agN${i}" type="text" value="${CMS.esc(r.note || '')}" data-f="note" placeholder="ex.: Pode mexer com o dólar">
+  <label for="agU${i}">Link oficial (opcional)</label><input id="agU${i}" type="text" inputmode="url" value="${CMS.esc(r.url || '')}" data-f="url" placeholder="https://...">
+  <input type="text" value="${CMS.esc(r.linkText || '')}" data-f="linkText" placeholder="Texto do link (opcional, ex.: Ver no site do BCE)" style="margin-top:6px"></div>`;
+function agRead() { document.querySelectorAll('#agRows .agr').forEach(el => { const r = agRows[+el.dataset.i]; el.querySelectorAll('[data-f]').forEach(inp => r[inp.dataset.f] = inp.value.trim()); }); }
+function agCur() { agRead(); return { updated: today(), items: agRows.filter(r => r.text).map(r => ({ date: r.date || '', text: r.text, note: r.note || '', url: r.url || '', linkText: r.linkText || '' })) }; }
+function agRender() { $('#agRows').innerHTML = agRows.map(agRowHTML).join(''); agPreview(); }
+function agPreview() { const ag = agCur(); $('#agPrev').innerHTML = ag.items.length ? CMS.agendaBlock(ag).replace(/<script[\s\S]*?<\/script>/, '') : '<p class="hint" style="margin:0">Ainda sem eventos.</p>'; }
+async function openAgenda() {
+  show('vAgenda'); busy(true, 'A carregar a agenda…');
+  try { await loadAgenda(); agRows = (agenda.items || []).map(x => ({ ...x })); if (!agRows.length) agRows = [{}]; agRender(); }
+  catch (e) { toast(errMsg(e), 5000); } finally { busy(false); }
+}
+$('#agRows').addEventListener('input', () => agPreview());
+$('#agRows').addEventListener('click', e => { const b = e.target.closest('[data-agdel]'); if (!b) return; agRead(); agRows.splice(+b.dataset.agdel, 1); if (!agRows.length) agRows = [{}]; agRender(); });
+$('#agAdd').onclick = () => { agRead(); agRows.push({}); agRender(); };
+$('#agFill').onclick = () => {
+  const lines = $('#agPaste').value.split(/\n+/).map(l => l.trim()).filter(Boolean), out = [];
+  for (const l of lines) {
+    const p = l.split('|').map(x => x.trim()); if (p.length < 2) continue;
+    let d = p[0]; const m = d.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+    if (m) d = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; else if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) d = '';
+    out.push({ date: d, text: p[1] || '', note: p[2] || '', url: /^https:\/\//i.test(p[3] || '') ? p[3] : '', linkText: p[4] || '' });
+  }
+  if (!out.length) return toast('Não encontrei linhas no formato data | evento | nota | link.', 4000);
+  agRows = out; $('#agPaste').value = ''; agRender(); toast(`${out.length} evento(s) preenchidos. Reveja e publique.`);
+};
+async function agPublish(ag) {
+  busy(true, 'A publicar a agenda…');
+  try {
+    await loadReg(); agenda = ag;
+    const idx = await getFile('index.html'); if (idx == null) throw new Error('index.html não encontrado no repositório.');
+    await commit({ 'cms/agenda.json': JSON.stringify(ag, null, 1), 'index.html': CMS.applyIndex(idx, reg, today(), ag), 'semana.html': CMS.semanaPage(reg, ag) }, 'Painel: agenda da semana');
+    toast('Agenda publicada. O site atualiza em cerca de 1 minuto.', 4000);
+  } catch (e) { toast(errMsg(e), 5000); } finally { busy(false); }
+}
+$('#agPub').onclick = () => {
+  const ag = agCur();
+  if (!ag.items.length) return toast('Acrescente pelo menos um evento.');
+  const bad = agRows.find(r => r.url && !/^https:\/\/[^\s"'<>]+$/i.test(r.url)); if (bad) return toast('O link tem de começar por https://', 4000);
+  agPublish(ag);
+};
+$('#agClear').onclick = () => { if (confirm('Tirar a agenda do site?')) { agRows = [{}]; agRender(); agPublish({ updated: today(), items: [] }); } };
 
 boot();
 </script>
