@@ -12,7 +12,10 @@
    "featured": false,
    "cta": true,
    "min": 4,
-   "status": "pub"
+   "status": "pub",
+   "cover": "auto",
+   "ogimg": "img/capas/guia-irs-xtb.png",
+   "points": []
   },
   {
    "slug": "guia-fifo-acoes-fracionadas",
@@ -26,7 +29,10 @@
    "featured": false,
    "cta": true,
    "min": 3,
-   "status": "pub"
+   "status": "pub",
+   "cover": "auto",
+   "ogimg": "img/capas/guia-fifo-acoes-fracionadas.png",
+   "points": []
   },
   {
    "slug": "guia-bitcoin-direto-ou-etp",
@@ -40,7 +46,10 @@
    "featured": true,
    "cta": true,
    "min": 7,
-   "status": "pub"
+   "status": "pub",
+   "cover": "auto",
+   "ogimg": "img/capas/guia-bitcoin-direto-ou-etp.png",
+   "points": []
   },
   {
    "slug": "acoes-ou-cfds-a-diferenca-que-pode-custar-caro-e-o-que-muda-no-irs",
@@ -54,7 +63,10 @@
    "featured": false,
    "cta": true,
    "min": 4,
-   "status": "pub"
+   "status": "pub",
+   "cover": "auto",
+   "ogimg": "img/capas/acoes-ou-cfds-a-diferenca-que-pode-custar-caro-e-o-que-muda-no-irs.png",
+   "points": []
   },
   {
    "slug": "semana-2026-10-29",
@@ -68,7 +80,14 @@
    "featured": false,
    "cta": true,
    "min": 3,
-   "status": "pub"
+   "status": "pub",
+   "cover": "auto",
+   "ogimg": "img/capas/semana-2026-10-29.png",
+   "points": [
+    "BCE mantém os juros, mas a subida foi discutida",
+    "Lagarde vai deixar o BCE em fevereiro",
+    "Fed também em pausa, com a porta aberta a subidas"
+   ]
   },
   {
    "slug": "xtb-no-irs-como-completar-o-anexo-g-pre-preenchido-e-as-acoes-fraciona",
@@ -82,7 +101,10 @@
    "featured": false,
    "cta": true,
    "min": 4,
-   "status": "pub"
+   "status": "pub",
+   "cover": "auto",
+   "ogimg": "img/capas/xtb-no-irs-como-completar-o-anexo-g-pre-preenchido-e-as-acoes-fraciona.png",
+   "points": []
   }
  ]
 }
