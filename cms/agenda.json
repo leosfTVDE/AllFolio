@@ -1,0 +1,40 @@
+{
+ "updated": "2026-11-01",
+ "items": [
+  {
+   "date": "2026-11-02",
+   "text": "Resultados da Apple",
+   "note": "Pesam no S&P 500 e nos ETF do mercado mundial",
+   "url": "https://investor.apple.com/",
+   "linkText": "Ver na página de investidores da Apple"
+  },
+  {
+   "date": "2026-11-03",
+   "text": "Eleições intercalares nos EUA",
+   "note": "Podem mexer com o dólar e as ações americanas",
+   "url": "",
+   "linkText": ""
+  },
+  {
+   "date": "2026-11-05",
+   "text": "Banco de Inglaterra decide os juros",
+   "note": "Taxa atual: 3,75%",
+   "url": "https://www.bankofengland.co.uk/monetary-policy",
+   "linkText": "Ver no site do Banco de Inglaterra"
+  },
+  {
+   "date": "2026-11-06",
+   "text": "Relatório de emprego dos EUA (outubro)",
+   "note": "Pode influenciar a próxima decisão da Fed",
+   "url": "https://www.bls.gov/news.release/empsit.toc.htm",
+   "linkText": "Ver no site oficial (BLS)"
+  },
+  {
+   "date": "",
+   "text": "Orçamento de 2027 na especialidade",
+   "note": "Votação final a 24 de novembro",
+   "url": "",
+   "linkText": ""
+  }
+ ]
+}
