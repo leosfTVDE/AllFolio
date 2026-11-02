@@ -1,1 +1,5 @@
-{"waitlist": false, "tool": false}
+{
+ "waitlist": true,
+ "tool": false,
+ "updated": "2026-11-02"
+}
