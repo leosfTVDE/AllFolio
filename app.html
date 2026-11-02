@@ -741,8 +741,8 @@ function portTotals(p) {
 }
 function updatePortBtn() {
   const b = $('#portBtn'); if (!b) return;
-  const many = (S.ports || []).length > 1; b.classList.toggle('hidden', !many);
-  if (!many) return;
+  const has = (S.ports || []).length > 0; b.classList.toggle('hidden', !has);
+  if (!has) return;
   const p = curPort(), col = isAll() ? '#0A2A66' : p?.color || '#1D4ED8';
   b.innerHTML = `<span class="inline-block w-2 h-2 rounded-full mr-1 align-middle" style="background:${col}"></span>${esc(isAll() ? 'Todas' : p?.name || '')} ▾`;
 }
@@ -1114,7 +1114,7 @@ function go(tab, isBack = false) {
 }
 function render() {
   const bar = $('#demoBar'); if (bar) bar.classList.toggle('hidden', !S.demo);
-  updatePortBtn(); const nt = $('#netTxt'); if (nt) nt.classList.toggle('hidden', (S.ports || []).length > 1);
+  updatePortBtn(); const nt = $('#netTxt'); if (nt) nt.classList.toggle('hidden', (S.ports || []).length > 0);
   ({ home: renderHome, portfolio: renderPortfolio, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs, goals: renderGoals, more: renderMore, settings: renderSettings })[UI.tab]();
 }
 
@@ -1289,7 +1289,7 @@ function renderHome() {
   const tile = (attrs, label, value, cls = '') => `<button ${attrs} class="text-left rounded-2xl bg-white border border-brand-100 p-3"><div class="text-xs font-semibold text-slate-500">${label}</div><div class="num text-lg font-extrabold ${cls}">${value}</div></button>`;
 
   const per = homePer(), hv = pos.length ? homeVariation(per) : null, hbv = hv?.ok && homeBenchOn() ? benchVariation(per, homeBenchId(), hv.grid) : null;
-  const pLabel = (S.ports || []).length > 1 ? ' · ' + esc(isAll() ? 'Todas as carteiras' : curPort()?.name || '') : '';
+  const pLabel = (S.ports || []).length ? ' · ' + esc(isAll() ? 'Todas as carteiras' : curPort()?.name || '') : '';
   const compact = !!S.settings.homeCompact && !empty;
   const spark = pts => { if (!pts || pts.length < 2) return ''; const ys = pts.map(p => p[1] ?? p), lo = Math.min(...ys), hi = Math.max(...ys), sp = (hi - lo) || 1;
     return `<svg width="84" height="34" viewBox="0 0 84 34" aria-hidden="true"><polyline fill="none" stroke="${ys[ys.length - 1] >= ys[0] ? '#A7F3D0' : '#FDA4AF'}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" points="${ys.map((v, i) => `${(i / (ys.length - 1) * 82 + 1).toFixed(1)},${(31 - (v - lo) / sp * 28).toFixed(1)}`).join(' ')}"/></svg>`; };
