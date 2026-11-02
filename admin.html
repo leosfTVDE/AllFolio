@@ -53,7 +53,7 @@
   #pv{position:fixed;inset:0;background:var(--bg);z-index:12;display:none;flex-direction:column}
   #pv iframe{flex:1;border:0;width:100%;background:#fff}
   .ok{width:58px;height:58px;border-radius:50%;background:var(--greenbg);color:var(--green);display:grid;place-items:center;font-size:28px;margin:6px auto 10px}
-  .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:12px}
+  .nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:12px}.nav button{font-size:12.5px!important;padding:0 4px}
   .nav button{min-height:40px;font-size:14px}.nav button.on{background:var(--soft);color:var(--blue);border-color:var(--blue)}
   .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
@@ -72,6 +72,10 @@
   .agprev .ag-w{margin:0}.agprev .ag-l{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin:0 0 8px}
   .agprev .ag-r{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line)}.agprev .ag-d{width:48px;text-align:center;background:var(--soft);border-radius:10px;padding:3px 0;line-height:1.15}.agprev .ag-d span{font-size:10px;text-transform:uppercase;color:var(--muted)}.agprev .ag-d b{display:block}
   .agprev .ag-e b{display:block}.agprev .ag-e small{display:block;color:var(--muted)}.agprev .ag-e a{font-size:13px}.agprev .ag-f{font-size:12px;color:var(--muted)}
+  .swr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}.swr:first-of-type{border-top:none}.swr small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+  .swt{position:relative;flex:none;width:52px;height:30px}.swt input{opacity:0;width:0;height:0;position:absolute}.swt span{position:absolute;inset:0;border-radius:99px;background:#CBD5E1;transition:.15s;cursor:pointer}
+  .swt span:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.15s}.swt input:checked+span{background:var(--green)}.swt input:checked+span:before{left:25px}
+  .wlrow{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}.wlrow small{color:var(--muted)}
   .hidden{display:none!important}
 </style>
 </head>
@@ -79,7 +83,7 @@
 <header><h1>Painel · AllFolio.pt</h1><span id="hst" class="st"></span></header>
 <main>
 <input type="file" id="eImgFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
-<div id="nav" class="nav hidden"><button data-nav="list" class="on">Artigos</button><button data-nav="agenda">📅 Agenda</button><button data-nav="stats">📊 Visitas</button></div>
+<div id="nav" class="nav hidden"><button data-nav="list" class="on">Artigos</button><button data-nav="agenda">📅 Agenda</button><button data-nav="rel">📄 Relatório</button><button data-nav="stats">📊 Visitas</button></div>
 
 <section id="vSetup" class="hidden">
   <div class="card">
@@ -119,6 +123,16 @@
   <div class="card agprev" style="margin-top:12px"><div id="agPrev"></div></div>
   <button id="agPub" class="primary full" style="margin-top:12px">Publicar a agenda</button>
   <button id="agClear" class="link grey" style="margin-top:8px">Limpar a agenda (tirar do site)</button>
+</section>
+<section id="vRel" class="hidden">
+  <p class="hint" style="font-size:14px;margin-top:0">A ferramenta que transforma o relatório anual da XTB no guia para o Portal. Teste-a aqui à vontade; o site só a mostra quando ligar o interruptor.</p>
+  <div class="card">
+    <div class="swr"><div><b>Lista de espera no site</b><small id="rWlTxt"></small></div><label class="swt"><input type="checkbox" id="rWl"><span></span></label></div>
+    <div class="swr"><div><b>Ferramenta do relatório no site</b><small id="rToolTxt"></small></div><label class="swt"><input type="checkbox" id="rTool"><span></span></label></div>
+    <button id="rSave" class="primary full" style="margin-top:8px">Guardar e publicar</button>
+  </div>
+  <div class="card"><h3>Área de testes (só para si)</h3><p class="hint" style="font-size:14px">Veja exatamente o que o cliente vai ver: o resumo, o guia completo e o PDF/Excel para a contabilista.</p><div id="rTest"></div></div>
+  <div class="card"><div class="srow" style="margin-top:0;align-items:center"><h3 style="margin:0">Lista de espera</h3><button class="link" id="rExport">Exportar (Excel)</button></div><div id="rWlBox"><p class="hint">A carregar…</p></div></div>
 </section>
 <section id="vStats" class="hidden">
   <p class="hint" style="font-size:14px;margin-top:0">Visitas ao site, contadas sem cookies e sem dados pessoais (só totais por dia). Complementa o Search Console, que mostra as pesquisas do Google. Conta a partir do dia em que o contador foi publicado.</p>
@@ -193,7 +207,9 @@
 <div id="busy"><div id="busyT">A publicar…</div></div>
 <div id="toast" role="status"></div>
 
-<script src="cms.js?v=20261102"></script>
+<script src="cms.js?v=20261103"></script>
+<script src="logic.js?v=20261103"></script>
+<script src="irs-tool.js?v=20261103"></script>
 <script src="cms-seed.js"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -204,8 +220,8 @@ const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOff
 
 function toast(t, ms = 3200) { const el = $('#toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = 'none', ms); }
 function busy(on, t) { $('#busy').style.display = on ? 'grid' : 'none'; if (t) $('#busyT').textContent = t; }
-function show(v) { ['vSetup', 'vList', 'vEdit', 'vDone', 'vStats', 'vAgenda'].forEach(id => $('#' + id).classList.toggle('hidden', id !== v)); $('#nav').classList.toggle('hidden', !['vList', 'vStats', 'vAgenda'].includes(v));
-  document.querySelectorAll('[data-nav]').forEach(x => x.classList.toggle('on', x.dataset.nav === (v === 'vStats' ? 'stats' : v === 'vAgenda' ? 'agenda' : 'list'))); window.scrollTo(0, 0); }
+function show(v) { ['vSetup', 'vList', 'vEdit', 'vDone', 'vStats', 'vAgenda', 'vRel'].forEach(id => $('#' + id).classList.toggle('hidden', id !== v)); $('#nav').classList.toggle('hidden', !['vList', 'vStats', 'vAgenda', 'vRel'].includes(v));
+  document.querySelectorAll('[data-nav]').forEach(x => x.classList.toggle('on', x.dataset.nav === (v === 'vStats' ? 'stats' : v === 'vAgenda' ? 'agenda' : v === 'vRel' ? 'rel' : 'list'))); window.scrollTo(0, 0); }
 
 /* ---------- GitHub ---------- */
 const b64enc = s => { const b = new TextEncoder().encode(s); let x = ''; for (let i = 0; i < b.length; i += 0x8000) x += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(x); };
@@ -508,8 +524,8 @@ function cleanBody(h) { return sanitize(h).replace(/<p>(\s|<br>)*<\/p>/g, '').tr
 
 /* ---------- Arranque ---------- */
 async function boot() {
-  if (typeof CMS === 'undefined' || typeof CMS.pointsOf !== 'function' || typeof CMS.semanaPage !== 'function' || typeof CMS.agendaBlock !== 'function') {
-    document.querySelector('main').innerHTML = '<div class="card"><h2 style="margin:0 0 8px;font-size:19px">Falta atualizar o cms.js</h2><p class="hint" style="font-size:15px">O painel é novo, mas o ficheiro <b>cms.js</b> que o site está a servir ainda é o antigo. Confirme que enviou o cms.js para o GitHub, espere 2 minutos e recarregue esta página.</p></div>';
+  if (typeof CMS === 'undefined' || typeof CMS.pointsOf !== 'function' || typeof CMS.semanaPage !== 'function' || typeof CMS.agendaBlock !== 'function' || typeof IRSTool === 'undefined') {
+    document.querySelector('main').innerHTML = '<div class="card"><h2 style="margin:0 0 8px;font-size:19px">Faltam ficheiros novos do painel</h2><p class="hint" style="font-size:15px">O painel é novo, mas algum dos ficheiros <b>cms.js</b>, <b>logic.js</b> ou <b>irs-tool.js</b> ainda não está no site (ou é a versão antiga). Confirme que os enviou para o GitHub, espere 2 minutos e recarregue esta página.</p></div>';
     return;
   }
   if (!cfg?.token) {
@@ -556,7 +572,7 @@ $('#bRepub').onclick = async () => {
 /* ---------- Visitas ---------- */
 const FBV = '10.12.2'; let FB = null, sDocs = [], sPer = '7';
 if (localStorage.getItem('af_notrack') === null) localStorage.setItem('af_notrack', '1');
-$('#nav').onclick = e => { const b = e.target.closest('[data-nav]'); if (!b) return; if (b.dataset.nav === 'stats') openStats(); else if (b.dataset.nav === 'agenda') openAgenda(); else { show('vList'); renderList(); } };
+$('#nav').onclick = e => { const b = e.target.closest('[data-nav]'); if (!b) return; if (b.dataset.nav === 'stats') openStats(); else if (b.dataset.nav === 'agenda') openAgenda(); else if (b.dataset.nav === 'rel') openRel(); else { show('vList'); renderList(); } };
 const loadScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Não foi possível ligar ao Firebase. Verifique a internet.')); document.head.appendChild(s); });
 async function fbInit() {
   if (FB) return FB;
@@ -596,6 +612,17 @@ service cloud.firestore {
       allow create, update: if day.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}$')
         && request.resource.data.keys().hasOnly(['v', 'pv', 'p', 's', 'd', 'l', 'c', 'f']);
       allow delete: if false;
+    }
+    // Lista de espera do relatório: qualquer visitante se inscreve (só email, corretora e consentimento); só o dono lê e apaga.
+    match /waitlist/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['email', 'broker', 'consent', 'src', 'at'])
+        && request.resource.data.email is string && request.resource.data.email.size() <= 120
+        && request.resource.data.email.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$')
+        && request.resource.data.consent == true
+        && request.resource.data.broker is string && request.resource.data.broker.size() <= 30
+        && request.resource.data.at == request.time;
+      allow read, delete: if request.auth != null && request.auth.uid == "${uid}";
+      allow update: if false;
     }
     match /{document=**} {
       allow read, write: if false;
@@ -702,6 +729,55 @@ $('#agPub').onclick = () => {
   agPublish(ag);
 };
 $('#agClear').onclick = () => { if (confirm('Tirar a agenda do site?')) { agRows = [{}]; agRender(); agPublish({ updated: today(), items: [] }); } };
+
+/* ---------- Relatório IRS: interruptores, área de testes e lista de espera ---------- */
+let relMounted = false, wlRows = [];
+const relTxt = () => {
+  $('#rWlTxt').textContent = $('#rWl').checked ? ($('#rTool').checked ? 'Fica escondida enquanto a ferramenta estiver ligada' : 'Aparece na página inicial, nos guias de IRS e em /irs-xtb') : 'Desligada: nada aparece no site';
+  $('#rToolTxt').textContent = $('#rTool').checked ? 'Pública em /irs-xtb (por agora só o resumo grátis)' : 'Desligada: só funciona aqui na área de testes';
+};
+async function openRel() {
+  show('vRel'); busy(true, 'A carregar…');
+  try {
+    const t = await getFile('config.json'); let c = {}; try { c = t ? JSON.parse(t) : {}; } catch (e) {}
+    $('#rWl').checked = !!c.waitlist; $('#rTool').checked = !!c.tool; relTxt();
+    if (!relMounted) { IRSTool.mount($('#rTest'), { full: true, exports: true, readText: window.__irsReadText }); relMounted = true; }
+  } catch (e) { toast(errMsg(e), 5000); } finally { busy(false); }
+  loadWaitlist();
+}
+$('#rWl').onchange = relTxt; $('#rTool').onchange = relTxt;
+$('#rSave').onclick = async () => {
+  busy(true, 'A publicar…');
+  try { await commit({ 'config.json': JSON.stringify({ waitlist: $('#rWl').checked, tool: $('#rTool').checked, updated: today() }, null, 1) }, 'Painel: interruptores do relatório'); toast('Guardado. O site atualiza em cerca de 1 minuto.', 4000); }
+  catch (e) { toast(errMsg(e), 5000); } finally { busy(false); }
+};
+async function loadWaitlist() {
+  const box = $('#rWlBox');
+  try { await fbInit(); } catch (e) { box.innerHTML = `<p class="hint">${CMS.esc(e.message)}</p>`; return; }
+  if (!FB.auth.currentUser) { box.innerHTML = '<p class="hint">Para ver os inscritos, entre primeiro com a sua conta no separador 📊 Visitas.</p><button class="full" data-nav-go="stats">Entrar</button>'; box.querySelector('[data-nav-go]').onclick = () => openStats(); return; }
+  try {
+    const q = await FB.db.collection('waitlist').get();
+    wlRows = q.docs.map(d => ({ id: d.id, ...d.data() })).map(r => ({ ...r, when: r.at && r.at.toDate ? r.at.toDate() : null })).sort((x, y) => (y.when || 0) - (x.when || 0));
+    const wk = wlRows.filter(r => r.when && Date.now() - r.when < 7 * 864e5).length, br = {};
+    wlRows.forEach(r => { const k = r.broker || 'Não indicou'; br[k] = (br[k] || 0) + 1; });
+    const brs = Object.entries(br).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${CMS.esc(k)} ${Math.round(v / wlRows.length * 100)}%`).join(' · ');
+    box.innerHTML = `<div class="kpis" style="margin:8px 0"><div class="kpi"><span>Inscritos</span><b>${wlRows.length}</b></div><div class="kpi"><span>Últimos 7 dias</span><b>${wk}</b></div></div>
+      ${wlRows.length ? `<p class="hint" style="margin:0 0 6px">Corretoras: ${brs}</p>` : '<p class="hint">Ainda sem inscritos.</p>'}
+      ${wlRows.map((r, i) => `<div class="wlrow"><span><b>${CMS.esc(r.email)}</b><br><small>${CMS.esc(r.broker || '—')} · ${r.when ? r.when.toLocaleDateString('pt-PT') : ''}</small></span><button class="link grey" data-wldel="${i}">Apagar</button></div>`).join('')}`;
+    box.querySelectorAll('[data-wldel]').forEach(b => b.onclick = async () => { const r = wlRows[+b.dataset.wldel]; if (!confirm(`Apagar ${r.email} da lista?`)) return; try { await FB.db.collection('waitlist').doc(r.id).delete(); toast('Apagado.'); loadWaitlist(); } catch (e) { toast('Não foi possível apagar: ' + (e.code || e.message), 4000); } });
+  } catch (e) {
+    if (e.code === 'permission-denied') {
+      const r = rulesText(FB.auth.currentUser.uid);
+      box.innerHTML = `<p class="hint" style="font-size:14px"><b>Falta um passo (só uma vez):</b> as regras da base de dados ainda não incluem a lista de espera. Copie as regras abaixo e cole-as no Firebase (Firestore Database → Regras → apagar tudo, colar, Publicar).</p><pre class="rules" id="rRules"></pre><button id="rCopy" class="primary full">Copiar regras</button>`;
+      $('#rRules').textContent = r; $('#rCopy').onclick = async () => { try { await navigator.clipboard.writeText(r); toast('Regras copiadas.'); } catch (er) { toast('Selecione o texto e copie à mão.'); } };
+    } else box.innerHTML = `<p class="hint">Não foi possível carregar: ${CMS.esc(e.code || e.message)}</p>`;
+  }
+}
+$('#rExport').onclick = () => {
+  if (!wlRows.length) return toast('Ainda não há inscritos para exportar.');
+  const csv = '\ufeffemail;corretora;data\n' + wlRows.map(r => [r.email, r.broker || '', r.when ? r.when.toISOString().slice(0, 10) : ''].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = `lista-de-espera-${today()}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 1000);
+};
 
 boot();
 </script>
