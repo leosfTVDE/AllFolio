@@ -106,7 +106,7 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
     <div class="flex-1 min-w-0">
       <div class="font-extrabold tracking-tight leading-none text-[17px]">AllFolio<span class="font-semibold text-slate-500">.pt</span></div>
       <div class="flex items-center gap-1.5 text-xs text-slate-500 mt-1 whitespace-nowrap overflow-hidden">
-        <span id="netDot" class="w-2 h-2 rounded-full bg-gain shrink-0"></span><span id="netTxt">Online</span><button id="fxBtn" class="hidden font-bold text-brand-700 num" aria-label="Ver câmbio do euro"></button><span id="pwaTxt"></span>
+        <span id="netDot" class="w-2 h-2 rounded-full bg-gain shrink-0"></span><button id="portBtn" data-ports class="hidden shrink-0 max-w-[120px] truncate font-bold text-ink bg-brand-50 rounded-full px-2 py-0.5" aria-label="Escolher carteira"></button><span id="netTxt">Online</span><button id="fxBtn" class="hidden font-bold text-brand-700 num" aria-label="Ver câmbio do euro"></button><span id="pwaTxt"></span>
       </div>
     </div>
     <button id="btnInstall" class="hidden h-9 px-3 rounded-full border border-brand-200 text-brand-700 text-sm font-semibold">Instalar</button>
@@ -248,25 +248,29 @@ const TF = (() => {
       a.type === b.type ? (a.created || 0) - (b.created || 0) : (a.type === 'buy' ? -1 : 1));
     const lots = {}, realized = [], issues = [];
     for (const t of order) {
-      const k = t.ticker; (lots[k] ||= []);
+      const k = t.ticker, kk = t.port ? t.port + '\u0001' + k : k; (lots[kk] ||= []);
       const q = r8(t.qty); if (!(q > 0)) continue;
       if (t.type === 'buy') {
-        lots[k].push({ txId: t.id, date: t.date, qty: q, qty0: q, unit: t.price, feeUnit: (t.fees || 0) / q, broker: t.broker });
+        lots[kk].push({ txId: t.id, date: t.date, qty: q, qty0: q, unit: t.price, feeUnit: (t.fees || 0) / q, broker: t.broker, port: t.port });
       } else {
         let rem = q; const su = t.price, sf = (t.fees || 0) / q;
-        while (rem > EPS && lots[k].length) {
-          const lot = lots[k][0], m = Math.min(lot.qty, rem);
+        while (rem > EPS && lots[kk].length) {
+          const lot = lots[kk][0], m = Math.min(lot.qty, rem);
           realized.push({ saleId: t.id, buyId: lot.txId, ticker: k, sellDate: t.date, buyDate: lot.date, qty: r8(m),
             realizacao: m * su, aquisicao: m * lot.unit, despesas: m * (lot.feeUnit + sf),
-            broker: t.broker || lot.broker, days: daysBetween(lot.date, t.date) });
+            broker: t.broker || lot.broker, days: daysBetween(lot.date, t.date), port: t.port });
           lot.qty = r8(lot.qty - m); rem = r8(rem - m);
-          if (lot.qty <= EPS) lots[k].shift();
+          if (lot.qty <= EPS) lots[kk].shift();
         }
         if (rem > EPS) issues.push({ ticker: k, date: t.date, qty: rem, saleId: t.id });
       }
     }
     realized.forEach(r => r.ganho = r.realizacao - r.aquisicao - r.despesas);
-    return { lots, realized, issues };
+    // Com várias carteiras, o FIFO corre dentro de cada uma; as posições juntam-se por ativo
+    const out = {};
+    for (const [kk, ls] of Object.entries(lots)) { const k = kk.includes('\u0001') ? kk.split('\u0001')[1] : kk; (out[k] ||= []).push(...ls); }
+    Object.values(out).forEach(ls => ls.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    return { lots: out, realized, issues };
   }
 
   function positions(lots, assets) {
@@ -682,9 +686,115 @@ const KEY = 'taxfolio.pt.v1';
 const S = { tx: [], div: [], assets: {}, settings: { brokerCp: {}, cdt: {} } };
 const UI = { tab: 'home', ptab: 'assets', hfilter: 'all', q: '', year: null, broker: 'AUTO', imp: null, impCur: 'EUR' };
 
+/* ---------- Carteiras (até 3) ----------
+   A carteira ativa vive em S.tx / S.div / S.cash / S.divDone / S.settings.goals, como antes.
+   As outras guardam os seus dados em S.ports[i].data. Em "Todas", S.* é uma junção só de leitura. */
+const PORT_COLORS = ['#E8352A', '#0F9D6E', '#F2A93B'], PORT_MAX = 3;
+const isAll = () => S.portActive === 'all';
+const curPort = () => (S.ports || []).find(p => p.id === S.portActive);
+const portName = id => (S.ports || []).find(p => p.id === id)?.name || '';
+function portsInit() {
+  if (!Array.isArray(S.ports) || !S.ports.length) {
+    const cnt = {}; (S.tx || []).forEach(t => { if (t.broker) cnt[t.broker] = (cnt[t.broker] || 0) + 1; });
+    const top = Object.entries(cnt).sort((x, y) => y[1] - x[1])[0]?.[0];
+    S.ports = [{ id: 'p1', name: top ? (TF.BROKERS[top]?.name || top) : 'Principal', color: PORT_COLORS[0], owner: 'A' }]; S.portActive = 'p1';
+  }
+  if (!S.portActive || (S.portActive !== 'all' && !curPort()) || (S.portActive === 'all' && S.ports.length < 2)) S.portActive = S.ports[0].id;
+  if (!S.portLast || !S.ports.some(p => p.id === S.portLast)) S.portLast = isAll() ? S.ports[0].id : S.portActive;
+}
+const portSnap = () => ({ tx: S.tx || [], div: S.div || [], cash: S.cash || [], divDone: S.divDone || {}, goals: S.settings.goals });
+function flushActive() { if (isAll()) return; const p = curPort(); if (p) p.data = portSnap(); }
+function loadActive() {
+  if (isAll()) {
+    const tag = (arr, p) => (arr || []).map(x => ({ ...x, port: p.id }));
+    S.tx = S.ports.flatMap(p => tag(p.data?.tx, p)); S.div = S.ports.flatMap(p => tag(p.data?.div, p)); S.cash = S.ports.flatMap(p => tag(p.data?.cash, p));
+    S.divDone = Object.assign({}, ...S.ports.map(p => p.data?.divDone || {}));
+    S.settings.goals = { port: { on: false, target: 0, month: '' }, monthly: { on: false, amount: 0 }, alloc: { on: false, mode: 'kind', targets: { etf: 70, acao: 30 } }, div: { on: false, amount: 0 }, readonly: true };
+  } else {
+    const d = curPort()?.data;
+    if (d) { S.tx = d.tx || []; S.div = d.div || []; S.cash = d.cash || []; S.divDone = d.divDone || {}; S.settings.goals = d.goals; if (!S.settings.goals) delete S.settings.goals; }
+  }
+}
+function switchPort(id) {
+  if (id === S.portActive) return;
+  flushActive(); S.portActive = id; if (id !== 'all') S.portLast = id;
+  loadActive(); UI.hm = null; UI.apAmt = ''; if (typeof homeLoadAt !== 'undefined') homeLoadAt = 0;
+  save(); closeModal(); render(); updatePortBtn();
+}
+function needPort() {
+  if (!isAll()) return false;
+  toast('Escolha uma carteira para registar ou alterar dados.'); setTimeout(openPorts, 300); return true;
+}
+// IRS: junta todas as carteiras do mesmo titular (o IRS é por pessoa), com o FIFO dentro de cada carteira
+function irsOwner() { return isAll() ? 'A' : (curPort()?.owner || 'A'); }
+function irsState() {
+  if ((S.ports || []).length < 2) return S;
+  flushActive();
+  const ps = S.ports.filter(p => (p.owner || 'A') === irsOwner()), tag = (arr, p) => (arr || []).map(x => ({ ...x, port: p.id }));
+  return { ...S, tx: ps.flatMap(p => tag(p.data?.tx, p)), div: ps.flatMap(p => tag(p.data?.div, p)) };
+}
+const irsPorts = () => (S.ports || []).filter(p => (p.owner || 'A') === irsOwner());
+function portTotals(p) {
+  const d = (!isAll() && p.id === S.portActive) ? portSnap() : (p.data || {});
+  try { const pos = TF.positions(TF.fifo(d.tx || []).lots, S.assets), cash = (d.cash || []).reduce((s, c) => s + (c.type === 'wd' ? -1 : 1) * (Number(c.amount) || 0), 0);
+    return { value: pos.reduce((s, x) => s + (x.value ?? x.cost), 0) + Math.max(0, cash), n: pos.length }; } catch (e) { return { value: 0, n: 0 }; }
+}
+function updatePortBtn() {
+  const b = $('#portBtn'); if (!b) return;
+  const many = (S.ports || []).length > 1; b.classList.toggle('hidden', !many);
+  if (!many) return;
+  const p = curPort(), col = isAll() ? '#0A2A66' : p?.color || '#1D4ED8';
+  b.innerHTML = `<span class="inline-block w-2 h-2 rounded-full mr-1 align-middle" style="background:${col}"></span>${esc(isAll() ? 'Todas' : p?.name || '')} ▾`;
+}
+function openPorts() {
+  flushActive();
+  const many = S.ports.length > 1;
+  const row = (id, name, color, sub, val) => `<button data-psel="${id}" class="w-full text-left flex items-center gap-3 px-3 py-3 rounded-2xl ${S.portActive === id ? 'bg-brand-50' : ''}">
+      <span class="w-3 h-3 rounded-full shrink-0" style="background:${color}"></span><span class="flex-1 min-w-0"><b class="block truncate">${esc(name)}</b><span class="text-xs text-slate-500">${sub}</span></span>
+      <span class="num text-sm font-bold">${val}</span>${S.portActive === id ? '<span class="text-brand-600 font-bold">✓</span>' : ''}</button>`;
+  const tot = S.ports.map(p => portTotals(p));
+  openModal(`${modalHead('Carteiras')}
+    <div class="space-y-1">${S.ports.map((p, i) => row(p.id, p.name, p.color, `${tot[i].n} ativo(s)${(p.owner || 'A') !== 'A' ? ' · outro titular' : ''}`, fmtEUR(tot[i].value))).join('')}
+    ${many ? row('all', 'Todas as carteiras', '#0A2A66', 'só para consultar', fmtEUR(tot.reduce((s, x) => s + x.value, 0))) : ''}</div>
+    <div class="grid grid-cols-2 gap-2 mt-4">
+      <button data-pnew class="h-11 rounded-2xl ${S.ports.length >= PORT_MAX ? 'bg-slate-100 text-slate-400' : 'bg-brand-600 text-white'} font-bold text-sm" ${S.ports.length >= PORT_MAX ? 'disabled' : ''}>+ Nova carteira</button>
+      <button data-pedit="${isAll() ? S.portLast : S.portActive}" class="h-11 rounded-2xl bg-brand-50 text-brand-700 font-bold text-sm">Editar ${esc(isAll() ? portName(S.portLast) : curPort()?.name || '')}</button></div>
+    <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">Até ${PORT_MAX} carteiras, por exemplo uma por corretora ou por país. Cada uma tem as suas operações, caixa e metas. O IRS junta sempre as carteiras do mesmo titular.</p>`);
+}
+function openPortEdit(id) {
+  const isNew = !id, p = isNew ? { name: '', color: PORT_COLORS.find(c => !S.ports.some(x => x.color === c)) || PORT_COLORS[0], owner: 'A' } : S.ports.find(x => x.id === id);
+  if (!p) return;
+  openModal(`${modalHead(isNew ? 'Nova carteira' : 'Editar carteira')}
+    <label class="lbl" for="pName">Nome</label><input id="pName" class="field" maxlength="24" value="${esc(p.name)}" placeholder="ex.: Trading 212, Brasil, Reforma">
+    <label class="lbl mt-3">Cor</label><div class="flex gap-2" id="pCols">${PORT_COLORS.map(c => `<button type="button" data-pc="${c}" class="w-10 h-10 rounded-full border-4 ${p.color === c ? 'border-ink' : 'border-white'}" style="background:${c}" aria-label="Cor"></button>`).join('')}</div>
+    <label class="flex items-center gap-2 mt-4 text-sm"><input type="checkbox" id="pOwner" ${(p.owner || 'A') !== 'A' ? 'checked' : ''}> É de outro titular (ex.: cônjuge): fica num relatório de IRS à parte</label>
+    <button id="pSave" class="w-full mt-4 h-12 rounded-2xl bg-brand-600 text-white font-bold">${isNew ? 'Criar e abrir' : 'Guardar'}</button>
+    ${!isNew && S.ports.length > 1 ? '<button id="pDel" class="w-full mt-2 h-10 rounded-2xl text-loss text-sm font-bold">Apagar esta carteira</button>' : ''}`);
+  let color = p.color;
+  $('#pCols').onclick = e => { const b = e.target.closest('[data-pc]'); if (!b) return; color = b.dataset.pc; document.querySelectorAll('[data-pc]').forEach(x => x.classList.toggle('border-ink', x === b)); document.querySelectorAll('[data-pc]').forEach(x => x.classList.toggle('border-white', x !== b)); };
+  $('#pSave').onclick = () => {
+    const name = $('#pName').value.trim(); if (!name) return toast('Dê um nome à carteira.');
+    const owner = $('#pOwner').checked ? 'B' : 'A';
+    if (isNew) {
+      if (S.ports.length >= PORT_MAX) return toast(`Máximo de ${PORT_MAX} carteiras.`);
+      const nid = 'p' + Date.now().toString(36); flushActive();
+      S.ports.push({ id: nid, name, color, owner, data: { tx: [], div: [], cash: [], divDone: {}, goals: undefined } });
+      save(); switchPort(nid); toast(`Carteira "${name}" criada.`);
+    } else { Object.assign(p, { name, color, owner }); save(); closeModal(); render(); updatePortBtn(); }
+  };
+  const del = $('#pDel'); if (del) del.onclick = () => {
+    const t = portTotals(p);
+    if (!confirm(`Apagar a carteira "${p.name}"${t.n ? ` e as suas ${t.n} posições e operações` : ''}? Isto não pode ser desfeito.`)) return;
+    flushActive(); S.ports = S.ports.filter(x => x.id !== p.id);
+    if (S.portActive === p.id || isAll()) { S.portActive = S.ports[0].id; S.portLast = S.portActive; const d = S.ports[0].data || {}; S.tx = d.tx || []; S.div = d.div || []; S.cash = d.cash || []; S.divDone = d.divDone || {}; S.settings.goals = d.goals; if (!S.settings.goals) delete S.settings.goals; }
+    save(); closeModal(); render(); updatePortBtn(); toast('Carteira apagada.');
+  };
+}
+
 function load() {
   try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) Object.assign(S, s); } catch (e) {}
   S.settings ||= {}; S.settings.brokerCp ||= {}; S.settings.cdt ||= {};
+  portsInit(); if (isAll()) loadActive();
   try { UI.tab = localStorage.getItem(KEY + '.tab') || 'home'; } catch (e) {}
 }
 function saveLocal() {
@@ -989,6 +1099,7 @@ function openQuoteSettings(first = false) {
 
 const NAV_TABS = ['home', 'portfolio', 'tax', 'more'];
 function go(tab, isBack = false) {
+  if (tab === 'import' && needPort()) return;
   if (!isBack && UI.tab && UI.tab !== tab) { (UI.hist ||= []).push(UI.tab); if (UI.hist.length > 20) UI.hist.shift(); }
   if (NAV_TABS.includes(tab)) UI.hist = [];
   UI.tab = tab; try { localStorage.setItem(KEY + '.tab', tab); } catch (e) {}
@@ -1003,6 +1114,7 @@ function go(tab, isBack = false) {
 }
 function render() {
   const bar = $('#demoBar'); if (bar) bar.classList.toggle('hidden', !S.demo);
+  updatePortBtn(); const nt = $('#netTxt'); if (nt) nt.classList.toggle('hidden', (S.ports || []).length > 1);
   ({ home: renderHome, portfolio: renderPortfolio, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs, goals: renderGoals, more: renderMore, settings: renderSettings })[UI.tab]();
 }
 
@@ -1166,7 +1278,7 @@ function renderHome() {
   const csH = cashState(), cashV = csH.saldo, hasCash = (S.cash || []).length > 0 || Math.abs(cashV) > 0.004;
   const grand = total + cashV, invPct = grand > 0 ? Math.max(0, Math.min(100, total / grand * 100)) : 0;
   const lastAt = Math.max(0, ...priced.map(p => S.assets[p.ticker]?.priceSrc === 'auto' ? (S.assets[p.ticker].priceTime || S.assets[p.ticker].priceAt || 0) : 0));
-  const yr = defaultYear(), rep = TF.yearReport(S, yr);
+  const yr = defaultYear(), rep = TF.yearReport(irsState(), yr);
   const divYear = S.div.filter(d => d.date.startsWith(yr)).reduce((s, d) => s + d.gross, 0);
   const empty = !S.tx.length && !S.div.length;
   const qa = (icon, label, attrs, primary = false) => `<button ${attrs} class="flex flex-col items-center gap-1.5 text-xs font-semibold">
@@ -1177,10 +1289,23 @@ function renderHome() {
   const tile = (attrs, label, value, cls = '') => `<button ${attrs} class="text-left rounded-2xl bg-white border border-brand-100 p-3"><div class="text-xs font-semibold text-slate-500">${label}</div><div class="num text-lg font-extrabold ${cls}">${value}</div></button>`;
 
   const per = homePer(), hv = pos.length ? homeVariation(per) : null, hbv = hv?.ok && homeBenchOn() ? benchVariation(per, homeBenchId(), hv.grid) : null;
-  $('#view-home').innerHTML = `
+  const pLabel = (S.ports || []).length > 1 ? ' · ' + esc(isAll() ? 'Todas as carteiras' : curPort()?.name || '') : '';
+  const compact = !!S.settings.homeCompact && !empty;
+  const spark = pts => { if (!pts || pts.length < 2) return ''; const ys = pts.map(p => p[1] ?? p), lo = Math.min(...ys), hi = Math.max(...ys), sp = (hi - lo) || 1;
+    return `<svg width="84" height="34" viewBox="0 0 84 34" aria-hidden="true"><polyline fill="none" stroke="${ys[ys.length - 1] >= ys[0] ? '#A7F3D0' : '#FDA4AF'}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" points="${ys.map((v, i) => `${(i / (ys.length - 1) * 82 + 1).toFixed(1)},${(31 - (v - lo) / sp * 28).toFixed(1)}`).join(' ')}"/></svg>`; };
+  const cardHTML = compact ? `
+  <div class="rounded-[28px] text-white px-5 py-4 relative overflow-hidden" style="background:linear-gradient(135deg,#1D4ED8,#0A2A66)">
+    <div class="flex items-center justify-between gap-3">
+      <div class="min-w-0"><div class="text-xs text-brand-100 font-medium truncate">Património${pLabel}</div>
+        <div class="num text-[28px] leading-tight font-extrabold tracking-tight">${fmtEUR(hasCash ? grand : total)}</div>
+        ${hv?.ok ? `<div class="num text-xs font-bold ${hv.gain >= 0 ? 'text-emerald-200' : 'text-rose-200'}">${plus(hv.gain)} (${fmtPct(hv.pct)}) ${HP[per].w}</div>` : ''}</div>
+      <div class="flex flex-col items-end gap-1 shrink-0">${hv?.ok ? spark(hv.pts) : ''}<button data-hcompact class="h-7 px-3 rounded-full bg-white/15 text-xs font-bold" aria-label="Mostrar o cartão completo">▾ Mais</button></div></div>
+  </div>` : null;
+  $('#view-home').innerHTML = (cardHTML || `
   <div class="rounded-[28px] text-white p-5 relative overflow-hidden" style="background:linear-gradient(135deg,#1D4ED8,#0A2A66)">
-    <div class="flex items-start justify-between gap-2"><div class="text-sm text-brand-100 font-medium">Património total</div>
-      ${pos.length ? `<button data-hbench class="shrink-0 h-8 px-3 rounded-full bg-white/15 text-xs font-bold">${homeBenchOn() ? `vs ${esc(benchInfo(homeBenchId()).label)} ▾` : 'Comparar ▾'}</button>` : ''}</div>
+    <div class="flex items-start justify-between gap-2"><div class="text-sm text-brand-100 font-medium min-w-0 truncate">Património total${pLabel}</div>
+      <div class="flex gap-1.5 shrink-0">${pos.length ? `<button data-hbench class="h-8 px-3 rounded-full bg-white/15 text-xs font-bold">${homeBenchOn() ? `vs ${esc(benchInfo(homeBenchId()).label)} ▾` : 'Comparar ▾'}</button>` : ''}
+      ${!empty ? '<button data-hcompact class="h-8 px-2.5 rounded-full bg-white/15 text-xs font-bold" aria-label="Reduzir o cartão">▴ Menos</button>' : ''}</div></div>
     <div class="num text-[36px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(hasCash ? grand : total)}</div>
     ${pos.length ? homeVarHTML(hv, hbv, per, priced.length, res, invested) : ''}
     ${hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3 relative">
@@ -1190,7 +1315,7 @@ function renderHome() {
     <div class="text-[11px] text-brand-200 mt-2">${total > 0.004 ? `${fmtN(invPct, 0)}% investido · ${fmtN(100 - invPct, 0)}% em caixa` : '100% em caixa · pronto para investir'}${priced.length && lastAt ? ' · cotação ' + ago(lastAt) : ''}</div>`
     : `<div class="text-xs text-brand-100 num mt-2">Investido ${fmtEUR(invested)}</div>
     <div class="text-[11px] text-brand-200 mt-1">${pos.length ? (priced.length ? `${priced.length} de ${pos.length} posições com preço${lastAt ? ' · ' + ago(lastAt) : ''}` : 'Sem preços atuais: toque em Preços') : 'Sem posições abertas'}</div>`}
-  </div>
+  </div>`) + `
 
   ${pos.length ? `<div class="grid grid-cols-2 gap-2 mt-3">${goalTileHTML(gd)}${divsTileHTML()}</div>` : ''}
 
@@ -1308,6 +1433,7 @@ function renderMore() {
     ${it('data-go="divs"', '<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10.5c0-1 1.1-1.5 2.5-1.5s2.5.6 2.5 1.6-1.1 1.4-2.5 1.4-2.5.5-2.5 1.5 1.1 1.5 2.5 1.5 2.5-.5 2.5-1.5"/>', 'Dividendos', '#0F9D6E')}
     ${it('data-go="goals"', '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>', 'Metas')}
     ${it('data-charts', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', 'Gráficos')}
+    ${it('data-ports', '<rect x="3" y="6" width="18" height="14" rx="3"/><path d="M8 6V4h8v2M3 12h18"/>', 'Carteiras', '#E8352A')}
     ${it('data-go="settings"', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', 'Configurações', '#1A3FAE')}
   </div>`;
 }
@@ -1497,6 +1623,7 @@ function renderCash() {
 }
 
 function openCashForm(type = 'dep', ex = null, fromNova = false) {
+  if (needPort()) return;
   const e = ex || {};
   const novaSeg = fromNova ? `<div class="flex gap-1 p-1 rounded-2xl bg-brand-50 mb-4">${[['buy', 'Compra'], ['sell', 'Venda'], ['div', 'Dividendo'], ['cash', 'Caixa']].map(([k, l]) =>
     `<button type="button" data-novakind="${k}" class="flex-1 h-10 rounded-xl text-sm font-bold ${k === 'cash' ? 'bg-white shadow-sm text-ink' : 'text-slate-500'}">${l}</button>`).join('')}</div>
@@ -2126,6 +2253,7 @@ function goalsCardHTML() {
 }
 
 function renderGoals() {
+  if (isAll()) { $('#view-goals').innerHTML = `<h1 class="text-2xl font-extrabold tracking-tight mb-3">Metas</h1>${card(`<div class="p-5 text-center"><p class="text-sm text-slate-600">As metas e a distribuição desejada são de cada carteira. Escolha uma carteira para as ver ou definir.</p><button data-ports class="mt-3 h-11 px-5 rounded-2xl bg-brand-600 text-white font-bold text-sm">Escolher carteira</button></div>`)}`; return; }
   const d = goalsData(), g = d.g, parts = [];
   if (d.port) parts.push(card(`<div class="p-4">
     <div class="flex justify-between items-baseline"><h2 class="font-extrabold">Valor da carteira</h2><span class="text-xs text-slate-500">até ${monthYear(g.port.month)}</span></div>
@@ -2166,6 +2294,7 @@ function renderGoals() {
 }
 
 function openGoalsCfg() {
+  if (needPort()) return;
   const g = goalsCfg(), pos = TF.positions(TF.fifo(S.tx).lots, S.assets);
   const tickers = [...new Set([...pos.map(p => p.ticker), ...Object.keys(g.alloc.targets || {}).filter(k => k !== 'etf' && k !== 'acao')])];
   const sw = (id, on, label, sub) => `<label class="flex items-start gap-3 cursor-pointer"><input id="${id}" type="checkbox" ${on ? 'checked' : ''} class="mt-1 w-5 h-5 accent-[#1D4ED8]"><span><span class="font-bold block">${label}</span><span class="text-xs text-slate-500">${sub}</span></span></label>`;
@@ -2275,6 +2404,7 @@ const modalHead = t => `<div class="flex items-center justify-between mb-4"><h2 
 const brokerOpts = sel => Object.entries(TF.BROKERS).map(([k, b]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>${b.name}</option>`).join('');
 
 function openTxForm(kind = 'buy', existing = null, fromCash = false) {
+  if (needPort()) return;
   const e = existing || {}, isDiv = kind === 'div';
   const tickers = Object.keys(S.assets).sort().map(t => `<option value="${esc(t)}">`).join('');
   const seg = existing ? '' : `<div class="flex gap-1 p-1 rounded-2xl bg-brand-50 mb-4">${[['buy', 'Compra'], ['sell', 'Venda'], ['div', 'Dividendo'], ['cash', 'Caixa']].map(([k, l]) =>
@@ -2515,7 +2645,7 @@ async function copyText(text) {
 
 function renderTax() {
   const yrs = TF.years(S); if (!UI.year || !yrs.includes(UI.year)) UI.year = defaultYear();
-  const rep = TF.yearReport(S, UI.year), T = rep.totals, tbs = tables(rep);
+  const rep = TF.yearReport(irsState(), UI.year), T = rep.totals, tbs = tables(rep);
   const tableHTML = t => card(`<div class="p-4 pb-2 flex items-start justify-between gap-3">
       <h3 class="font-bold leading-snug">${t.title}</h3>
       ${t.rows.length ? `<button data-copy="${t.id}" class="no-print shrink-0 h-9 px-3 rounded-xl bg-brand-50 text-brand-700 text-xs font-bold">Copiar</button>` : ''}</div>
@@ -2533,6 +2663,7 @@ function renderTax() {
       <select id="yearSel" class="field !w-auto !py-2">${yrs.map(y => `<option ${y === UI.year ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
   </div>
   <p class="text-sm text-slate-600 -mt-1 mb-3">Rendimentos de ${rep.year}, a declarar na entrega do IRS em ${Number(rep.year) + 1}.</p>
+  ${(S.ports || []).length > 1 ? `<div class="mb-3 rounded-2xl bg-brand-50 text-brand-700 text-xs px-3 py-2 leading-relaxed">${irsOwner() === 'A' ? 'Titular principal' : 'Outro titular'}: inclui ${irsPorts().map(p => `<b>${esc(p.name)}</b>`).join(', ')}. O FIFO é calculado dentro de cada carteira.${S.ports.some(p => (p.owner || 'A') !== irsOwner()) ? ' Para ver o IRS do outro titular, abra uma das carteiras dele.' : ''}</div>` : ''}
 
   <div class="rounded-[28px] bg-ink text-white p-5">
     <div class="text-sm text-brand-200">Imposto estimado (taxa autónoma de 28%)</div>
@@ -2643,6 +2774,7 @@ function aportePlan(amount, withCash = false) {
   return { rows, spent, left: Math.max(0, left), reserve, cashT, cashFull, noPrice: rows.filter(r => !r.price).map(r => r.tk), oldest: Math.min(...rows.filter(r => r.price).map(r => S.assets[r.tk]?.priceAt || Date.now())) };
 }
 function openAporte() {
+  if (needPort()) return;
   openModal(`${modalHead('Planear aporte')}
     <label class="lbl" for="apAmt">Quanto vai investir agora?</label>
     <div class="flex items-center gap-2 rounded-2xl border-2 border-brand-600 bg-white px-3"><input id="apAmt" class="w-full h-14 text-2xl font-extrabold num outline-none bg-transparent" inputmode="decimal" placeholder="0" value="${UI.apAmt || ''}"><span class="text-xl font-bold text-slate-500">€</span></div>
@@ -3269,6 +3401,12 @@ const cfgValid = c => !!(c && c.apiKey && c.projectId && c.appId && !JSON.string
 function personalData() {
   const o = {}; SYNC_KEYS.forEach(k => o[k] = S[k] ?? (k === 'assets' || k === 'divDone' || k === 'xtbAnnual' ? {} : []));
   const st = { ...(S.settings || {}) }; delete st.fx; delete st.quota; o.settings = st;
+  if (S.ports) {
+    flushActive();
+    o.ports = S.ports.map(p => ({ ...p, data: p.data || { tx: [], div: [], cash: [], divDone: {} } }));
+    o.portActive = S.portActive; o.portLast = S.portLast;
+    if (isAll()) { const d = S.ports.find(p => p.id === S.portLast)?.data || {}; o.tx = d.tx || []; o.div = d.div || []; o.cash = d.cash || []; o.divDone = d.divDone || {}; o.settings.goals = d.goals; }
+  }
   return o;
 }
 function applyPersonal(p) {
@@ -3277,9 +3415,12 @@ function applyPersonal(p) {
   const fx = S.settings?.fx, quota = S.settings?.quota;
   S.settings = { ...(p.settings || {}), fx, quota };
   S.settings.brokerCp ||= {}; S.settings.cdt ||= {};
+  S.ports = Array.isArray(p.ports) && p.ports.length ? p.ports : null; S.portActive = p.portActive || null; S.portLast = p.portLast || null;
+  portsInit(); if (p.ports) loadActive();
   S.demo = false;
+  if (typeof updatePortBtn === 'function') updatePortBtn();
 }
-const hasLocalData = () => !!(S.tx.length || S.div.length || (S.cash || []).length);
+const hasLocalData = () => !!(S.tx.length || S.div.length || (S.cash || []).length || (S.ports || []).some(p => p.data?.tx?.length || p.data?.div?.length));
 
 function loadScript(src) {
   return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
@@ -3505,9 +3646,14 @@ function accountCardHTML() {
 
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-aporte],[data-hm],[data-mhunit],[data-hunit],[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-ports],[data-psel],[data-pnew],[data-pedit],[data-hcompact],[data-aporte],[data-hm],[data-mhunit],[data-hunit],[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
+  if ('ports' in d) { openPorts(); return; }
+  if (d.psel) { switchPort(d.psel); return; }
+  if ('pnew' in d) { openPortEdit(null); return; }
+  if (d.pedit) { if (isAll()) { flushActive(); } openPortEdit(d.pedit); return; }
+  if ('hcompact' in d) { S.settings.homeCompact = !S.settings.homeCompact; save(); renderHome(); return; }
   if ('aporte' in d) { openAporte(); return; }
   if (d.hm) { UI.hm = d.hm; render(); return; }
   if (d.mhunit) { S.settings.homeUnit = d.mhunit === 'eur' ? 'eur' : 'pct'; save(); render(); return; }
@@ -3524,7 +3670,7 @@ document.addEventListener('click', e => {
   else if ('delacct' in d) cloudDeleteAccount();
   else if ('back' in d) { const prev = (UI.hist || []).pop(); go(prev || 'home', true); }
   else if (d.theme) setTheme(d.theme);
-  else if ('report' in d) { const y = defaultYear(); openReportModal(TF.yearReport(S, y)); }
+  else if ('report' in d) { const y = defaultYear(); openReportModal(TF.yearReport(irsState(), y)); }
   else if ('fiscalcfg' in d) openFiscalCfg();
   else if ('cdtcfg' in d) openCdtCfg();
   else if ('holdercfg' in d) openHolderCfg();
