@@ -1,5 +1,5 @@
 /* AllFolio.pt — Service Worker (offline) */
-const CACHE = 'taxfolio-v36';
+const CACHE = 'taxfolio-v37';
 const CORE = ['./', './index.html', './app.html', './manifest.json', './firebase-config.js', './icon-192.png', './icon-512.png'];
 const CDN = [
   'https://cdn.tailwindcss.com/3.4.17',
@@ -32,7 +32,7 @@ self.addEventListener('fetch', e => {
   // Cotações e câmbio: sempre da rede, nunca da cache
   if (url.origin !== location.origin && !CDN.includes(req.url) && !/fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) return;
   // Páginas: rede primeiro (para receber atualizações), cache se offline
-  if (req.mode === 'navigate' || url.pathname.endsWith('/firebase-config.js')) {
+  if (req.mode === 'navigate' || url.pathname.endsWith('/firebase-config.js') || /\/(market|config)\.json$/.test(url.pathname)) {
     const isApp = /\/app(\.html)?$/.test(url.pathname);
     e.respondWith(fetch(req).then(r => { if (r.ok) { const cp = r.clone(); caches.open(CACHE).then(c => c.put(req.mode === 'navigate' ? (isApp ? './app.html' : './index.html') : req, cp)); } return r; })
       .catch(() => caches.match(req.mode === 'navigate' ? (isApp ? './app.html' : './index.html') : req)));

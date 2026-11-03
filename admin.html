@@ -123,6 +123,15 @@
   <div class="card agprev" style="margin-top:12px"><div id="agPrev"></div></div>
   <button id="agPub" class="primary full" style="margin-top:12px">Publicar a agenda</button>
   <button id="agClear" class="link grey" style="margin-top:8px">Limpar a agenda (tirar do site)</button>
+  <div class="card" style="margin-top:18px">
+    <h3 style="margin:0 0 4px">🌡️ Termómetro do mercado: CAPE do mês</h3>
+    <p class="hint" style="font-size:14px">Uma vez por mês, escreva o CAPE do S&amp;P 500 (o valor de "Current Shiller PE Ratio" em <a href="https://www.multpl.com/shiller-pe" target="_blank" rel="noopener">multpl.com/shiller-pe</a>). Os juros e o VIX são automáticos.</p>
+    <div class="agr" style="margin-top:6px"><div class="g2" style="grid-template-columns:1fr 1fr">
+      <div><label for="mkCape" style="margin-top:0">CAPE</label><input id="mkCape" type="text" inputmode="decimal" placeholder="ex.: 38,5"></div>
+      <div><label for="mkMonth" style="margin-top:0">Mês</label><input id="mkMonth" type="text" placeholder="2026-11"></div></div></div>
+    <p class="hint" id="mkInfo" style="margin-top:8px"></p>
+    <button id="mkSave" class="primary full" style="margin-top:8px">Guardar e publicar</button>
+  </div>
 </section>
 <section id="vRel" class="hidden">
   <p class="hint" style="font-size:14px;margin-top:0">A ferramenta que transforma o relatório anual da XTB no guia para o Portal. Teste-a aqui à vontade; o site só a mostra quando ligar o interruptor.</p>
@@ -777,6 +786,38 @@ $('#rExport').onclick = () => {
   if (!wlRows.length) return toast('Ainda não há inscritos para exportar.');
   const csv = '\ufeffemail;corretora;data\n' + wlRows.map(r => [r.email, r.broker || '', r.when ? r.when.toISOString().slice(0, 10) : ''].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = `lista-de-espera-${today()}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 1000);
+};
+
+/* ---------- Termómetro do mercado: CAPE mensal ---------- */
+const WORKER = 'https://taxfolio-pr.leonardospinasse.workers.dev';
+const ISR = { cape: [15, 40], dfr: [0, 4], vix: [40, 12] }, ISW = { val: 0.4, mac: 0.4, sen: 0.2 };
+const isLin = (v, a, b) => Math.max(0, Math.min(100, (v - a) / (b - a) * 100));
+function isCalc(m) { const p = {}; if (m.cape != null) p.val = isLin(m.cape, ...ISR.cape); if (m.dfr != null) p.mac = isLin(m.dfr, ...ISR.dfr); if (m.vix != null) p.sen = isLin(m.vix, ...ISR.vix);
+  const ks = Object.keys(p); if (!ks.length) return null; const ws = ks.reduce((s, k) => s + ISW[k], 0); return Math.round(ks.reduce((s, k) => s + p[k] * ISW[k], 0) / ws); }
+let mkFile = null;
+async function mkLoad() {
+  try { const t = await getFile('market.json'); mkFile = t ? JSON.parse(t) : { history: [] }; } catch (e) { mkFile = { history: [] }; }
+  $('#mkCape').value = mkFile.cape != null ? String(mkFile.cape).replace('.', ',') : '';
+  $('#mkMonth').value = new Date().toISOString().slice(0, 7);
+  $('#mkInfo').textContent = mkFile.cape != null ? `Último: CAPE ${String(mkFile.cape).replace('.', ',')} (${mkFile.capeMonth || '—'}) · ${(mkFile.history || []).length} mês(es) de histórico.` : 'Ainda sem CAPE: o termómetro usa só os juros e o VIX.';
+}
+const _openAgenda = openAgenda;
+openAgenda = async function () { await _openAgenda(); mkLoad(); };
+$('#mkSave').onclick = async () => {
+  const cape = Number(String($('#mkCape').value).replace(',', '.')), month = $('#mkMonth').value.trim();
+  if (!(cape > 3 && cape < 80)) return toast('Escreva um CAPE válido (por exemplo 38,5).');
+  if (!/^\d{4}-\d{2}$/.test(month)) return toast('O mês tem de ser no formato AAAA-MM (por exemplo 2026-11).');
+  busy(true, 'A buscar os juros e o VIX…');
+  try {
+    let dfr = null, vix = null;
+    try { const j = await (await fetch(WORKER + '/bce')).json(); dfr = j?.dfr?.rate ?? null; } catch (e) {}
+    try { const j = await (await fetch(WORKER + '/quote?symbols=' + encodeURIComponent('^VIX'))).json(); vix = j['^VIX']?.price ?? null; } catch (e) {}
+    const f = mkFile || { history: [] }, issc = isCalc({ cape, dfr, vix });
+    const hist = (f.history || []).filter(h => h.m !== month).concat([{ m: month, cape, dfr, vix: vix != null ? Math.round(vix * 10) / 10 : null, issc }]).sort((x, y) => x.m.localeCompare(y.m)).slice(-24);
+    const out = { cape, capeMonth: month, updated: today(), ranges: ISR, history: hist };
+    await commit({ 'market.json': JSON.stringify(out, null, 1) }, 'Painel: CAPE de ' + month);
+    mkFile = out; mkLoad(); toast(`Publicado. Termómetro: ${issc ?? '—'} (CAPE ${String(cape).replace('.', ',')}${dfr != null ? ', BCE ' + dfr + '%' : ''}${vix != null ? ', VIX ' + vix.toFixed(1) : ''}).`, 5000);
+  } catch (e) { toast(errMsg(e), 5000); } finally { busy(false); }
 };
 
 boot();

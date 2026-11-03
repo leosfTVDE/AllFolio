@@ -136,16 +136,19 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
   <section id="view-cash" data-view class="hidden"></section>
   <section id="view-divs" data-view class="hidden"></section>
   <section id="view-goals" data-view class="hidden"></section>
+  <section id="view-market" data-view class="hidden"></section>
   <section id="view-more" data-view class="hidden"></section>
   <section id="view-settings" data-view class="hidden"></section>
 </main>
 
 <nav class="navbar fixed bottom-0 inset-x-0 z-30 bg-white border-t border-brand-100">
-  <div class="max-w-3xl mx-auto grid grid-cols-4">
+  <div class="max-w-3xl mx-auto grid grid-cols-5">
     <button data-tab="home" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Início</button>
     <button data-tab="portfolio" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Carteira</button>
+    <button data-tab="market" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 16a8 8 0 1 1 16 0"/><path d="M12 16l4-5"/><circle cx="12" cy="16" r="1.4" fill="currentColor"/></svg>Mercado</button>
     <button data-tab="tax" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg>IRS</button>
     <button data-tab="more" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
@@ -1097,7 +1100,7 @@ function openQuoteSettings(first = false) {
 
 /* ---------- Navegação ---------- */
 
-const NAV_TABS = ['home', 'portfolio', 'tax', 'more'];
+const NAV_TABS = ['home', 'portfolio', 'market', 'tax', 'more'];
 function go(tab, isBack = false) {
   if (tab === 'import' && needPort()) return;
   if (!isBack && UI.tab && UI.tab !== tab) { (UI.hist ||= []).push(UI.tab); if (UI.hist.length > 20) UI.hist.shift(); }
@@ -1115,7 +1118,7 @@ function go(tab, isBack = false) {
 function render() {
   const bar = $('#demoBar'); if (bar) bar.classList.toggle('hidden', !S.demo);
   updatePortBtn(); const nt = $('#netTxt'); if (nt) nt.classList.toggle('hidden', (S.ports || []).length > 0);
-  ({ home: renderHome, portfolio: renderPortfolio, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs, goals: renderGoals, more: renderMore, settings: renderSettings })[UI.tab]();
+  ({ home: renderHome, portfolio: renderPortfolio, market: renderMarket, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs, goals: renderGoals, more: renderMore, settings: renderSettings })[UI.tab]();
 }
 
 /* ---------- Componentes ---------- */
@@ -1272,6 +1275,7 @@ function sparkline() {
 }
 
 function renderHome() {
+  if (!S.market || Date.now() - (S.market.at || 0) > 30 * 60e3) loadMarket().then(ch => { if (ch && UI.tab === 'home') renderHome(); });
   const F = TF.fifo(S.tx), pos = TF.positions(F.lots, S.assets);
   const invested = pos.reduce((s, p) => s + p.cost, 0), total = pos.reduce((s, p) => s + (p.value ?? p.cost), 0);
   const priced = pos.filter(p => p.value != null), res = total - invested;
@@ -1298,7 +1302,7 @@ function renderHome() {
     <div class="flex items-center justify-between gap-3">
       <div class="min-w-0"><div class="text-xs text-brand-100 font-medium truncate">Património${pLabel}</div>
         <div class="num text-[28px] leading-tight font-extrabold tracking-tight">${fmtEUR(hasCash ? grand : total)}</div>
-        ${hv?.ok ? `<div class="num text-xs font-bold ${hv.gain >= 0 ? 'text-emerald-200' : 'text-rose-200'}">${plus(hv.gain)} (${fmtPct(hv.pct)}) ${HP[per].w}</div>` : ''}</div>
+        ${hv?.ok ? `<div class="num text-xs font-bold ${hv.gain >= 0 ? 'text-emerald-200' : 'text-rose-200'}">${plus(hv.gain)} (${fmtPct(hv.pct)}) ${HP[per].w}</div>` : ''}${isscPill()}</div>
       <div class="flex flex-col items-end gap-1 shrink-0">${hv?.ok ? spark(hv.pts) : ''}<button data-hcompact class="h-7 px-3 rounded-full bg-white/15 text-xs font-bold" aria-label="Mostrar o cartão completo">▾ Mais</button></div></div>
   </div>` : null;
   $('#view-home').innerHTML = (cardHTML || `
@@ -1308,6 +1312,7 @@ function renderHome() {
       ${!empty ? '<button data-hcompact class="h-8 px-2.5 rounded-full bg-white/15 text-xs font-bold" aria-label="Reduzir o cartão">▴ Menos</button>' : ''}</div></div>
     <div class="num text-[36px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(hasCash ? grand : total)}</div>
     ${pos.length ? homeVarHTML(hv, hbv, per, priced.length, res, invested) : ''}
+    ${isscPill()}
     ${hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3 relative">
       <button data-go="portfolio" class="text-left rounded-xl bg-white/10 px-3 py-2"><div class="text-[11px] text-brand-100">Investimentos</div><div class="num font-bold">${fmtEUR(total)}</div></button>
       <button data-go="cash" class="text-left rounded-xl bg-white/10 px-3 py-2"><div class="text-[11px] text-brand-100">Caixa · ${esc(bname(csH.cfg.place))}</div><div class="num font-bold">${fmtEUR(cashV)}</div></button></div>
@@ -2727,8 +2732,157 @@ function renderTax() {
 
 
 
+
+/* ---------- Mercado: termómetro (ISSC) e planear aporte ---------- */
+// Escalas de cada pilar (0 = pânico/desconto, 100 = euforia/esticado). Ficam visíveis na explicação.
+const ISSC_R = { cape: [15, 40], dfr: [0, 4], vix: [40, 12] }, ISSC_W = { val: 0.4, mac: 0.4, sen: 0.2 };
+const issLin = (v, a, b) => Math.max(0, Math.min(100, (v - a) / (b - a) * 100));
+function isscCalc(m) {
+  if (!m) return null;
+  const p = {};
+  if (m.cape != null) p.val = issLin(m.cape, ...ISSC_R.cape);
+  if (m.dfr != null) p.mac = issLin(m.dfr, ...ISSC_R.dfr);
+  if (m.vix != null) p.sen = issLin(m.vix, ...ISSC_R.vix);
+  const ks = Object.keys(p); if (!ks.length) return null;
+  const ws = ks.reduce((s, k) => s + ISSC_W[k], 0);
+  return { v: Math.round(ks.reduce((s, k) => s + p[k] * ISSC_W[k], 0) / ws), p, partial: ks.length < 3 };
+}
+const isscZone = v => v <= 30 ? { l: 'Desconto', d: 'medo e preços baixos face à história', c: '#0F9D6E' }
+  : v <= 60 ? { l: 'Neutro', d: 'sem sinais fortes num sentido ou noutro', c: '#B7791F' } : { l: 'Esticado', d: 'ações caras face à história, juros atrativos ou otimismo elevado', c: '#C2410C' };
+let mkLoading = null;
+function loadMarket(force = false) {
+  if (!force && S.market?.at && Date.now() - S.market.at < 30 * 60e3) return Promise.resolve(false);
+  if (mkLoading) return mkLoading;
+  mkLoading = (async () => {
+    const m = { ...(S.market || {}) };
+    try { const r = await fetch('market.json?t=' + Date.now(), { cache: 'no-store' }); if (r.ok) { const j = await r.json(); m.cape = j.cape ?? null; m.capeMonth = j.capeMonth || ''; m.history = j.history || []; } } catch (e) {}
+    if (useWorker() && navigator.onLine) {
+      try { const j = await (await fetch(`${workerBase()}/bce`)).json(); if (j?.dfr?.rate != null) { m.dfr = j.dfr.rate; m.dfrSince = j.dfr.since; } } catch (e) {}
+      try { const j = await (await fetch(`${workerBase()}/quote?symbols=${encodeURIComponent('^VIX')}`)).json(); const q = j['^VIX']; if (q?.price) m.vix = q.price; } catch (e) {}
+    }
+    m.at = Date.now(); S.market = m; saveLocal(); mkLoading = null; return true;
+  })();
+  return mkLoading;
+}
+function isscPill(light = true) {
+  const I = isscCalc(S.market); if (!I) return '';
+  const z = isscZone(I.v);
+  return `<button data-mkgo class="mt-2 inline-flex items-center gap-1.5 h-7 px-3 rounded-full ${light ? 'bg-white/15 text-white' : 'bg-brand-50 text-ink'} text-xs font-bold">🌡️ Mercado <span class="num">${I.v}</span> · ${z.l.toLowerCase()} ›</button>`;
+}
+function gaugeSVG(v) {
+  const ang = Math.PI * (1 - v / 100), x = 110 + 70 * Math.cos(ang), y = 104 - 70 * Math.sin(ang);
+  return `<svg viewBox="0 0 220 118" width="100%" height="128" role="img" aria-label="Termómetro do mercado em ${v} de 100">
+    <defs><linearGradient id="isg" x1="0" x2="1"><stop offset="0" stop-color="#0F9D6E"/><stop offset=".5" stop-color="#F2C14E"/><stop offset="1" stop-color="#DC2626"/></linearGradient></defs>
+    <path d="M24 104 A86 86 0 0 1 196 104" fill="none" stroke="url(#isg)" stroke-width="15" stroke-linecap="round"/>
+    <line x1="110" y1="104" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#0A2A66" stroke-width="4" stroke-linecap="round"/><circle cx="110" cy="104" r="6.5" fill="#0A2A66"/>
+    <text x="110" y="88" text-anchor="middle" font-size="26" font-weight="800" fill="#0A2A66">${v}</text>
+    <text x="22" y="117" font-size="9" fill="#64748B">0 · pânico</text><text x="198" y="117" text-anchor="end" font-size="9" fill="#64748B">euforia · 100</text></svg>`;
+}
+function renderMarket() {
+  const m = S.market || {}, I = isscCalc(m), z = I ? isscZone(I.v) : null;
+  if (!S.market || Date.now() - (S.market.at || 0) > 30 * 60e3) loadMarket().then(ch => { if (ch && UI.tab === 'market') renderMarket(); });
+  const hist = (m.history || []).filter(h => h.issc != null), first = hist.length > 1 ? hist[Math.max(0, hist.length - 12)] : null;
+  const pill = (ico, name, raw, v) => `<div class="mt-2.5"><div class="flex justify-between text-sm"><span>${ico} ${name} <span class="text-[11px] text-slate-500">${raw}</span></span><b class="num">${v == null ? '—' : Math.round(v)}</b></div>
+    <div class="h-2 rounded-full bg-brand-50 mt-1 overflow-hidden">${v == null ? '' : `<i class="block h-full rounded-full" style="width:${v}%;background:${v > 60 ? '#F08A3B' : v > 30 ? '#F2C14E' : '#4CC294'}"></i>`}</div></div>`;
+  $('#view-market').innerHTML = `<h1 class="text-2xl font-extrabold tracking-tight mb-3">Mercado</h1>
+  ${card(`<div class="p-4">
+    <div class="flex items-center justify-between"><h2 class="font-extrabold">Termómetro do mercado</h2><button data-issinfo class="w-8 h-8 rounded-full bg-brand-50 text-brand-700 font-extrabold" aria-label="Como funciona o termómetro">i</button></div>
+    ${I ? `${gaugeSVG(I.v)}<div class="text-center text-sm -mt-1"><b style="color:${z.c}">${z.l}</b> · ${z.d}</div>
+      ${first ? `<div class="text-center text-xs text-slate-500 mt-1">Últimos meses: de ${first.issc} (${esc(first.m)}) para ${I.v}</div>` : ''}
+      ${I.partial ? '<div class="text-center text-xs text-amber-700 mt-1">Faltam dados de algum pilar: o resultado usa só os que existem.</div>' : ''}`
+      : `<p class="text-sm text-slate-500 py-6 text-center">${navigator.onLine ? 'A carregar os dados do mercado…' : 'Sem internet: os dados do mercado aparecem quando voltar a ligação.'}</p>`}
+    ${pill('📈', 'Valorização', m.cape != null ? `CAPE ${fmtN(m.cape, 1)}${m.capeMonth ? ' · ' + esc(m.capeMonth) : ''}` : 'CAPE por atualizar', I?.p.val)}
+    ${pill('🏦', 'Juros', m.dfr != null ? `BCE ${fmtN(m.dfr, 2)}%` : '—', I?.p.mac)}
+    ${pill('😬', 'Sentimento', m.vix != null ? `VIX ${fmtN(m.vix, 1)}` : '—', I?.p.sen)}
+    <p class="text-[11px] text-slate-500 mt-3">Informação de mercado, não uma recomendação.${m.at ? ' Atualizado ' + ago(m.at) + '.' : ''}</p>
+  </div>`)}
+  ${card(`<div class="p-4" id="mkAporte">
+    <div class="flex items-center justify-between"><h2 class="font-extrabold">Planear aporte</h2><span class="text-[11px] text-slate-500">ações inteiras</span></div>
+    ${I ? `<p class="text-xs text-slate-600 mt-1">🌡️ Mercado a <b>${I.v}</b> (${z.l.toLowerCase()}): ${z.d}. <button data-issinfo class="text-brand-700 font-bold">Saber mais</button></p>` : ''}
+    <label class="lbl mt-3" for="mkAmt">Quanto vai investir agora?</label>
+    <div class="flex items-center gap-2 rounded-2xl border-2 border-brand-600 bg-white px-3"><input id="mkAmt" class="w-full h-14 text-2xl font-extrabold num outline-none bg-transparent" inputmode="decimal" placeholder="0" value="${esc(UI.apAmt || '')}"><span class="text-xl font-bold text-slate-500">€</span></div>
+    <div class="flex gap-1.5 mt-2">${[100, 150, 300, 500].map(v => `<button data-mkq="${v}" class="flex-1 h-8 rounded-full border border-brand-100 bg-white text-xs font-bold">${v} €</button>`).join('')}</div>
+    <div id="mkCash" class="mt-3"></div>
+    <div id="mkRes" class="mt-3"></div>
+  </div>`, 'mt-3')}`;
+  const inp = $('#mkAmt'), cashT = Number(S.settings.goals?.alloc?.targets?.__cash) || 0;
+  if (UI.apCash === undefined) UI.apCash = true;
+  const sw = (id, on, label) => `<button id="${id}" class="relative w-11 h-6 rounded-full shrink-0 ${on ? 'bg-gain' : 'bg-slate-300'}" aria-pressed="${on}" aria-label="${label}"><i class="absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-all" style="left:${on ? '23px' : '3px'}"></i></button>`;
+  const draw = () => {
+    const amt = TF.num(inp.value) || 0; UI.apAmt = inp.value;
+    const band = S.settings.isscBand || 10, adjOn = !!S.settings.isscAdj && !!I;
+    const delta = adjOn ? Math.round((I.v - 50) / 50 * band) : 0, cashEff = Math.max(0, Math.min(100, cashT + delta));
+    const showCash = cashT > 0 || adjOn;
+    $('#mkCash').innerHTML = `<div class="rounded-2xl bg-brand-50/70 p-3 text-sm">
+      ${cashT > 0 ? `<div class="flex items-center justify-between gap-3"><span><b>Caixa de oportunidade</b><span class="block text-[11px] text-slate-500">O seu alvo: ${fmtN(cashT, 0)}% do aporte</span></span>${sw('mkSwC', UI.apCash, 'Reservar parte para a caixa')}</div>` : ''}
+      ${I && (cashT === 0 || UI.apCash) ? `<div class="flex items-center justify-between gap-3 ${cashT > 0 ? 'mt-3 pt-3 border-t border-brand-100' : ''}"><span><b>🌡️ Ajustar pelo termómetro</b><span class="block text-[11px] text-slate-500">Opcional · varia no máximo ±${band} pontos${cashT === 0 ? ' (o seu alvo de caixa é 0%)' : ''}</span></span>${sw('mkSwT', adjOn, 'Ajustar pelo termómetro')}</div>
+        ${adjOn ? `<input id="mkBand" type="range" min="5" max="25" step="5" value="${band}" class="w-full mt-2" aria-label="Variação máxima"><p class="text-[11px] text-slate-600 mt-1">${delta === 0 ? `Com o termómetro a ${I.v}, a caixa fica no seu alvo.` : `A caixa passa de ${fmtN(cashT, 0)}% para ${cashEff}% (${delta > 0 ? '+' : ''}${delta} pontos) por o mercado estar ${z.l.toLowerCase()}.`}</p>` : ''}` : ''}
+    </div>`;
+    const useCash = (cashT > 0 && UI.apCash) || (adjOn && cashEff > 0);
+    if (amt <= 0) { $('#mkRes').innerHTML = '<p class="text-sm text-slate-500">Escreva o valor e a app diz que ações inteiras comprar para se aproximar da sua distribuição desejada.</p>'; bind(); return; }
+    const P = aportePlan(amt, useCash, useCash ? cashEff : null);
+    if (P.err) { $('#mkRes').innerHTML = `<div class="rounded-2xl bg-amber-50 text-amber-900 text-sm p-3">${esc(P.err)}</div><button data-goalcfg class="w-full mt-2 h-11 rounded-2xl bg-brand-50 text-brand-700 font-bold text-sm">Definir a distribuição</button>`; bind(); return; }
+    const nm = t => esc(t.replace(/\.[A-Z]+$/, '')), buy = P.rows.filter(r => r.n), cashPct = amt ? P.reserve / amt * 100 : 0;
+    $('#mkRes').innerHTML = `${P.reserve > 0.004 ? `<div class="flex h-3 rounded-full overflow-hidden"><i style="width:${cashPct}%;background:#0F9D6E"></i><i style="width:${100 - cashPct}%;background:#1D4ED8"></i></div>
+        <div class="flex justify-between text-xs mt-1 num"><span class="text-gain font-bold">● Caixa ${fmtN(cashPct, 0)}% · ${fmtEUR(P.reserve)}</span><span class="text-brand-700 font-bold">● Ações ${fmtN(100 - cashPct, 0)}%</span></div>` : ''}
+      ${buy.length ? `<div class="rounded-2xl border border-brand-100 bg-white divide-y divide-brand-50 mt-2">${buy.map(r => `<div class="px-3 py-2.5">
+          <div class="flex justify-between gap-2"><b>${nm(r.tk)} <span class="text-gain">× ${r.n}</span></b><b class="num">${fmtEUR(r.n * r.price)}</b></div>
+          <div class="relative h-1.5 rounded-full bg-brand-50 mt-1.5"><i class="absolute inset-y-0 left-0 rounded-full bg-emerald-400" style="width:${Math.min(100, r.after * 2.5)}%"></i><s class="absolute -top-1 w-0.5 h-3.5 bg-ink rounded" style="left:${Math.min(100, (r.targetShown ?? r.target) * 2.5)}%"></s></div>
+          <div class="text-[11px] text-slate-500 num mt-1">${fmtEUR(r.price)}/un. · fica ${fmtN(r.after, 1)}% (alvo ${fmtN(r.targetShown ?? r.target, 1)}%)</div></div>`).join('')}</div>`
+        : '<div class="rounded-2xl bg-amber-50 text-amber-900 text-sm p-3 mt-2">Com este valor não dá para comprar nenhuma ação inteira de um ativo abaixo do alvo.</div>'}
+      <div class="rounded-2xl bg-ink text-white p-3 mt-2 text-sm num space-y-0.5">
+        ${P.reserve > 0.004 ? `<div class="flex justify-between"><span class="text-brand-100">Para a caixa de oportunidade</span><b>${fmtEUR(P.reserve)}</b></div>` : useCash && P.cashFull ? '<div class="flex justify-between"><span class="text-brand-100">Caixa de oportunidade</span><b>já no alvo</b></div>' : ''}
+        <div class="flex justify-between"><span class="text-brand-100">Em ações (${buy.reduce((s, r) => s + r.n, 0)} un.)</span><b>${fmtEUR(P.spent)}</b></div>
+        <div class="flex justify-between text-emerald-200"><span>Sobra</span><b>${fmtEUR(P.left)}</b></div></div>
+      ${P.rows.some(r => !r.n && r.price) ? `<p class="text-[11px] text-slate-500 mt-2">Não comprar agora: ${P.rows.filter(r => !r.n && r.price).map(r => nm(r.tk)).join(', ')}.</p>` : ''}
+      ${P.noPrice.length ? `<p class="text-[11px] text-amber-700 mt-1">Sem preço atual: ${P.noPrice.map(nm).join(', ')}. Toque em Preços no Início.</p>` : ''}
+      <p class="text-[11px] text-slate-400 mt-2">Preços ${P.oldest ? ago(P.oldest) : ''}, com cerca de 15 minutos de atraso. Nada é registado na app.</p>`;
+    bind();
+  };
+  function bind() {
+    const c = $('#mkSwC'); if (c) c.onclick = () => { UI.apCash = !UI.apCash; draw(); };
+    const t = $('#mkSwT'); if (t) t.onclick = () => { if (!S.settings.isscAdj && !S.settings.isscAck) return isscConsent(() => { draw(); }); S.settings.isscAdj = !S.settings.isscAdj; save(); draw(); };
+    const b = $('#mkBand'); if (b) b.oninput = e => { S.settings.isscBand = Number(e.target.value); save(); draw(); };
+  }
+  inp.oninput = draw;
+  document.querySelectorAll('[data-mkq]').forEach(b => b.onclick = () => { inp.value = b.dataset.mkq; draw(); });
+  draw();
+}
+function isscConsent(done) {
+  openModal(`${modalHead('Ajustar a caixa pelo termómetro')}
+    <div class="text-sm text-slate-700 space-y-2 leading-relaxed">
+      <p>Ao ligar, a parte do aporte que vai para a caixa de oportunidade passa a variar à volta do seu alvo, conforme o termómetro do mercado, até ao limite que escolher.</p>
+      <p><b>Lembre-se:</b> o termómetro é informação de mercado. Não prevê o que acontece no mês seguinte e não é uma recomendação de investimento. O mercado pode ficar "esticado" durante anos e continuar a subir.</p>
+      <p>Pode desligar a qualquer momento: a calculadora volta a usar só os seus alvos.</p></div>
+    <button id="isOk" class="w-full mt-4 h-12 rounded-2xl bg-brand-600 text-white font-bold">Percebi, ligar o ajuste</button>
+    <button id="isNo" class="w-full mt-2 h-10 rounded-2xl text-slate-500 text-sm font-bold">Agora não</button>`);
+  $('#isOk').onclick = () => { S.settings.isscAck = true; S.settings.isscAdj = true; save(); closeModal(); done(); };
+  $('#isNo').onclick = () => closeModal();
+}
+function openIsscInfo() {
+  const m = S.market || {}, I = isscCalc(m);
+  const pil = (ico, t, w, v, desc, scale, src) => `<div class="rounded-2xl border border-brand-100 p-3 mt-2"><div class="flex justify-between"><b>${ico} ${t} · ${w}</b><b class="num">${v == null ? '—' : Math.round(v)}</b></div>
+    <p class="text-xs text-slate-600 mt-1">${desc}</p><div class="flex justify-between text-[11px] text-slate-500 mt-1"><span>${scale[0]}</span><span>${scale[1]}</span></div><p class="text-[11px] text-slate-400 mt-1">${src}</p></div>`;
+  openModal(`${modalHead('Como funciona o termómetro')}
+    <h3 class="font-bold">A ideia</h3>
+    <p class="text-sm text-slate-700 mt-1">Junta três medidas públicas num número de 0 a 100, para mostrar se o mercado de ações está, no conjunto, mais perto do pânico (0) ou da euforia (100). Serve para dar contexto ao aporte, não para prever o próximo mês.</p>
+    <h3 class="font-bold mt-4">Os três pilares</h3>
+    ${pil('📈', 'Valorização', '40%', I?.p.val, 'O CAPE do S&P 500: o preço face aos lucros médios dos últimos 10 anos, corrigidos da inflação. Quanto mais alto, mais caras estão as ações face à sua história (a média histórica anda perto de 17).', [`CAPE ${ISSC_R.cape[0]} ou menos → 0`, `CAPE ${ISSC_R.cape[1]} ou mais → 100`], `Fonte: dados de Robert Shiller, atualizados uma vez por mês${m.capeMonth ? ' · último: ' + esc(m.capeMonth) : ''}.`)}
+    ${pil('🏦', 'Juros', '40%', I?.p.mac, 'A taxa de depósito do BCE. Juros altos tornam o dinheiro parado (depósitos, caixa) mais atrativo face às ações.', [`${ISSC_R.dfr[0]}% → 0`, `${ISSC_R.dfr[1]}% ou mais → 100`], 'Fonte: Banco Central Europeu.')}
+    ${pil('😬', 'Sentimento', '20%', I?.p.sen, 'O VIX, o "índice do medo" do mercado americano. VIX alto = medo; VIX baixo = calma ou confiança excessiva.', [`VIX ${ISSC_R.vix[0]} ou mais → 0`, `VIX ${ISSC_R.vix[1]} ou menos → 100`], 'Fonte: Cboe, com cerca de 15 minutos de atraso.')}
+    <p class="text-xs text-slate-600 mt-2">Cálculo: Valorização × 0,4 + Juros × 0,4 + Sentimento × 0,2. Se faltar algum pilar, os pesos repartem-se pelos que existem.</p>
+    <h3 class="font-bold mt-4">Como ler</h3>
+    <div class="space-y-1.5 mt-1 text-xs"><div class="rounded-xl bg-emerald-50 text-emerald-900 px-3 py-2"><b>0 a 30 · Desconto</b> – medo e preços baixos face à história.</div>
+      <div class="rounded-xl bg-amber-50 text-amber-900 px-3 py-2"><b>31 a 60 · Neutro</b> – sem sinais fortes num sentido ou noutro.</div>
+      <div class="rounded-xl bg-rose-50 text-rose-900 px-3 py-2"><b>61 a 100 · Esticado</b> – preços altos, juros atrativos ou otimismo elevado.</div></div>
+    <h3 class="font-bold mt-4">Limitações (importante)</h3>
+    <div class="rounded-2xl bg-amber-50 text-amber-900 text-xs p-3 mt-1 leading-relaxed">• Estes indicadores não preveem o próximo mês. O CAPE relaciona-se com as rentabilidades médias da década seguinte, não do mês seguinte.<br>• O mercado pode ficar "esticado" durante anos e continuar a subir. Tirar todo o dinheiro do mercado nessas fases pode custar caro.<br>• Os limites de cada pilar são uma escolha e mudam o resultado.<br>• É informação geral, não uma recomendação de investimento. Quem decide como investe é sempre o utilizador.</div>
+    <h3 class="font-bold mt-4">O ajuste opcional do aporte</h3>
+    <p class="text-sm text-slate-700 mt-1">Se o ligar no Planear aporte, a % da caixa varia no máximo o que escolher (por exemplo ±10 pontos) à volta do seu alvo, conforme o termómetro. Desligado, a calculadora usa só os seus alvos.</p>`);
+}
+
 /* ---------- Planear aporte: que ações inteiras comprar com um valor ---------- */
-function aportePlan(amount, withCash = false) {
+function aportePlan(amount, withCash = false, cashTOverride = null) {
   const al = S.settings.goals?.alloc || {}, t = al.targets || {};
   const pos = TF.positions(TF.fifo(S.tx).lots, S.assets), val = p => p.value ?? p.cost;
   const tg = {};
@@ -2738,7 +2892,7 @@ function aportePlan(amount, withCash = false) {
     pos.forEach(p => { const k = kind(p), pct = Number(t[k]) || 0; if (pct > 0 && kt[k] > 0) tg[p.ticker] = pct * val(p) / kt[k]; });
   }
   if (!Object.keys(tg).length) return { err: 'Defina primeiro a distribuição desejada nas Metas (por ativo).' };
-  const cashNow = Math.max(0, cashState().saldo || 0), cashT = Number(t.__cash) || 0;
+  const cashNow = Math.max(0, cashState().saldo || 0), cashT = cashTOverride != null ? cashTOverride : Number(t.__cash) || 0;
   const inv = pos.reduce((s, p) => s + val(p), 0);
   // 1) Caixa: reserva a % alvo do aporte, exceto se a caixa já estiver no alvo (ou se o utilizador desligar)
   const cashFull = cashNow >= cashT / 100 * (inv + cashNow + amount) - 0.005;
@@ -3646,7 +3800,7 @@ function accountCardHTML() {
 
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-ports],[data-psel],[data-pnew],[data-pedit],[data-hcompact],[data-aporte],[data-hm],[data-mhunit],[data-hunit],[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-mkgo],[data-issinfo],[data-ports],[data-psel],[data-pnew],[data-pedit],[data-hcompact],[data-aporte],[data-hm],[data-mhunit],[data-hunit],[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
   if ('ports' in d) { openPorts(); return; }
@@ -3654,7 +3808,9 @@ document.addEventListener('click', e => {
   if ('pnew' in d) { openPortEdit(null); return; }
   if (d.pedit) { if (isAll()) { flushActive(); } openPortEdit(d.pedit); return; }
   if ('hcompact' in d) { S.settings.homeCompact = !S.settings.homeCompact; save(); renderHome(); return; }
-  if ('aporte' in d) { openAporte(); return; }
+  if ('mkgo' in d) { go('market'); return; }
+  if ('issinfo' in d) { openIsscInfo(); return; }
+  if ('aporte' in d) { if (needPort()) return; go('market'); setTimeout(() => { $('#mkAporte')?.scrollIntoView({ block: 'start' }); $('#mkAmt')?.focus(); }, 120); return; }
   if (d.hm) { UI.hm = d.hm; render(); return; }
   if (d.mhunit) { S.settings.homeUnit = d.mhunit === 'eur' ? 'eur' : 'pct'; save(); render(); return; }
   if (d.hunit) { S.settings.homeUnit = d.hunit === 'eur' ? 'eur' : 'pct'; save(); renderHome(); return; }
