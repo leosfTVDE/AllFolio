@@ -80,7 +80,7 @@
    "featured": false,
    "cta": true,
    "min": 3,
-   "status": "pub",
+   "status": "hidden",
    "cover": "auto",
    "ogimg": "img/capas/semana-2026-10-29.png",
    "points": [
