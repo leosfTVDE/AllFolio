@@ -197,6 +197,15 @@
   .wl-form button,.wl-go{border:none;border-radius:12px;padding:12px 16px;font:inherit;font-weight:800;font-size:16px;background:#fff;color:#0A2A66;cursor:pointer;text-decoration:none;display:inline-block;text-align:center}
   .wl-msg{margin:2px 0 0;font-size:14px;min-height:1em}.wl-msg.ok{color:#A7F3D0}.wl-msg.err{color:#FECACA}.wl-more{color:#fff;font-weight:700;font-size:14px;display:inline-block;margin-top:10px}
   [hidden]{display:none!important}
+  .thm{margin:22px 0 4px}.thm-c{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px 18px}
+  .thm-h{display:flex;justify-content:space-between;align-items:center;gap:8px}.thm-h b{font-size:17px}
+  .thm-i{border:none;background:none;color:var(--blue);font:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:4px 0}
+  .thm-z{text-align:center;margin:-4px 0 8px;font-size:15px;min-height:3em;line-height:1.5}.thm-z b{font-weight:800}
+  .thm-p{margin-top:8px}.thm-p div{display:flex;justify-content:space-between;font-size:15px}.thm-p small{color:var(--muted);font-size:13px;margin-left:4px}
+  .thm-p i{display:block;height:7px;border-radius:9px;background:#EEF3FB;margin-top:4px;overflow:hidden}.thm-p em{display:block;height:100%;width:0;border-radius:9px;transition:width .4s}
+  .thm-x{margin-top:12px;background:#F4F7FC;border-radius:14px;padding:10px 12px;font-size:14px;color:#334155}.thm-x p{margin:6px 0}
+  .thm-s{font-size:13px;color:var(--muted);margin:10px 0 0;min-height:2.8em}
+  .thm-b{display:block;text-align:center;background:var(--blue);color:#fff;border-radius:12px;padding:11px;font-weight:800;margin-top:12px;text-decoration:none}.thm-b:hover{color:#fff}
 </style>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2352895338707924" crossorigin="anonymous"></script>
 </head>
@@ -229,15 +238,6 @@
     <div class="wrap">
       <h2 id="t-semana" class="lab">Esta semana</h2>
       <!--CMS:SEMANA-->
-<a class="wk" href="semana-2026-10-29"><div class="wk-cv"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" width="360" height="180" role="img" aria-label="Ilustração: gráfico de mercado e calendário da semana"><rect width="360" height="180" fill="#12357F"/><g stroke="rgba(255,255,255,.08)"><line x1="0" y1="50" x2="360" y2="50"/><line x1="0" y1="95" x2="360" y2="95"/><line x1="0" y1="140" x2="360" y2="140"/></g>
-<path d="M0 142 L40 126 L72 134 L112 100 L144 110 L180 76 L210 90 L246 58 L276 72 L306 46 L360 38 L360 180 L0 180Z" fill="rgba(126,226,184,.16)"/>
-<path d="M0 142 L40 126 L72 134 L112 100 L144 110 L180 76 L210 90 L246 58 L276 72 L306 46 L360 38" fill="none" stroke="#7EE2B8" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
-<g transform="translate(28 30)"><rect width="84" height="92" rx="14" fill="#FFFFFF"/><path d="M0 14 a14 14 0 0 1 14 -14 h56 a14 14 0 0 1 14 14 v14 h-84z" fill="#E8352A"/><text x="42" y="20" text-anchor="middle" font-size="12" font-weight="800" fill="#FFFFFF" font-family="Manrope, system-ui, sans-serif">OUT</text><text x="42" y="70" text-anchor="middle" font-size="34" font-weight="800" fill="#0A2A66" font-family="Manrope, system-ui, sans-serif">29</text></g>
-<g transform="translate(196 130)"><rect width="148" height="30" rx="10" fill="rgba(255,255,255,.12)"/><text x="74" y="19.5" text-anchor="middle" font-size="9" font-weight="700" fill="#FFFFFF" font-family="Manrope, system-ui, sans-serif">A SEMANA DO INVESTIDOR</text></g></svg></div>
-          <div class="wk-b"><span class="wk-l">A semana do investidor · 29 de outubro de 2026 · 3 min</span>
-          <h3>A semana do investidor: BCE em pausa, Lagarde de saída e a IA posta à prova</h3><ul><li>BCE mantém os juros, mas a subida foi discutida</li><li>Lagarde vai deixar o BCE em fevereiro</li><li>Fed também em pausa, com a porta aberta a subidas</li></ul>
-          <span class="wk-go">Ler a semana →</span></div></a>
-        <a class="more" href="semana">Edições anteriores →</a>
       <!--/CMS:SEMANA-->
       <div class="wl" data-flag="waitlist" hidden>
         <h3>IRS dos seus investimentos, pronto para a contabilista</h3>
@@ -257,16 +257,30 @@
         <a class="wl-go" href="irs-xtb" style="margin-top:12px">Experimentar →</a>
       </div>
       <!--CMS:AGENDA-->
-<div class="ag-w"><p class="ag-l">O que vigiar esta semana · 2 a 6 de novembro</p>
-        <div class="ag"><div class="ag-r" data-d="2026-11-02"><div class="ag-d"><span>seg</span><b>2</b></div>
-          <div class="ag-e"><b>Resultados da Apple</b><small>Pesam no S&amp;P 500 e nos ETF do mercado mundial</small><a href="https://investor.apple.com/" rel="noopener" target="_blank">Ver na página de investidores da Apple →</a></div></div><div class="ag-r" data-d="2026-11-03"><div class="ag-d"><span>ter</span><b>3</b></div>
-          <div class="ag-e"><b>Eleições intercalares nos EUA</b><small>Podem mexer com o dólar e as ações americanas</small></div></div><div class="ag-r" data-d="2026-11-05"><div class="ag-d"><span>qui</span><b>5</b></div>
-          <div class="ag-e"><b>Banco de Inglaterra decide os juros</b><small>Taxa atual: 3,75%</small><a href="https://www.bankofengland.co.uk/monetary-policy" rel="noopener" target="_blank">Ver no site do Banco de Inglaterra →</a></div></div><div class="ag-r" data-d="2026-11-06"><div class="ag-d"><span>sex</span><b>6</b></div>
-          <div class="ag-e"><b>Relatório de emprego dos EUA (outubro)</b><small>Pode influenciar a próxima decisão da Fed</small><a href="https://www.bls.gov/news.release/empsit.toc.htm" rel="noopener" target="_blank">Ver no site oficial (BLS) →</a></div></div><div class="ag-r"><div class="ag-d"><span>toda</span><b>sem.</b></div>
-          <div class="ag-e"><b>Orçamento de 2027 na especialidade</b><small>Votação final a 24 de novembro</small></div></div></div>
-        <p class="ag-f">Atualizado a 3 de novembro de 2026</p></div>
-        <script>(function(){var t=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Lisbon'});document.querySelectorAll('.ag-r[data-d]').forEach(function(r){var d=r.getAttribute('data-d');if(d<t)r.classList.add('past');else if(d===t){r.classList.add('today');var b=r.querySelector('b+b,.ag-e b');if(b)b.insertAdjacentHTML('beforeend',' <span class="ag-hoje">hoje</span>');}});})();</script>
       <!--/CMS:AGENDA-->
+      <div class="thm" aria-labelledby="t-thm">
+        <p class="ag-l" id="t-thm">Termómetro do mercado</p>
+        <div class="thm-c">
+          <div class="thm-h"><b>Como está o mercado hoje?</b><button type="button" class="thm-i" id="thmInfoBtn" aria-expanded="false">Como funciona ›</button></div>
+          <svg id="thmG" viewBox="0 0 220 112" width="100%" height="116" role="img" aria-label="Termómetro do mercado"><defs><linearGradient id="thmGr" x1="0" x2="1"><stop offset="0" stop-color="#0F9D6E"/><stop offset=".5" stop-color="#F2C14E"/><stop offset="1" stop-color="#DC2626"/></linearGradient></defs>
+            <path d="M24 102 A86 86 0 0 1 196 102" fill="none" stroke="url(#thmGr)" stroke-width="15" stroke-linecap="round"/><line id="thmN" x1="110" y1="102" x2="110" y2="34" stroke="#0A2A66" stroke-width="4" stroke-linecap="round" opacity=".25"/><circle cx="110" cy="102" r="6.5" fill="#0A2A66"/>
+            <text id="thmV" x="110" y="86" text-anchor="middle" font-size="25" font-weight="800" fill="#0A2A66">—</text></svg>
+          <p class="thm-z" id="thmZ">A carregar…</p>
+          <div class="thm-p"><div><span>📈 Valorização <small id="thmCape">CAPE</small></span><b id="thmPv">—</b></div><i><em id="thmBv"></em></i></div>
+          <div class="thm-p"><div><span>🏦 Juros <small id="thmDfr">BCE</small></span><b id="thmPm">—</b></div><i><em id="thmBm"></em></i></div>
+          <div class="thm-p"><div><span>😬 Sentimento <small id="thmVix">VIX</small></span><b id="thmPs">—</b></div><i><em id="thmBs"></em></i></div>
+          <div class="thm-x" id="thmInfo" hidden>
+            <p>Junta três medidas públicas num número de 0 a 100, para mostrar se o mercado de ações está, no conjunto, mais perto do pânico (0) ou da euforia (100). Serve para dar contexto, não para prever o próximo mês.</p>
+            <p><b>Valorização (40%)</b>: o CAPE do S&amp;P 500, o preço face aos lucros médios dos últimos 10 anos (média histórica perto de 17). <span id="thmRc"></span><br>
+            <b>Juros (40%)</b>: a taxa de depósito do BCE; juros altos tornam o dinheiro parado mais atrativo. <span id="thmRd"></span><br>
+            <b>Sentimento (20%)</b>: o VIX, o "índice do medo"; VIX baixo = calma ou otimismo. <span id="thmRv"></span></p>
+            <p><b>Como ler:</b> 0 a 30 desconto · 31 a 60 neutro · 61 a 100 esticado.</p>
+            <p><b>Limitações:</b> não prevê o mês seguinte; o mercado pode ficar "esticado" durante anos e continuar a subir; as escalas são uma escolha. É informação geral, não uma recomendação de investimento.</p>
+          </div>
+          <p class="thm-s" id="thmS">Informação de mercado, não uma recomendação.</p>
+          <a class="thm-b" href="app">Planear o meu aporte na app →</a>
+        </div>
+      </div>
       <div class="ind" aria-labelledby="t-ind">
         <h3 id="t-ind">Indicadores oficiais</h3>
         <div class="ind-g">
@@ -286,28 +300,17 @@
       <p class="sub">Explicações claras, com exemplos e contas feitas, sobre as dúvidas mais comuns de quem investe.</p>
       <!--CMS:GUIAS-->
 <div class="gwrap">
-        <a class="gcard big" href="guia-bitcoin-direto-ou-etp"><div class="gcv"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" width="360" height="180" role="img" aria-label="Ilustração: moeda de Bitcoin e carteira física"><rect width="360" height="180" fill="#FFF4E0"/><circle cx="150" cy="92" r="46" fill="#F7931A"/><circle cx="150" cy="92" r="38" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/><text x="150" y="108" text-anchor="middle" font-size="46" font-weight="800" fill="#FFFFFF" font-family="Manrope, system-ui, sans-serif">₿</text>
-<g transform="translate(214 50)"><rect width="52" height="80" rx="14" fill="#0A2A66"/><rect x="10" y="12" width="32" height="24" rx="5" fill="#5B8DEF"/><circle cx="26" cy="58" r="9" fill="#FFFFFF"/></g></svg></div><span class="tag">Novo · Bitcoin · 7 min</span>
+        <a class="gcard big" href="guia-bitcoin-direto-ou-etp"><span class="tag">Novo · Bitcoin · 5 min</span>
           <h3>Bitcoin direto ou ETP de Bitcoin? O que é seu, o que paga de IRS e o que fica para a família</h3>
           <p>A história do Bitcoin, a diferença entre ter a criptomoeda e ter um produto de bolsa, e porque é que um pode pagar 0 € de IRS e o outro 28%.</p>
           <span class="go">Ler →</span></a>
-        <a class="gcard" href="xtb-no-irs-como-completar-o-anexo-g-pre-preenchido-e-as-acoes-fraciona"><div class="gcv"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" width="360" height="180" role="img" aria-label="Ilustração: compras vendidas por ordem de chegada (FIFO)"><rect width="360" height="180" fill="#E7F6EF"/><rect x="78" y="50" width="56" height="56" rx="12" fill="#0F9D6E"/><text x="106" y="85" text-anchor="middle" font-size="16" font-weight="800" fill="#FFFFFF" font-family="Manrope, system-ui, sans-serif">1.º</text><rect x="152" y="50" width="56" height="56" rx="12" fill="#4CC294"/><text x="180" y="85" text-anchor="middle" font-size="16" font-weight="800" fill="#FFFFFF" font-family="Manrope, system-ui, sans-serif">2.º</text><rect x="226" y="50" width="56" height="56" rx="12" fill="#9FE0C4"/><text x="254" y="85" text-anchor="middle" font-size="16" font-weight="800" fill="#0B5D41" font-family="Manrope, system-ui, sans-serif">3.º</text>
-<path d="M82 132 h196" stroke="#0A2A66" stroke-width="3.4" stroke-linecap="round"/><path d="M80 132 l12 -7 v14z" fill="#0A2A66"/><text x="180" y="156" text-anchor="middle" font-size="11" font-weight="700" fill="#0B5D41" font-family="Manrope, system-ui, sans-serif">vende primeiro o que comprou primeiro</text></svg></div><span class="tag">IRS · 4 min</span>
-          <h3>XTB no IRS: como completar o Anexo G pré-preenchido (e as ações fracionadas)</h3>
-          <p>O Portal mostra a venda, mas não a compra. Veja como completar cada linha sem erros e o que fazer às frações.</p>
-          <span class="go">Ler →</span></a>
-        <a class="gcard" href="acoes-ou-cfds-a-diferenca-que-pode-custar-caro-e-o-que-muda-no-irs"><div class="gcv"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" width="360" height="180" role="img" aria-label="Ilustração: balança entre ação e CFD"><rect width="360" height="180" fill="#FDECEC"/><g stroke="#0A2A66" stroke-width="4" stroke-linecap="round"><line x1="180" y1="34" x2="180" y2="140"/><line x1="96" y1="48" x2="264" y2="48"/></g>
-<path d="M96 48 l-26 48 h52z" fill="#0F9D6E"/><path d="M264 48 l-26 48 h52z" fill="#DC2626"/><rect x="150" y="138" width="60" height="10" rx="5" fill="#0A2A66"/>
-<text x="96" y="120" text-anchor="middle" font-size="15" font-weight="800" fill="#0B5D41" font-family="Manrope, system-ui, sans-serif">Ação</text><text x="264" y="120" text-anchor="middle" font-size="15" font-weight="800" fill="#991B1B" font-family="Manrope, system-ui, sans-serif">CFD</text></svg></div><span class="tag">Investir · 4 min</span>
-          <h3>Ações ou CFDs? A diferença que pode custar caro (e o que muda no IRS)</h3>
-          <p>Parecem iguais na app da corretora, mas um é seu e o outro é uma aposta com alavancagem. Saiba distinguir.</p>
-          <span class="go">Ler →</span></a>
-        <a class="gcard" href="guia-irs-xtb"><div class="gcv"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" width="360" height="180" role="img" aria-label="Ilustração: declaração de IRS preenchida"><rect width="360" height="180" fill="#E6EEFC"/><g transform="translate(138 22)"><rect width="84" height="112" rx="10" fill="#FFFFFF" stroke="#BFD1F3" stroke-width="2"/><rect x="12" y="14" width="44" height="8" rx="3" fill="#1D4ED8"/>
-<g fill="#DCE7F8"><rect x="12" y="34" width="60" height="6" rx="3"/><rect x="12" y="48" width="50" height="6" rx="3"/><rect x="12" y="62" width="56" height="6" rx="3"/><rect x="12" y="76" width="40" height="6" rx="3"/></g>
-<circle cx="70" cy="98" r="18" fill="#0F9D6E"/><path d="M61 98 l6 6 l11 -12" stroke="#FFFFFF" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
-<g transform="translate(240 40)"><rect width="70" height="26" rx="8" fill="#FFFFFF"/><text x="35" y="17" text-anchor="middle" font-size="11" font-weight="800" fill="#1D4ED8" font-family="Manrope, system-ui, sans-serif">Anexo G</text></g><g transform="translate(52 108)"><rect width="70" height="26" rx="8" fill="#FFFFFF"/><text x="35" y="17" text-anchor="middle" font-size="11" font-weight="800" fill="#0F9D6E" font-family="Manrope, system-ui, sans-serif">Anexo J</text></g></svg></div><span class="tag">IRS · 4 min</span>
+        <a class="gcard" href="guia-irs-xtb"><span class="tag">IRS · 4 min</span>
           <h3>Como declarar ações e ETFs da XTB no IRS</h3>
           <p>Anexo G ou J, onde estão os documentos, dividendos, englobamento e os erros mais comuns.</p>
+          <span class="go">Ler →</span></a>
+        <a class="gcard" href="guia-fifo-acoes-fracionadas"><span class="tag">IRS · 3 min</span>
+          <h3>Mais-valias com FIFO e ações fracionadas: exemplo passo a passo</h3>
+          <p>Um exemplo completo, passo a passo, com as linhas exatas a declarar.</p>
           <span class="go">Ler →</span></a>
       </div>
       <!--/CMS:GUIAS-->
@@ -496,7 +499,35 @@
       if (j.fx) { document.getElementById('iFX').textContent = nf(j.fx.usd, 4) + ' $'; var f = j.fx.date.split('-'); document.getElementById('iFXm').textContent = 'por 1 € · ' + f[2] + '/' + f[1] + '/' + f[0]; }
     });
   }
-  function start() { quotes(); indicators(); setInterval(function () { if (!document.hidden) quotes(); }, 5 * 60e3); }
+  function thermo() {
+    var W = { val: 0.4, mac: 0.4, sen: 0.2 }, lin = function (v, a, b) { return Math.max(0, Math.min(100, (v - a) / (b - a) * 100)); };
+    var mk = fetch('market.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
+    Promise.all([mk, get('/bce'), get('/quote?symbols=' + encodeURIComponent('^VIX'))]).then(function (res) {
+      var m = res[0] || {}, b = res[1] || {}, q = (res[2] || {})['^VIX'], R = m.ranges || {};
+      var rc = R.cape || [10, 45], rd = R.dfr || [0, 4], rv = R.vix || [40, 12];
+      var cape = m.cape != null ? m.cape : null, dfr = b.dfr ? b.dfr.rate : null, vix = q && q.price ? q.price : null, p = {};
+      if (cape != null) p.val = lin(cape, rc[0], rc[1]); if (dfr != null) p.mac = lin(dfr, rd[0], rd[1]); if (vix != null) p.sen = lin(vix, rv[0], rv[1]);
+      var ks = Object.keys(p);
+      document.getElementById('thmRc').textContent = 'Escala: CAPE ' + rc[0] + ' = 0, ' + rc[1] + ' = 100.';
+      document.getElementById('thmRd').textContent = 'Escala: ' + rd[0] + '% = 0, ' + rd[1] + '% = 100.';
+      document.getElementById('thmRv').textContent = 'Escala: VIX ' + rv[0] + ' = 0, ' + rv[1] + ' = 100.';
+      if (!ks.length) { document.getElementById('thmZ').textContent = 'Dados indisponíveis de momento.'; return; }
+      var ws = ks.reduce(function (s, k) { return s + W[k]; }, 0), v = Math.round(ks.reduce(function (s, k) { return s + p[k] * W[k]; }, 0) / ws);
+      var z = v <= 30 ? ['Desconto', 'medo e preços baixos face à história', '#0F9D6E'] : v <= 60 ? ['Neutro', 'sem sinais fortes num sentido ou noutro', '#B7791F'] : ['Esticado', 'ações caras face à história, juros atrativos ou otimismo elevado', '#C2410C'];
+      var ang = Math.PI * (1 - v / 100), n = document.getElementById('thmN');
+      n.setAttribute('x2', (110 + 68 * Math.cos(ang)).toFixed(1)); n.setAttribute('y2', (102 - 68 * Math.sin(ang)).toFixed(1)); n.setAttribute('opacity', '1');
+      document.getElementById('thmV').textContent = v; document.getElementById('thmG').setAttribute('aria-label', 'Termómetro do mercado em ' + v + ' de 100');
+      document.getElementById('thmZ').innerHTML = '<b style="color:' + z[2] + '">' + z[0] + '</b> · ' + z[1];
+      var set = function (id, bar, val, label, lid) { document.getElementById(id).textContent = val == null ? '—' : Math.round(val); document.getElementById(lid).textContent = label;
+        var e = document.getElementById(bar); if (val != null) { e.style.width = val + '%'; e.style.background = val > 60 ? '#F08A3B' : val > 30 ? '#F2C14E' : '#4CC294'; } };
+      set('thmPv', 'thmBv', p.val, cape != null ? 'CAPE ' + nf(cape, 1) : 'CAPE por atualizar', 'thmCape');
+      set('thmPm', 'thmBm', p.mac, dfr != null ? 'BCE ' + nf(dfr, 2) + '%' : 'BCE —', 'thmDfr');
+      set('thmPs', 'thmBs', p.sen, vix != null ? 'VIX ' + nf(vix, 1) : 'VIX —', 'thmVix');
+      if (m.capeMonth) { var mm = m.capeMonth.split('-'); document.getElementById('thmS').textContent = 'Informação de mercado, não uma recomendação. CAPE de ' + MES[Number(mm[1]) - 1] + ' de ' + mm[0] + '.'; }
+    });
+    var ib = document.getElementById('thmInfoBtn'); ib.onclick = function () { var x = document.getElementById('thmInfo'), open = x.hasAttribute('hidden'); if (open) x.removeAttribute('hidden'); else x.setAttribute('hidden', ''); ib.setAttribute('aria-expanded', open); };
+  }
+  function start() { quotes(); indicators(); thermo(); setInterval(function () { if (!document.hidden) quotes(); }, 5 * 60e3); }
   if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 2000 }); else setTimeout(start, 600);
 })();
 </script>

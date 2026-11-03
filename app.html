@@ -2735,14 +2735,16 @@ function renderTax() {
 
 /* ---------- Mercado: termómetro (ISSC) e planear aporte ---------- */
 // Escalas de cada pilar (0 = pânico/desconto, 100 = euforia/esticado). Ficam visíveis na explicação.
-const ISSC_R = { cape: [15, 40], dfr: [0, 4], vix: [40, 12] }, ISSC_W = { val: 0.4, mac: 0.4, sen: 0.2 };
+const ISSC_R0 = { cape: [10, 45], dfr: [0, 4], vix: [40, 12] }, ISSC_W = { val: 0.4, mac: 0.4, sen: 0.2 };
+// As escalas vêm do ficheiro publicado pelo painel (market.json), para o site e a app usarem sempre as mesmas
+const issR = () => { const r = S.market?.ranges || {}; const ok = x => Array.isArray(x) && x.length === 2 && x.every(Number.isFinite); return { cape: ok(r.cape) ? r.cape : ISSC_R0.cape, dfr: ok(r.dfr) ? r.dfr : ISSC_R0.dfr, vix: ok(r.vix) ? r.vix : ISSC_R0.vix }; };
 const issLin = (v, a, b) => Math.max(0, Math.min(100, (v - a) / (b - a) * 100));
 function isscCalc(m) {
   if (!m) return null;
-  const p = {};
-  if (m.cape != null) p.val = issLin(m.cape, ...ISSC_R.cape);
-  if (m.dfr != null) p.mac = issLin(m.dfr, ...ISSC_R.dfr);
-  if (m.vix != null) p.sen = issLin(m.vix, ...ISSC_R.vix);
+  const p = {}, R = issR();
+  if (m.cape != null) p.val = issLin(m.cape, ...R.cape);
+  if (m.dfr != null) p.mac = issLin(m.dfr, ...R.dfr);
+  if (m.vix != null) p.sen = issLin(m.vix, ...R.vix);
   const ks = Object.keys(p); if (!ks.length) return null;
   const ws = ks.reduce((s, k) => s + ISSC_W[k], 0);
   return { v: Math.round(ks.reduce((s, k) => s + p[k] * ISSC_W[k], 0) / ws), p, partial: ks.length < 3 };
@@ -2755,7 +2757,7 @@ function loadMarket(force = false) {
   if (mkLoading) return mkLoading;
   mkLoading = (async () => {
     const m = { ...(S.market || {}) };
-    try { const r = await fetch('market.json?t=' + Date.now(), { cache: 'no-store' }); if (r.ok) { const j = await r.json(); m.cape = j.cape ?? null; m.capeMonth = j.capeMonth || ''; m.history = j.history || []; } } catch (e) {}
+    try { const r = await fetch('market.json?t=' + Date.now(), { cache: 'no-store' }); if (r.ok) { const j = await r.json(); m.cape = j.cape ?? null; m.capeMonth = j.capeMonth || ''; m.history = j.history || []; m.ranges = j.ranges || null; } } catch (e) {}
     if (useWorker() && navigator.onLine) {
       try { const j = await (await fetch(`${workerBase()}/bce`)).json(); if (j?.dfr?.rate != null) { m.dfr = j.dfr.rate; m.dfrSince = j.dfr.since; } } catch (e) {}
       try { const j = await (await fetch(`${workerBase()}/quote?symbols=${encodeURIComponent('^VIX')}`)).json(); const q = j['^VIX']; if (q?.price) m.vix = q.price; } catch (e) {}
@@ -2860,7 +2862,7 @@ function isscConsent(done) {
   $('#isNo').onclick = () => closeModal();
 }
 function openIsscInfo() {
-  const m = S.market || {}, I = isscCalc(m);
+  const m = S.market || {}, I = isscCalc(m), ISSC_R = issR();
   const pil = (ico, t, w, v, desc, scale, src) => `<div class="rounded-2xl border border-brand-100 p-3 mt-2"><div class="flex justify-between"><b>${ico} ${t} · ${w}</b><b class="num">${v == null ? '—' : Math.round(v)}</b></div>
     <p class="text-xs text-slate-600 mt-1">${desc}</p><div class="flex justify-between text-[11px] text-slate-500 mt-1"><span>${scale[0]}</span><span>${scale[1]}</span></div><p class="text-[11px] text-slate-400 mt-1">${src}</p></div>`;
   openModal(`${modalHead('Como funciona o termómetro')}
