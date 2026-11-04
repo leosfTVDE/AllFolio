@@ -1579,7 +1579,9 @@ function cashState() {
   const mv = [];
   S.cash.forEach(c => mv.push({ k: 'cash', id: c.id, date: c.date, amount: c.type === 'dep' ? c.amount : -c.amount, label: c.type === 'dep' ? 'Depósito' : 'Retirado', sub: c.note || 'à mão' }));
   S.div.filter(d => d.date >= from).forEach(d => mv.push({ k: 'div', id: d.id, date: d.date, amount: divNet(d), label: 'Dividendo ' + d.ticker, sub: d.src === 'forecast' ? 'confirmado na app' : 'registado', irs: divIRS(d) }));
-  S.tx.filter(t => t.fromCash).forEach(t => mv.push({ k: t.type, id: t.id, date: t.date, amount: t.type === 'buy' ? -(t.qty * t.price + (t.fees || 0)) : t.qty * t.price - (t.fees || 0), label: (t.type === 'buy' ? 'Compra ' : 'Venda ') + t.ticker, sub: t.type === 'buy' ? 'usado da caixa' : 'devolvido à caixa' }));
+  // Vendas: entram na caixa automaticamente (desde a data de início da caixa), salvo se o utilizador as excluir no formulário
+  const sellIn = t => t.toCash === true || (t.toCash === undefined && (t.fromCash === true || (cfg.sellsAuto !== false && t.date >= from)));
+  S.tx.filter(t => (t.type === 'buy' && t.fromCash) || (t.type === 'sell' && sellIn(t))).forEach(t => mv.push({ k: t.type, id: t.id, date: t.date, amount: t.type === 'buy' ? -(t.qty * t.price + (t.fees || 0)) : t.qty * t.price - (t.fees || 0), label: (t.type === 'buy' ? 'Compra ' : 'Venda ') + t.ticker, sub: t.type === 'buy' ? 'usado da caixa' : 'valor da venda' }));
   mv.sort((a, b) => b.date.localeCompare(a.date) || 0);
   const sum = f => mv.filter(f).reduce((s, m) => s + m.amount, 0), yr = String(new Date().getFullYear());
   return { mv, from, cfg, saldo: sum(() => true), dep: sum(m => m.k === 'cash' && m.amount > 0), divs: sum(m => m.k === 'div'),
@@ -1664,15 +1666,19 @@ function openCashCfg() {
   openModal(`${modalHead('Definições da caixa')}
   <form id="ccForm" class="space-y-3">
     <div><label class="lbl" for="ccGoal">Meta (EUR) <span class="font-normal text-slate-400">(0 para não mostrar)</span></label><input id="ccGoal" class="field num" inputmode="decimal" value="${c.goal || ''}" placeholder="1000"></div>
-    <div><label class="lbl" for="ccFrom">Contar dividendos a partir de</label><input id="ccFrom" type="date" class="field" value="${c.divFrom || cashState().from}"></div>
+    <div><label class="lbl" for="ccFrom">Contar dividendos e vendas a partir de</label><input id="ccFrom" type="date" class="field" value="${c.divFrom || cashState().from}"></div>
+    <label class="flex items-start gap-2 text-sm font-semibold"><input id="ccSells" type="checkbox" class="w-5 h-5 mt-0.5 accent-[#0F9D6E]" ${c.sellsAuto !== false ? 'checked' : ''}><span>Somar automaticamente o valor das vendas à caixa<span class="block text-[11px] font-normal text-slate-500">Vale para as vendas a partir da data acima, incluindo as importadas.</span></span></label>
     <div><label class="lbl" for="ccPlace">Onde está o dinheiro</label><select id="ccPlace" class="field">${brokerOpts(c.place || 'XTB')}</select></div>
     <button class="w-full h-12 rounded-2xl bg-brand-600 text-white font-bold">Guardar</button>
   </form>`);
-  $('#ccForm').onsubmit = ev => { ev.preventDefault(); Object.assign(c, { goal: TF.num($('#ccGoal').value), divFrom: $('#ccFrom').value, place: $('#ccPlace').value }); save(); closeModal(); render(); toast('Definições guardadas'); };
+  $('#ccForm').onsubmit = ev => { ev.preventDefault(); Object.assign(c, { goal: TF.num($('#ccGoal').value), divFrom: $('#ccFrom').value, place: $('#ccPlace').value, sellsAuto: $('#ccSells').checked }); save(); closeModal(); render(); toast('Definições guardadas'); };
 }
 
 function cashQHTML(kind, e, pre) {
-  if (kind === 'sell') return `<label class="flex items-center gap-2 text-sm font-semibold"><input id="fCash" type="checkbox" class="w-5 h-5 accent-[#0F9D6E]" ${e.fromCash ? 'checked' : ''}>Devolver o valor à caixa de oportunidade</label>`;
+  if (kind === 'sell') {
+    const cfg = cashCfg(), from = cashState().from, on = e.id ? (e.toCash ?? (e.fromCash === true || (cfg.sellsAuto !== false && e.date >= from))) : cfg.sellsAuto !== false;
+    return `<label class="flex items-start gap-2 text-sm font-semibold"><input id="fCash" type="checkbox" class="w-5 h-5 mt-0.5 accent-[#0F9D6E]" ${on ? 'checked' : ''}><span>O valor desta venda entra na caixa de oportunidade<span class="block text-[11px] font-normal text-slate-500">Desmarque se levantou o dinheiro ou o usou noutra coisa.</span></span></label>`;
+  }
   const back = e.fromCash ? e.qty * e.price + (e.fees || 0) : 0;
   const ask = !!((S.cash || []).length || cashState().saldo > 0.004 || e.fromCash || pre);
   UI.cq = { ask, back, val: e.id ? !!e.fromCash : (pre ? true : null) };
@@ -2529,7 +2535,7 @@ function openTxForm(kind = 'buy', existing = null, fromCash = false) {
       if (kind === 'buy' && UI.cq?.ask && UI.cq.val === null) { $('#cashQ')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return toast('Responda se o valor saiu da caixa'); }
       TF.ensureAsset(S, { ticker, name: $('#fName').value.trim() });
       const rec = { id: e.id || uid(), created: e.created || Date.now(), type: kind, ticker, date, qty, price: cur === 'EUR' ? p : p / fx,
-        priceOrig: p, currency: cur, fx: cur === 'EUR' ? null : fx, fees: TF.num($('#fFees').value), broker, fromCash: kind === 'sell' ? !!$('#fCash')?.checked : (UI.cq?.ask ? UI.cq.val === true : false) };
+        priceOrig: p, currency: cur, fx: cur === 'EUR' ? null : fx, fees: TF.num($('#fFees').value), broker, fromCash: kind === 'sell' ? undefined : (UI.cq?.ask ? UI.cq.val === true : false), toCash: kind === 'sell' ? !!$('#fCash')?.checked : undefined };
       if (existing) S.tx = S.tx.map(t => t.id === e.id ? rec : t); else S.tx.push(rec);
     }
     save(); closeModal(); render(); toast(existing ? 'Alterações guardadas' : 'Registado');
