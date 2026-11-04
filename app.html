@@ -798,6 +798,7 @@ function load() {
   try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) Object.assign(S, s); } catch (e) {}
   S.settings ||= {}; S.settings.brokerCp ||= {}; S.settings.cdt ||= {};
   portsInit(); if (isAll()) loadActive();
+  fixXtbAnnual();
   try { UI.tab = localStorage.getItem(KEY + '.tab') || 'home'; } catch (e) {}
 }
 function saveLocal() {
@@ -2841,8 +2842,9 @@ function renderMarket() {
       <div class="rounded-2xl bg-ink text-white p-3 mt-2 text-sm num space-y-0.5">
         ${P.reserve > 0.004 ? `<div class="flex justify-between"><span class="text-brand-100">Para a caixa de oportunidade</span><b>${fmtEUR(P.reserve)}</b></div>` : useCash && P.cashFull ? '<div class="flex justify-between"><span class="text-brand-100">Caixa de oportunidade</span><b>já no alvo</b></div>' : ''}
         <div class="flex justify-between"><span class="text-brand-100">Em ações (${buy.reduce((s, r) => s + r.n, 0)} un.)</span><b>${fmtEUR(P.spent)}</b></div>
-        <div class="flex justify-between text-emerald-200"><span>Sobra</span><b>${fmtEUR(P.left)}</b></div></div>
-      ${P.rows.some(r => !r.n && r.price) ? `<p class="text-[11px] text-slate-500 mt-2">Não comprar agora: ${P.rows.filter(r => !r.n && r.price).map(r => nm(r.tk)).join(', ')}.</p>` : ''}
+        <div class="flex justify-between text-emerald-200"><span>Troco (fica na caixa)</span><b>${fmtEUR(P.left)}</b></div></div>
+      <p class="text-[11px] text-slate-500 mt-2">Compra primeiro os ativos mais longe do alvo, só em ações inteiras e enquanto a compra os aproximar do alvo, sem compras extra acima dele. O troco fica na caixa de oportunidade.</p>
+      ${P.rows.some(r => !r.n && r.price) ? `<p class="text-[11px] text-slate-500 mt-1">Não comprar agora: ${P.rows.filter(r => !r.n && r.price).map(r => nm(r.tk)).join(', ')} (já no alvo, ou uma ação inteira afastá-lo-ia do alvo).</p>` : ''}
       ${P.noPrice.length ? `<p class="text-[11px] text-amber-700 mt-1">Sem preço atual: ${P.noPrice.map(nm).join(', ')}. Toque em Preços no Início.</p>` : ''}
       <p class="text-[11px] text-slate-400 mt-2">Preços ${P.oldest ? ago(P.oldest) : ''}, com cerca de 15 minutos de atraso. Nada é registado na app.</p>`;
     bind();
@@ -2910,26 +2912,19 @@ function aportePlan(amount, withCash = false, cashTOverride = null) {
   let left = amount - reserve;
   const tot = inv + left;
   const rows = Object.keys(tg).map(tk => { const p = pos.find(x => x.ticker === tk); return { tk, target: tg[tk], price: S.assets[tk]?.price ?? null, cur: p ? val(p) : 0, n: 0 }; });
+  // Compra ações inteiras, uma de cada vez, no ativo que mais se aproxima do seu valor ideal com essa compra
+  // (os mais longe do alvo primeiro). Só compra se a ação aproximar o ativo do alvo; sem compras extra acima do alvo.
+  // O troco que não chega para nenhuma compra útil fica para a caixa de oportunidade.
   for (let k = 0; k < 2000; k++) {
     let best = null, bs = 0;
     for (const r of rows) {
       if (!r.price || r.price > left + 1e-9) continue;
       const v = r.cur + r.n * r.price, gap = r.target / 100 * tot - v; if (gap <= 0) continue;
-      const score = gap - Math.abs(r.target / 100 * tot - (v + r.price)); if (score > bs) { bs = score; best = r; }
+      const score = gap - Math.abs(gap - r.price); if (score > bs) { bs = score; best = r; }
     }
     if (!best) break; best.n++; left -= best.price;
   }
-  // Ainda sobra para mais ações: compra a que fica menos acima do alvo, até o dinheiro não chegar para nenhuma
-  for (let k = 0; k < 2000; k++) {
-    const totAfter = inv + rows.reduce((s, r) => s + r.n * (r.price || 0), 0);
-    let best = null, bo = Infinity;
-    for (const r of rows) {
-      if (!r.price || r.price > left + 1e-9) continue;
-      const over = ((r.cur + (r.n + 1) * r.price) / (totAfter + r.price) * 100 - r.target) / r.target;
-      if (over < bo) { bo = over; best = r; }
-    }
-    if (!best) break; best.n++; left -= best.price;
-  }
+
   const spent = rows.reduce((s, r) => s + r.n * r.price, 0);
   rows.forEach(r => { r.after = (r.cur + r.n * (r.price || 0)) / (inv + spent) * 100; r.targetShown = tg[r.tk]; });
   rows.sort((x, y) => (y.n * (y.price || 0)) - (x.n * (x.price || 0)) || y.target - x.target);
@@ -2968,8 +2963,19 @@ function openAporte() {
 }
 
 /* ---------- Relatório anual da XTB → guia para completar o pré-preenchimento do Portal ---------- */
+// Os relatórios da XTB guardam-se por ano ({ "2025": {...} }). Uma versão antiga podia transformá-los
+// numa lista com milhares de posições vazias; isto repara-os sem perder nenhum relatório.
+function fixXtbAnnual() {
+  const x = S.xtbAnnual;
+  if (x && typeof x === 'object' && !Array.isArray(x) && Object.keys(x).every(k => /^(19|20)\d{2}$/.test(k))) return false;
+  const out = {};
+  const add = (k, v) => { if (v && typeof v === 'object' && !Array.isArray(v)) { const y = String(v.year || k); if (/^(19|20)\d{2}$/.test(y)) out[y] = v; } };
+  if (Array.isArray(x)) x.forEach((v, i) => add(i, v)); else if (x && typeof x === 'object') Object.entries(x).forEach(([k, v]) => add(k, v));
+  S.xtbAnnual = out; return true;
+}
 function xtbAnnualCard() {
-  const ys = Object.keys(S.xtbAnnual || {}).sort().reverse();
+  if (fixXtbAnnual()) save();
+  const ys = Object.keys(S.xtbAnnual || {}).filter(y => /^(19|20)\d{2}$/.test(y)).sort().reverse();
   return `<div class="no-print mt-4 rounded-3xl border border-brand-100 bg-white p-4">
     <div class="flex items-center gap-2"><span class="w-9 h-9 rounded-xl bg-[#E8352A] text-white grid place-items-center text-xs font-extrabold shrink-0">XTB</span>
       <div><div class="font-bold leading-tight">Relatório anual da XTB</div><div class="text-[11px] text-slate-500">Guia para preencher o Portal das Finanças</div></div></div>
@@ -2989,7 +2995,7 @@ async function loadXtbAnnual(file) {
   if (!text) return toast('Não foi possível ler o PDF. Ligue-se à internet e tente de novo.');
   const r = TF.parseXtbAnnual(text);
   if (!r.ok || !r.year) return toast('Não reconheci o relatório anual de mais-valias da XTB neste PDF.');
-  S.xtbAnnual ||= {};
+  fixXtbAnnual();
   const old = S.xtbAnnual[r.year];
   S.xtbAnnual[r.year] = { ...r, portal: old?.portal || {}, at: Date.now() };
   if (r.holder && !S.settings.holderName) S.settings.holderName = r.holder;
@@ -3573,7 +3579,8 @@ function personalData() {
 }
 function applyPersonal(p) {
   p = p || {};
-  SYNC_KEYS.forEach(k => S[k] = p[k] ?? (k === 'assets' || k === 'divDone' ? {} : []));
+  SYNC_KEYS.forEach(k => S[k] = p[k] ?? (k === 'assets' || k === 'divDone' || k === 'xtbAnnual' ? {} : []));
+  fixXtbAnnual();
   const fx = S.settings?.fx, quota = S.settings?.quota;
   S.settings = { ...(p.settings || {}), fx, quota };
   S.settings.brokerCp ||= {}; S.settings.cdt ||= {};
