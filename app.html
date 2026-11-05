@@ -1140,7 +1140,7 @@ const LOGO_SVG = (s = 34, dark = false) => `<svg width="${s}" height="${s}" view
   <text x="3" y="15" font-size="14" font-weight="800" fill="${dark ? '#34D399' : '#0F9D6E'}" font-family="system-ui, sans-serif">$</text></svg>`;
 
 /* ---------- Variação da carteira e comparação no Início ---------- */
-const HP = { d: { l: '1 dia', w: 'no último dia', days: 1 }, w: { l: 'Semana', w: 'esta semana', days: 7 }, m: { l: 'Mês', w: 'este mês', days: 30 }, y: { l: 'Ano', w: 'num ano', days: 365 } };
+const HP = { d: { l: '1 dia', w: 'no último dia', days: 1 }, w: { l: 'Semana', w: 'esta semana', days: 7 }, m: { l: 'Mês', w: 'este mês', days: 30 }, y: { l: 'Ano', w: 'num ano', days: 365 }, t: { l: 'Tudo', w: 'desde o início', days: null } };
 const homePer = () => HP[S.settings.homePer] ? S.settings.homePer : 'w';
 const homeBenchId = () => S.settings.homeBench || 'SPY';
 const homeBenchOn = () => !S.settings.homeBenchOff;
@@ -1242,10 +1242,11 @@ const infMonth = ym => `${monthName(ym)} de ${ym.slice(0, 4)}`;
 function realGain(geo) {
   const h = S.hist?.['INF:' + geo]; if (!h?.pts?.length) return null;
   const pos = TF.positions(TF.fifo(S.tx).lots, S.assets), last = h.pts[h.pts.length - 1][1];
-  let cost = 0, adj = 0, value = 0;
+  let cost = 0, adj = 0, value = 0, covered = false;
+  const lastDate = h.pts[h.pts.length - 1][0];
   for (const p of pos) { value += p.value ?? p.cost;
-    for (const l of p.lots) { const c = l.qty * l.unit, at = seriesAt(h.pts, l.date) ?? h.pts[0][1]; cost += c; adj += c * last / at; } }
-  if (!cost) return null;
+    for (const l of p.lots) { const c = l.qty * l.unit, at = seriesAt(h.pts, l.date) ?? h.pts[0][1]; cost += c; adj += c * last / at; if (l.date.slice(0, 7) < lastDate.slice(0, 7)) covered = true; } }
+  if (!cost || !covered) return null;
   const nominal = (value / cost - 1) * 100, infl = (adj / cost - 1) * 100;
   return { nominal, infl, real: nominal - infl, realEur: value - adj, inflEur: adj - cost, label: INF_GEO[geo] || geo, geo, last: h.last };
 }
@@ -1293,7 +1294,8 @@ function renderHome() {
   const goalTile = gd ? (gd.port ? [`Meta ${gd.g.port.month.slice(0, 4)}`, `${fmtN(gd.port.pct, 0)}%`] : gd.monthly ? ['Aporte do mês', `${fmtN(gd.monthly.now / gd.g.monthly.amount * 100, 0)}%`] : gd.div ? ['Dividendos/mês', `${fmtN(gd.div.pct, 0)}%`] : ['Metas', 'Ver']) : ['Metas', 'Definir'];
   const tile = (attrs, label, value, cls = '') => `<button ${attrs} class="text-left rounded-2xl bg-white border border-brand-100 p-3"><div class="text-xs font-semibold text-slate-500">${label}</div><div class="num text-lg font-extrabold ${cls}">${value}</div></button>`;
 
-  const per = homePer(), hv = pos.length ? homeVariation(per) : null, hbv = hv?.ok && homeBenchOn() ? benchVariation(per, homeBenchId(), hv.grid) : null;
+  const per = homePer(), hv = pos.length && per !== 't' ? homeVariation(per) : null, hbv = hv?.ok && homeBenchOn() ? benchVariation(per, homeBenchId(), hv.grid) : null;
+  const AT = per === 't' ? allTime() : null;
   const pLabel = (S.ports || []).length ? ' · ' + esc(isAll() ? 'Todas as carteiras' : curPort()?.name || '') : '';
   const compact = !!S.settings.homeCompact && !empty;
   const spark = pts => { if (!pts || pts.length < 2) return ''; const ys = pts.map(p => p[1] ?? p), lo = Math.min(...ys), hi = Math.max(...ys), sp = (hi - lo) || 1;
@@ -1303,8 +1305,8 @@ function renderHome() {
     <div class="flex items-center justify-between gap-3">
       <div class="min-w-0"><div class="text-xs text-brand-100 font-medium truncate">Património${pLabel}</div>
         <div class="num text-[28px] leading-tight font-extrabold tracking-tight">${fmtEUR(hasCash ? grand : total)}</div>
-        ${hv?.ok ? `<div class="num text-xs font-bold ${hv.gain >= 0 ? 'text-emerald-200' : 'text-rose-200'}">${plus(hv.gain)} (${fmtPct(hv.pct)}) ${HP[per].w}</div>` : ''}${isscPill()}</div>
-      <div class="flex flex-col items-end gap-1 shrink-0">${hv?.ok ? spark(hv.pts) : ''}<button data-hcompact class="h-7 px-3 rounded-full bg-white/15 text-xs font-bold" aria-label="Mostrar o cartão completo">▾ Mais</button></div></div>
+        ${hv?.ok ? `<div class="num text-xs font-bold ${hv.gain >= 0 ? 'text-emerald-200' : 'text-rose-200'}">${plus(hv.gain)} (${fmtPct(hv.pct)}) ${HP[per].w}</div>` : AT ? `<div class="num text-xs font-bold ${AT.result >= 0 ? 'text-emerald-200' : 'text-rose-200'}">${plus(AT.result)} (${fmtPct(AT.pct)}) desde o início</div>` : ''}${isscPill()}</div>
+      <div class="flex flex-col items-end gap-1 shrink-0">${hv?.ok ? spark(hv.pts) : AT?.chart?.length > 1 ? spark(AT.chart.map(c => c.v - c.inv)) : ''}<button data-hcompact class="h-7 px-3 rounded-full bg-white/15 text-xs font-bold" aria-label="Mostrar o cartão completo">▾ Mais</button></div></div>
   </div>` : null;
   $('#view-home').innerHTML = (cardHTML || `
   <div class="rounded-[28px] text-white p-5 relative overflow-hidden" style="background:linear-gradient(135deg,#1D4ED8,#0A2A66)">
@@ -1312,7 +1314,7 @@ function renderHome() {
       <div class="flex gap-1.5 shrink-0">${pos.length ? `<button data-hbench class="h-8 px-3 rounded-full bg-white/15 text-xs font-bold">${homeBenchOn() ? `vs ${esc(benchInfo(homeBenchId()).label)} ▾` : 'Comparar ▾'}</button>` : ''}
       ${!empty ? '<button data-hcompact class="h-8 px-2.5 rounded-full bg-white/15 text-xs font-bold" aria-label="Reduzir o cartão">▴ Menos</button>' : ''}</div></div>
     <div class="num text-[36px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(hasCash ? grand : total)}</div>
-    ${pos.length ? homeVarHTML(hv, hbv, per, priced.length, res, invested) : ''}
+    ${pos.length ? (per === 't' ? tudoHTML(AT) : homeVarHTML(hv, hbv, per, priced.length, res, invested)) : ''}
     ${isscPill()}
     ${hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3 relative">
       <button data-go="portfolio" class="text-left rounded-xl bg-white/10 px-3 py-2"><div class="text-[11px] text-brand-100">Investimentos</div><div class="num font-bold">${fmtEUR(total)}</div></button>
@@ -1346,7 +1348,7 @@ function renderHome() {
       + (hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3">${tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cashV), cashV < 0 ? 'text-loss' : '')}${tile(gd ? 'data-go="goals"' : 'data-goalcfg', goalTile[0], goalTile[1])}</div>` : '')
     : `<div class="flex items-center justify-between mt-3 mb-2"><h2 class="font-extrabold text-lg">As suas posições <span class="text-slate-500 font-semibold">(${pos.length})</span></h2>
       <span class="flex gap-3"><button data-charts class="text-sm font-bold text-brand-600">Gráficos</button><button data-go="portfolio" class="text-sm font-bold text-brand-600">Ver carteira</button></span></div>
-    ${card(pos.slice(0, S.settings.homeAllPos ? pos.length : 5).map(p => posRow(p, hv?.ok ? (hv.byTk[p.ticker] ?? null) : undefined, hv?.ok && S.settings.homeUnit === 'eur' ? (hv.byTkEur[p.ticker] ?? null) : undefined)).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}
+    ${card(pos.slice(0, S.settings.homeAllPos ? pos.length : 5).map(p => posRow(p)).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}
     ${pos.length > 5 ? `<button data-hmore class="mt-2 w-full h-11 rounded-2xl bg-white border border-brand-100 text-sm font-bold text-brand-700">${S.settings.homeAllPos ? 'Mostrar menos ▴' : `Mostrar todas (mais ${pos.length - 5}) ▾`}</button>` : ''}
     ${card(`<div class="p-4">
       <div class="flex items-center justify-between mb-1"><h2 class="font-extrabold">Resumo de ${yr}</h2><button data-tab="tax" class="text-sm font-bold text-brand-600">IRS</button></div>
@@ -1393,8 +1395,89 @@ function homeVarHTML(hv, hbv, per, nPriced, res, invested) {
       <div class="flex justify-between ${rg.real >= 0 ? 'text-emerald-200' : 'text-rose-200'}"><span>${rg.real >= 0 ? 'Ganho real (acima da inflação)' : 'Abaixo da inflação'}</span><b>${eur ? plus(rg.realEur) : `${rg.real >= 0 ? '+' : '−'}${fmtN(Math.abs(rg.real), 1)} pontos`}</b></div>
       <div class="text-[10px] text-brand-200 pt-1">Fonte: Eurostat (inflação oficial) · dados até ${esc(infMonth(rg.last))}${hv.missing.length ? ` · sem dados: ${esc(hv.missing.map(t => t.replace(/\.[A-Z]+$/, '')).join(', '))}` : ''}</div></div>`
       : `<div class="text-[11px] text-brand-200 mt-2 num">Desde a compra: ${plus(res)} (${pctStr(res, invested) || '0%'})${hv.missing.length ? ` · sem dados: ${esc(hv.missing.map(t => t.replace(/\.[A-Z]+$/, '')).join(', '))}` : ''}</div>`) : '';
-  return `${top}${chart}${legend}${diff}<div class="flex items-center gap-2 mt-3"><div class="grid grid-cols-4 gap-1.5 flex-1">${pb('d')}${pb('w')}${pb('m')}${pb('y')}</div>
-    <div class="flex rounded-xl p-0.5 shrink-0" style="background:rgba(255,255,255,.12)" role="group" aria-label="Mostrar em percentagem ou em euros">${ub('pct', '%')}${ub('eur', '€')}</div></div>${bw}${total}`;
+  return `${top}${chart}${legend}${diff}${perBar(per)}${bw}${total}`;
+}
+function perBar(per) {
+  const eur = S.settings.homeUnit === 'eur';
+  const pb = k => `<button data-hper="${k}" class="h-8 rounded-xl text-[11px] font-bold ${per === k ? 'bg-white text-brand-700' : 'text-white'}" style="${per === k ? '' : 'background:rgba(255,255,255,.12)'}">${HP[k].l}</button>`;
+  const ub = (k, l) => `<button data-hunit="${k}" aria-pressed="${(eur ? 'eur' : 'pct') === k}" class="h-8 w-8 rounded-lg text-xs font-extrabold ${(eur ? 'eur' : 'pct') === k ? 'bg-white text-brand-700' : 'text-white'}">${l}</button>`;
+  return `<div class="flex items-center gap-1.5 mt-3"><div class="grid grid-cols-5 gap-1 flex-1">${pb('d')}${pb('w')}${pb('m')}${pb('y')}${pb('t')}</div>
+    <div class="flex rounded-xl p-0.5 shrink-0" style="background:rgba(255,255,255,.12)" role="group" aria-label="Mostrar em percentagem ou em euros">${ub('pct', '%')}${ub('eur', '€')}</div></div>`;
+}
+/* ---------- "Tudo": resultado de toda a carteira desde o primeiro investimento ---------- */
+// Taxa anual que iguala os fluxos (compras negativas, vendas e dividendos positivos, valor atual no fim)
+function xirr(flows) {
+  if (flows.length < 2 || !flows.some(f => f.v < 0) || !flows.some(f => f.v > 0)) return null;
+  const t0 = Date.parse(flows[0].d), yrs = f => (Date.parse(f.d) - t0) / 31557600000;
+  const npv = r => flows.reduce((s, f) => s + f.v / Math.pow(1 + r, yrs(f)), 0);
+  let lo = -0.99, hi = 10, flo = npv(lo), fhi = npv(hi); if (flo * fhi > 0) return null;
+  for (let i = 0; i < 200; i++) { const mid = (lo + hi) / 2, fm = npv(mid); if (Math.abs(fm) < 1e-7) return mid; if (flo * fm < 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; } }
+  return (lo + hi) / 2;
+}
+function allTime() {
+  const tx = [...S.tx].filter(t => t.type === 'buy' || t.type === 'sell').sort((x, y) => x.date.localeCompare(y.date) || (x.created || 0) - (y.created || 0));
+  if (!tx.length) return null;
+  const F = TF.fifo(S.tx), pos = TF.positions(F.lots, S.assets), t0 = today(), start = tx[0].date;
+  const value = pos.reduce((s, p) => s + (p.value ?? p.cost), 0), openCost = pos.reduce((s, p) => s + p.lots.reduce((x, l) => x + l.qty * l.unit, 0), 0);
+  const fees = tx.reduce((s, t) => s + (t.fees || 0), 0);
+  const realized = F.realized.reduce((s, r) => s + r.realizacao - r.aquisicao, 0);
+  const divs = (S.div || []).filter(d => d.date >= start).reduce((s, d) => s + (d.gross || 0) - (d.taxForeign || 0) - (d.taxPT || 0), 0);
+  const open = value - openCost, result = open + realized + divs - fees;
+  // Capital investido: o máximo de dinheiro que esteve aplicado ao mesmo tempo (compras − vendas, acumulado)
+  let cum = 0, peak = 0; const flows = [];
+  for (const t of tx) { const amt = t.type === 'buy' ? t.qty * t.price + (t.fees || 0) : -(t.qty * t.price - (t.fees || 0)); cum += amt; peak = Math.max(peak, cum); flows.push({ d: t.date, v: -amt }); }
+  (S.div || []).filter(d => d.date >= start).forEach(d => flows.push({ d: d.date, v: (d.gross || 0) - (d.taxForeign || 0) - (d.taxPT || 0) }));
+  flows.sort((x, y) => x.d.localeCompare(y.d)); flows.push({ d: t0, v: value });
+  const days = (Date.parse(t0) - Date.parse(start)) / 864e5, rate = days >= 30 ? xirr(flows) : null;
+  // Comparação: os mesmos aportes e vendas, nas mesmas datas, no índice escolhido
+  const b = homeBenchOn() ? benchInfo(homeBenchId()) : null, bh = b && !b.inf && b.hkey ? S.hist?.[b.hkey] : null, bcur = bh?.cur || b?.cur;
+  let bench = null;
+  if (bh?.pts?.length) {
+    let units = 0, ok = true; const bflows = [];
+    for (const t of tx) { const px = pxEUR(bh, bcur, t.date); if (!px) { ok = false; break; } const amt = t.type === 'buy' ? t.qty * t.price + (t.fees || 0) : t.qty * t.price - (t.fees || 0);
+      if (t.type === 'buy') { units += amt / px; bflows.push({ d: t.date, v: -amt }); } else { const u = Math.min(units, amt / px); units -= u; bflows.push({ d: t.date, v: u * px }); } }
+    const pxNow = pxEUR(bh, bcur, t0);
+    if (ok && pxNow) { const bval = units * pxNow; bflows.push({ d: t0, v: bval }); bench = { label: b.label, rate: days >= 30 ? xirr(bflows) : null, result: bflows.reduce((s, f) => s + f.v, 0) }; }
+  }
+  // Inflação anual no mesmo período
+  const ih = S.hist?.['INF:' + inflGeoReal()]; let inflY = null;
+  if (ih?.pts?.length && days >= 60) { const a0 = seriesAt(ih.pts, start), a1 = ih.pts[ih.pts.length - 1][1], yrs = (Date.parse(ih.pts[ih.pts.length - 1][0]) - Date.parse(start)) / 31557600000; if (a0 && yrs > 0.08) inflY = Math.pow(a1 / a0, 1 / yrs) - 1; }
+  // Gráfico: valor da carteira e dinheiro investido, mês a mês desde o início
+  const grid = []; for (let d = start; d < t0; d = addDays(d, Math.max(7, Math.round(days / 40)))) grid.push(d); grid.push(t0);
+  const tks = [...new Set(tx.map(t => t.ticker))], lastPx = {};
+  const chart = grid.map(g => {
+    let v = 0, inv = 0; const q = {};
+    for (const t of tx) { if (t.date > g) break; q[t.ticker] = (q[t.ticker] || 0) + (t.type === 'buy' ? t.qty : -t.qty); lastPx[t.ticker] = t.price; inv += t.type === 'buy' ? t.qty * t.price + (t.fees || 0) : -(t.qty * t.price - (t.fees || 0)); }
+    for (const tk of tks) { const qq = q[tk] || 0; if (qq < 1e-9) continue; const h = S.hist?.[histKeyOf(tk)], cur = h?.cur || quoteOf(tk).cur;
+      const px = g === t0 ? (S.assets[tk]?.price ?? pxEUR(h, cur, g)) : pxEUR(h, cur, g); v += qq * (px ?? lastPx[tk] ?? 0); }
+    return { d: g, v, inv: Math.max(0, inv) };
+  });
+  return { start, value, open, realized, divs, fees, result, invested: peak, pct: peak > 0 ? result / peak * 100 : 0, rate, bench, inflY, chart, years: days / 365.25 };
+}
+function tudoHTML(AT) {
+  if (!AT) return `<div class="text-xs text-brand-100 mt-1">Registe ou importe as suas operações para ver o resultado desde o início.</div>${perBar('t')}`;
+  const eur = S.settings.homeUnit === 'eur', col = v => v >= 0 ? 'text-emerald-200' : 'text-rose-200';
+  const MS = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'], st = AT.start.split('-');
+  const pr = r => r == null ? '—' : `${r >= 0 ? '+' : '−'}${fmtN(Math.abs(r * 100), 1)}% / ano`;
+  const C = AT.chart, W = 320, H = 92, vals = C.flatMap(c => [c.v, c.inv]), lo = Math.min(...vals), hi = Math.max(...vals), sp = (hi - lo) || 1;
+  const pl = k => C.map((c, i) => `${(i / Math.max(1, C.length - 1) * W).toFixed(1)},${(H - 4 - (c[k] - lo) / sp * (H - 10)).toFixed(1)}`).join(' ');
+  const row = (l, v, cls = '') => `<div class="flex justify-between ${cls}"><span class="text-brand-100">${l}</span><b class="${v >= 0 ? 'text-emerald-200' : 'text-rose-200'}">${plus(v)}</b></div>`;
+  const real = AT.rate != null && AT.inflY != null ? AT.rate - AT.inflY : null;
+  return `<div class="num text-sm font-bold mt-1 ${col(AT.result)}">${eur ? `${plus(AT.result)} <span class="font-semibold opacity-80">(${fmtPct(AT.pct)})</span>` : `${fmtPct(AT.pct)} <span class="font-semibold opacity-80">(${plus(AT.result)})</span>`} desde o início <span class="font-normal text-brand-100">· ${MS[Number(st[1]) - 1]} ${st[0]}</span></div>
+    ${C.length > 1 ? `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" class="mt-2" aria-hidden="true"><polyline fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round" points="${pl('inv')}"/><polyline fill="none" stroke="#A7F3D0" stroke-width="2.6" stroke-linejoin="round" points="${pl('v')}"/></svg>
+      <div class="flex gap-4 text-xs mt-1"><span><i class="inline-block w-3.5 h-[3px] rounded align-middle" style="background:#A7F3D0"></i> Valor</span><span><i class="inline-block w-3.5 align-middle" style="border-top:2px dotted rgba(255,255,255,.6)"></i> Dinheiro investido</span></div>` : ''}
+    ${perBar('t')}
+    <div class="text-xs mt-3 pt-2 border-t border-white/15 num space-y-1">
+      <div class="flex justify-between"><span class="text-brand-100">Capital investido (máximo aplicado)</span><b>${fmtEUR(AT.invested)}</b></div>
+      ${row('Posições abertas (por vender)', AT.open)}
+      ${row('Vendas realizadas (mais-valias)', AT.realized)}
+      ${row('Dividendos recebidos (líquidos)', AT.divs)}
+      ${AT.fees > 0.004 ? row('Comissões pagas', -AT.fees) : ''}
+      <div class="flex justify-between pt-1.5 border-t border-white/15"><b>Resultado total</b><b class="${col(AT.result)}">${plus(AT.result)} (${fmtPct(AT.pct)})</b></div>
+      ${AT.rate != null ? `<div class="flex justify-between"><span class="text-brand-100">Rentabilidade média por ano</span><b class="${col(AT.rate)}">${pr(AT.rate)}</b></div>` : `<div class="text-[11px] text-brand-200">A rentabilidade por ano aparece quando a carteira tiver pelo menos um mês.</div>`}
+    </div>
+    ${AT.rate != null && (AT.bench?.rate != null || AT.inflY != null) ? `<div class="mt-2 text-xs rounded-xl bg-white/10 px-3 py-2 leading-relaxed">No mesmo período${AT.bench?.rate != null ? `, com os mesmos aportes nas mesmas datas, o <b>${esc(AT.bench.label)}</b> teria rendido <b>${pr(AT.bench.rate)}</b>` : ''}${AT.inflY != null ? `${AT.bench?.rate != null ? ', e a' : ', a'} <b>inflação ${esc(infPhrase(inflGeoReal()))}</b> foi de <b>${fmtN(AT.inflY * 100, 1)}% / ano</b>${real != null ? `: o seu ganho real foi de cerca de <b>${pr(real)}</b>` : ''}` : ''}.</div>` : ''}
+    <div class="text-[10px] text-brand-200 mt-2">Inclui as vendas e os dividendos registados na app, desde a primeira operação.</div>`;
 }
 
 /* ================= APOIAR ================= */
@@ -1559,7 +1642,7 @@ function posRow(p, pv, pvEur) {
       <div class="text-xs text-slate-500 truncate">${fmtQ(p.qty)} un. · PM ${fmtEUR(p.avg)}${p.value != null ? ' · ' + fmtEUR(p.value / p.qty) + ' ' + priceWhen(S.assets[p.ticker]) : ''}</div>${infoTags(S.assets[p.ticker])}</div>
     <div class="text-right num"><div class="font-bold">${fmtEUR(p.value ?? p.cost)}</div>
       ${pv !== undefined ? (pv != null ? `<div class="text-xs font-bold ${pv >= 0 ? 'text-gain' : 'text-loss'}">${pvEur != null ? plus(pvEur) : fmtPct(pv)}</div>` : '<div class="text-xs text-slate-400">—</div>')
-        : p.value != null ? `<div class="text-xs font-bold ${sgn(p.value - p.cost)}">${plus(p.value - p.cost)} (${pctStr(p.value - p.cost, p.cost)})</div>`
+        : p.value != null ? `<div class="text-xs font-bold ${sgn(p.value - p.cost)}">${S.settings.homeUnit === 'eur' ? plus(p.value - p.cost) : (pctStr(p.value - p.cost, p.cost) || '0%')}</div>`
         : '<div class="text-xs text-slate-400">sem preço atual</div>'}</div></button>`;
 }
 
