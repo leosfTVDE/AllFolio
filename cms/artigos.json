@@ -89,20 +89,20 @@
    "slug": "semana-2026-11-05",
    "type": "semana",
    "title": "Semana de 2 a 6 de novembro: Democratas ganham as intercalares, Wall Street dispara e Londres sobe os juros",
-   "desc": "Intercalares nos EUA, Wall Street em alta, resultados da Apple e AMD, juros a subir no Reino Unido e o que vigiar na próxima semana.",
-   "teaser": "Democratas ganham o Congresso, o Dow sobe 3% e Londres sobe os juros. Mais: os lucros da EDP Renováveis e a agenda da próxima semana.",
+   "desc": "Intercalares nos EUA, a euforia de quarta e a queda dos chips de quinta, juros a subir no Reino Unido e o que vigiar na próxima semana.",
+   "teaser": "Wall Street festeja as intercalares e no dia seguinte os chips afundam. Mais: Londres sobe os juros, a EDP Renováveis e a agenda da próxima semana.",
    "tag": "",
    "date": "2026-11-05",
-   "updated": "",
+   "updated": "2026-11-06",
    "featured": false,
    "cta": true,
-   "min": 4,
+   "min": 5,
    "cover": "auto",
    "ogimg": "img/capas/semana-2026-11-05.png",
    "points": [
     "Democratas ganham o Congresso e Wall Street aplaude",
-    "Resultados: Apple divide, AMD convence",
-    "Banco de Inglaterra sobe os juros pela primeira vez desde 2023"
+    "Quinta-feira negra para os chips e a inteligência artificial",
+    "Resultados: Apple divide, AMD convence (e depois cai)"
    ],
    "status": "pub"
   }
