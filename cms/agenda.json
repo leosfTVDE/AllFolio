@@ -1,38 +1,66 @@
 {
- "updated": "2026-11-03",
+ "updated": "2026-11-08",
  "items": [
   {
-   "date": "2026-11-02",
-   "text": "Resultados da Apple",
-   "note": "Pesam no S&P 500 e nos ETF do mercado mundial",
-   "url": "https://investor.apple.com/",
-   "linkText": "Ver na página de investidores da Apple"
-  },
-  {
-   "date": "2026-11-03",
-   "text": "Eleições intercalares nos EUA",
-   "note": "Podem mexer com o dólar e as ações americanas",
+   "date": "2026-11-09",
+   "text": "Resultados da Constellation Energy, Barrick, Occidental e Rocket Lab",
+   "note": "Energia e ouro em destaque",
    "url": "",
    "linkText": ""
   },
   {
-   "date": "2026-11-05",
-   "text": "Banco de Inglaterra decide os juros",
-   "note": "Taxa atual: 3,75%",
-   "url": "https://www.bankofengland.co.uk/monetary-policy",
-   "linkText": "Ver no site do Banco de Inglaterra"
+   "date": "2026-11-09",
+   "text": "Inflação na China",
+   "note": "Termómetro da procura na segunda maior economia",
+   "url": "",
+   "linkText": ""
   },
   {
-   "date": "2026-11-06",
-   "text": "Relatório de emprego dos EUA (outubro)",
-   "note": "Pode influenciar a próxima decisão da Fed",
-   "url": "https://www.bls.gov/news.release/empsit.toc.htm",
+   "date": "2026-11-10",
+   "text": "Inflação de outubro nos EUA (13:30 em Lisboa)",
+   "note": "O dado mais importante da semana: pode decidir se a Fed sobe os juros em dezembro",
+   "url": "https://www.bls.gov/cpi/",
    "linkText": "Ver no site oficial (BLS)"
   },
   {
+   "date": "2026-11-10",
+   "text": "Resultados da CoreWeave",
+   "note": "Primeiro teste à IA depois da queda dos chips",
+   "url": "",
+   "linkText": ""
+  },
+  {
+   "date": "2026-11-11",
+   "text": "Inflação de outubro em Portugal (dados finais)",
+   "note": "A estimativa rápida apontou 3,8%",
+   "url": "https://www.ine.pt/",
+   "linkText": "Ver no site do INE"
+  },
+  {
+   "date": "2026-11-12",
+   "text": "PIB do Reino Unido",
+   "note": "Depois de o Banco de Inglaterra ter subido os juros",
+   "url": "",
+   "linkText": ""
+  },
+  {
+   "date": "2026-11-13",
+   "text": "Preços no produtor nos EUA",
+   "note": "Pistas sobre a inflação nos próximos meses",
+   "url": "",
+   "linkText": ""
+  },
+  {
    "date": "",
-   "text": "Orçamento de 2027 na especialidade",
-   "note": "Votação final a 24 de novembro",
+   "text": "Resultados da Applied Materials e da Cisco",
+   "note": "Mais dois testes para os chips e a IA; datas a confirmar",
+   "url": "",
+   "linkText": ""
+  },
+  {
+   "date": "",
+   "text": "Orçamento do Estado para 2027 na especialidade",
+   "note": "Votações de 18 a 23 de novembro; votação final a 24",
    "url": "",
    "linkText": ""
   }
