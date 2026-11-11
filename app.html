@@ -137,6 +137,7 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
   <section id="view-divs" data-view class="hidden"></section>
   <section id="view-goals" data-view class="hidden"></section>
   <section id="view-market" data-view class="hidden"></section>
+  <section id="view-dash" data-view class="hidden"></section>
   <section id="view-more" data-view class="hidden"></section>
   <section id="view-settings" data-view class="hidden"></section>
 </main>
@@ -1125,7 +1126,7 @@ function go(tab, isBack = false) {
 function render() {
   const bar = $('#demoBar'); if (bar) bar.classList.toggle('hidden', !S.demo);
   updatePortBtn(); const nt = $('#netTxt'); if (nt) nt.classList.toggle('hidden', (S.ports || []).length > 0);
-  ({ home: renderHome, portfolio: renderPortfolio, market: renderMarket, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs, goals: renderGoals, more: renderMore, settings: renderSettings })[UI.tab]();
+  ({ home: renderHome, portfolio: renderPortfolio, market: renderMarket, dash: renderDash, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs, goals: renderGoals, more: renderMore, settings: renderSettings })[UI.tab]();
 }
 
 /* ---------- Componentes ---------- */
@@ -1353,7 +1354,7 @@ function renderHome() {
       <div class="flex flex-wrap justify-center gap-2">${btn('Importar extrato', 'data-go="import"')}${btn('Registar compra', 'data-add="buy"', 'ghost')}${btn('Ver com dados de exemplo', 'data-demo', 'ghost')}</div></div>`, 'mt-1')
       + (hasCash ? `<div class="grid grid-cols-2 gap-2 mt-3">${tile('data-go="cash"', 'Caixa de oportunidade', fmtEUR(cashV), cashV < 0 ? 'text-loss' : '')}${tile(gd ? 'data-go="goals"' : 'data-goalcfg', goalTile[0], goalTile[1])}</div>` : '')
     : `<div class="flex items-center justify-between mt-3 mb-2"><h2 class="font-extrabold text-lg">As suas posições <span class="text-slate-500 font-semibold">(${pos.length})</span></h2>
-      <span class="flex gap-3"><button data-charts class="text-sm font-bold text-brand-600">Gráficos</button><button data-go="portfolio" class="text-sm font-bold text-brand-600">Ver carteira</button></span></div>
+      <span class="flex gap-3"><button data-go="dash" class="text-sm font-bold text-brand-600">Painel</button><button data-charts class="text-sm font-bold text-brand-600">Gráficos</button><button data-go="portfolio" class="text-sm font-bold text-brand-600">Ver carteira</button></span></div>
     ${card(pos.slice(0, S.settings.homeAllPos ? pos.length : 5).map(p => posRow(p)).join('') || '<div class="p-5 text-sm text-slate-500">Sem posições abertas.</div>', 'divide-y divide-brand-50 overflow-hidden')}
     ${pos.length > 5 ? `<button data-hmore class="mt-2 w-full h-11 rounded-2xl bg-white border border-brand-100 text-sm font-bold text-brand-700">${S.settings.homeAllPos ? 'Mostrar menos ▴' : `Mostrar todas (mais ${pos.length - 5}) ▾`}</button>` : ''}
     ${card(`<div class="p-4">
@@ -1527,6 +1528,7 @@ function renderMore() {
     ${it('data-go="cash"', '<path d="M4 11c0-3 3.6-5 8-5s8 2 8 5-3.6 6-8 6-8-3-8-6z"/><path d="M12 8v6M10 10h4"/>', 'Caixa', '#0F9D6E')}
     ${it('data-go="divs"', '<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10.5c0-1 1.1-1.5 2.5-1.5s2.5.6 2.5 1.6-1.1 1.4-2.5 1.4-2.5.5-2.5 1.5 1.1 1.5 2.5 1.5 2.5-.5 2.5-1.5"/>', 'Dividendos', '#0F9D6E')}
     ${it('data-go="goals"', '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>', 'Metas')}
+    ${it('data-go="dash"', '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/>', 'Painel', '#1D4ED8')}
     ${it('data-charts', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', 'Gráficos')}
     ${it('data-ports', '<rect x="3" y="6" width="18" height="14" rx="3"/><path d="M8 6V4h8v2M3 12h18"/>', 'Carteiras', '#E8352A')}
     ${it('data-go="settings"', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', 'Configurações', '#1A3FAE')}
@@ -2978,6 +2980,122 @@ function openIsscInfo() {
     <div class="rounded-2xl bg-amber-50 text-amber-900 text-xs p-3 mt-1 leading-relaxed">• Estes indicadores não preveem o próximo mês. O CAPE relaciona-se com as rentabilidades médias da década seguinte, não do mês seguinte.<br>• O mercado pode ficar "esticado" durante anos e continuar a subir. Tirar todo o dinheiro do mercado nessas fases pode custar caro.<br>• Os limites de cada pilar são uma escolha e mudam o resultado.<br>• É informação geral, não uma recomendação de investimento. Quem decide como investe é sempre o utilizador.</div>
     <h3 class="font-bold mt-4">O ajuste opcional do aporte</h3>
     <p class="text-sm text-slate-700 mt-1">Se o ligar no Planear aporte, a % da caixa varia no máximo o que escolher (por exemplo ±10 pontos) à volta do seu alvo, conforme o termómetro. Desligado, a calculadora usa só os seus alvos.</p>`);
+}
+
+
+/* ---------- Painel (estilo dashboard): indicadores, distribuição, evolução vs Euribor / inflação / S&P 500, rentabilidade por mês ---------- */
+const DASH_COL = ['#5B9BF0', '#F2A93B', '#7FA5F0', '#1D9E75', '#AFA9EC', '#F08A8A', '#E5C04B', '#4CC2C2', '#C084FC', '#94A3B8'];
+let euriborLoading = null;
+function loadEuribor() {
+  if (S.euribor?.at && Date.now() - S.euribor.at < 24 * 3600e3) return Promise.resolve(false);
+  if (euriborLoading || !useWorker() || !navigator.onLine) return euriborLoading || Promise.resolve(false);
+  euriborLoading = fetch(`${workerBase()}/euribor`).then(r => r.ok ? r.json() : null).then(j => {
+    euriborLoading = null; if (!j?.pts?.length) return false; S.euribor = { pts: j.pts, at: Date.now() }; saveLocal(); return true;
+  }).catch(() => { euriborLoading = null; return false; });
+  return euriborLoading;
+}
+// Índice acumulado da Euribor (juro composto mês a mês), para comparar com os mesmos aportes
+function euriborIndex() {
+  const p = S.euribor?.pts; if (!p?.length) return null;
+  let idx = 100; const out = [];
+  for (const [m, r] of p) { out.push([m + '-01', idx]); idx *= 1 + (Number(r) || 0) / 100 / 12; }
+  out.push([addDays(today(), 1), idx]);
+  return out;
+}
+function dashCompare(kind, AT) {
+  const tx = [...S.tx].filter(t => t.type === 'buy' || t.type === 'sell').sort((x, y) => x.date.localeCompare(y.date));
+  let at = null, label = '';
+  if (kind === 'eur') { const ix = euriborIndex(); if (!ix) return null; at = d => seriesAt(ix, d); label = 'Euribor 3 meses'; }
+  else if (kind === 'inf') { const h = S.hist?.['INF:' + (S.settings.inflGeo || 'PT')]; if (!h?.pts?.length) return null; at = d => seriesAt(h.pts, d) ?? h.pts[0][1]; label = 'Inflação ' + (INF_GEO[S.settings.inflGeo || 'PT'] || 'Portugal'); }
+  else { const b = benchInfo('SPY'), h = b.hkey ? S.hist?.[b.hkey] : null; if (!h?.pts?.length) return null; at = d => pxEUR(h, h.cur || b.cur, d); label = 'S&P 500'; }
+  const pts = AT.chart.map(c => {
+    let val = 0;
+    for (const t of tx) { if (t.date > c.d) break; const i0 = at(t.date), i1 = at(c.d); if (!i0 || !i1) continue;
+      const amt = t.type === 'buy' ? t.qty * t.price + (t.fees || 0) : -(t.qty * t.price - (t.fees || 0)); val += amt * i1 / i0; }
+    return c.inv > 0 ? (val - c.inv) / c.inv * 100 : 0;
+  });
+  return { label, pts };
+}
+function dashLineSVG(C, own, cmp, divs) {
+  const W = 400, H = 210, L = 34, R = 40, T = 10, Bm = 24, iw = W - L - R, ih = H - T - Bm;
+  const all = [...own, ...(cmp?.pts || []), 0], lo = Math.min(...all), hi = Math.max(...all), sp = (hi - lo) || 1;
+  const x = i => L + i / Math.max(1, C.length - 1) * iw, y = v => T + ih - (v - lo) / sp * ih;
+  const dmax = Math.max(1, ...divs), bw = Math.max(2, iw / C.length * 0.6);
+  const ticks = [lo, (lo + hi) / 2, hi].map(v => `<text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#8FA3C7">${fmtN(v, 0)}%</text><line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,.06)"/>`).join('');
+  const MS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const xl = [0, Math.floor((C.length - 1) / 2), C.length - 1].map(i => { const d = C[i].d.split('-'); return `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#8FA3C7">${MS[Number(d[1]) - 1]} ${d[0].slice(2)}</text>`; }).join('');
+  const bars = divs.some(v => v > 0) ? divs.map((v, i) => v > 0 ? `<rect x="${x(i) - bw / 2}" y="${T + ih - v / dmax * ih * 0.45}" width="${bw}" height="${v / dmax * ih * 0.45}" rx="1.5" fill="rgba(93,202,165,.35)"/>` : '').join('')
+    + `<text x="${W - R + 6}" y="${T + ih - ih * 0.45 + 4}" font-size="11" fill="#5DCAA5">${fmtN(dmax, 0)} €</text>` : '';
+  const pl = arr => arr.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="height:auto;display:block;margin-top:6px" role="img" aria-label="Evolução da rentabilidade da carteira${cmp ? ' comparada com ' + esc(cmp.label) : ''}">${ticks}${bars}
+    <line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="rgba(255,255,255,.25)" stroke-dasharray="2 4"/>
+    ${cmp ? `<polyline fill="none" stroke="#F2A93B" stroke-width="2" stroke-dasharray="5 4" points="${pl(cmp.pts)}"/>` : ''}
+    <polyline fill="none" stroke="#5B9BF0" stroke-width="2.6" stroke-linejoin="round" points="${pl(own)}"/>${xl}</svg>`;
+}
+function dashDonutSVG(items, total) {
+  let a0 = -Math.PI / 2; const R = 70, r = 46, cx = 85, cy = 85;
+  const seg = items.map(it => { const a1 = a0 + it.v / total * Math.PI * 2, large = a1 - a0 > Math.PI ? 1 : 0;
+    const p = (ang, rad) => `${(cx + rad * Math.cos(ang)).toFixed(2)},${(cy + rad * Math.sin(ang)).toFixed(2)}`;
+    const d = items.length === 1 ? `M${cx - R},${cy} a${R},${R} 0 1,0 ${2 * R},0 a${R},${R} 0 1,0 ${-2 * R},0 M${cx - r},${cy} a${r},${r} 0 1,1 ${2 * r},0 a${r},${r} 0 1,1 ${-2 * r},0`
+      : `M${p(a0, R)} A${R},${R} 0 ${large} 1 ${p(a1, R)} L${p(a1, r)} A${r},${r} 0 ${large} 0 ${p(a0, r)} Z`;
+    a0 = a1; return `<path d="${d}" fill="${it.c}" stroke="#16233D" stroke-width="2" fill-rule="evenodd"><title>${esc(it.l)}: ${fmtEUR(it.v)} (${fmtN(it.v / total * 100, 1)}%)</title></path>`; }).join('');
+  return `<svg viewBox="0 0 170 170" width="170" height="170" role="img" aria-label="Distribuição da carteira">${seg}
+    <text x="85" y="80" text-anchor="middle" font-size="11" fill="#8FA3C7">Total</text><text x="85" y="98" text-anchor="middle" font-size="15" font-weight="700" fill="#E6EEFC">${fmtEUR(total)}</text></svg>`;
+}
+function renderDash() {
+  const el = $('#view-dash'); if (!el) return;
+  if (!S.tx.length) { el.innerHTML = `<h1 class="text-2xl font-extrabold tracking-tight mb-3">Painel</h1>${card('<div class="p-5 text-sm text-slate-600">Registe ou importe as suas operações para ver o painel.</div>')}`; return; }
+  loadEuribor().then(ch => { if (ch && UI.tab === 'dash') renderDash(); });
+  const geo = S.settings.inflGeo || 'PT'; if (!S.hist?.['INF:' + geo] && typeof fetchInflation === 'function') fetchInflation(geo).then(() => { if (UI.tab === 'dash') renderDash(); }).catch(() => {});
+  const AT = allTime(), pos = TF.positions(TF.fifo(S.tx).lots, S.assets), cash = Math.max(0, cashState().saldo || 0);
+  const invVal = pos.reduce((s, p) => s + (p.value ?? p.cost), 0), invCost = pos.reduce((s, p) => s + p.cost, 0), total = invVal + cash;
+  const items = pos.map(p => ({ l: p.ticker.replace(/\.[A-Z]+$/, ''), v: p.value ?? p.cost })).filter(i => i.v > 0).sort((x, y) => y.v - x.v).map((i, k) => ({ ...i, c: DASH_COL[k % DASH_COL.length] }));
+  if (cash > 0.004) items.push({ l: 'Caixa', v: cash, c: '#5DCAA5' });
+  const tgt = S.settings.goals?.alloc?.on && S.settings.goals.alloc.mode === 'asset' ? S.settings.goals.alloc.targets || {} : {};
+  const tgtOf = l => { if (l === 'Caixa') return tgt.__cash; const k = Object.keys(tgt).find(t => t.replace(/\.[A-Z]+$/, '') === l); return k ? tgt[k] : null; };
+  const kind = UI.dashCmp || 'eur';
+  const C = AT?.chart || [], own = C.map(c => c.inv > 0 ? (c.v - c.inv) / c.inv * 100 : 0);
+  const divCum = C.map(c => (S.div || []).filter(d => d.date <= c.d).reduce((s, d) => s + (d.gross || 0) - (d.taxForeign || 0) - (d.taxPT || 0), 0));
+  const cmp = C.length > 1 ? dashCompare(kind, AT) : null;
+  const last = own.length ? own[own.length - 1] : 0, lastC = cmp?.pts?.length ? cmp.pts[cmp.pts.length - 1] : null;
+  const note = !C.length || C.length < 2 ? 'A evolução aparece quando houver mais histórico.' : cmp == null
+    ? (kind === 'eur' ? 'Sem dados da Euribor de momento (é preciso o servidor de preços).' : 'Sem histórico do índice: toque em Atualizar histórico no separador Gráficos.')
+    : `Com os mesmos aportes, nas mesmas datas, ${kind === 'eur' ? 'na Euribor' : kind === 'inf' ? 'acompanhando a inflação' : 'no S&P 500'} teria ${fmtPct(lastC)}. A carteira está em ${fmtPct(last)}.`;
+  const R = (typeof monthlyReturns === 'function' ? monthlyReturns() : null) || [];
+  const years = [...new Set(R.map(r => r.y))].sort().reverse();
+  const MM = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const cell = v => v == null ? '<td style="color:#4A5B7E">—</td>' : `<td style="background:${v >= 2 ? '#0F9D6E' : v >= 0 ? 'rgba(15,157,110,.4)' : v > -2 ? 'rgba(220,38,38,.4)' : '#C2410C'}">${v > 0 ? '+' : ''}${fmtN(v, 1)}</td>`;
+  const table = years.map(y => { let f = 1, any = false; const row = MM.map((m, i) => { const r = R.find(x => x.y === y && x.mi === i); if (r?.pct != null) { f *= 1 + r.pct / 100; any = true; } return cell(r?.pct ?? null); }).join('');
+    const t = any ? (f - 1) * 100 : null; return `<tr><th>${y}</th>${row}<td style="font-weight:700;color:${t == null ? '#4A5B7E' : t >= 0 ? '#7EE2B8' : '#FCA5A5'}">${t == null ? '—' : (t > 0 ? '+' : '') + fmtN(t, 1) + '%'}</td></tr>`; }).join('');
+  const kp = (l, v, c = '') => `<div style="background:#16233D;border-radius:12px;padding:10px 12px"><span style="display:block;font-size:11px;color:#8FA3C7">${l}</span><b class="num" style="font-size:18px;${c}">${v}</b></div>`;
+  const resCol = v => v >= 0 ? 'color:#7EE2B8' : 'color:#FCA5A5';
+  const pnl = 'background:#16233D;border-radius:12px;padding:12px';
+  const pname = (S.ports || []).length ? ' · ' + esc(isAll() ? 'Todas as carteiras' : curPort()?.name || '') : '';
+  const MS = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'], st = (AT?.start || today()).split('-');
+  el.innerHTML = `<div style="background:#0F1A2E;border-radius:20px;padding:14px;color:#E6EEFC;max-width:100%;overflow:hidden">
+    <div class="flex items-center justify-between mb-3"><b style="font-size:17px">Painel${pname}</b><span style="font-size:12px;color:#8FA3C7">Desde ${MS[Number(st[1]) - 1]} ${st[0]}</span></div>
+    <div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(118px,1fr))">
+      ${kp('Valor total', fmtEUR(total))}${kp('Investido', fmtEUR(invCost))}${kp('Caixa', fmtEUR(cash))}
+      ${kp('Resultado', AT ? `${plus(AT.result)} <span style="font-size:12px">(${fmtPct(AT.pct)})</span>` : '—', AT ? resCol(AT.result) : '')}${kp('Dividendos', fmtEUR(AT?.divs || 0), (AT?.divs || 0) > 0 ? resCol(1) : '')}
+    </div>
+    <div class="grid gap-2 mt-2.5 md:grid-cols-5">
+      <div class="md:col-span-2" style="${pnl};min-width:0"><b style="font-size:14px">Distribuição</b>
+        <div class="flex justify-center mt-2">${items.length ? dashDonutSVG(items, total) : ''}</div>
+        <div class="mt-2 space-y-1">${items.map(i => { const t = tgtOf(i.l), p = i.v / total * 100;
+          return `<div class="flex justify-between items-center text-[12.5px]"><span class="flex items-center gap-1.5 min-w-0"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${i.c}"></i><span class="truncate">${esc(i.l)}</span></span><b class="num">${fmtN(p, 0)}%${t != null ? ` <span style="color:#8FA3C7;font-weight:400">· alvo ${fmtN(t, 0)}%</span>` : ''}</b></div>`; }).join('')}</div></div>
+      <div class="md:col-span-3" style="${pnl};min-width:0">
+        <div class="flex justify-between items-center flex-wrap gap-1.5"><b style="font-size:14px">Evolução</b>
+          <div class="flex gap-1">${[['eur', 'Euribor'], ['inf', 'Inflação'], ['sp', 'S&P 500']].map(([k, l]) => `<button data-dcmp="${k}" class="h-7 px-2.5 rounded-lg text-xs font-bold" style="${kind === k ? 'background:#1D4ED8;color:#fff' : 'border:0.5px solid #2A3B5E;color:#8FA3C7'}">${l}</button>`).join('')}</div></div>
+        ${C.length > 1 ? dashLineSVG(C, own, cmp, divCum) : '<div style="height:120px"></div>'}
+        <div class="flex gap-3 text-[11px] mt-1" style="color:#B9CEF1"><span><i style="display:inline-block;width:14px;height:3px;background:#5B9BF0;vertical-align:middle"></i> Carteira</span>${cmp ? `<span><i style="display:inline-block;width:14px;border-top:2px dashed #F2A93B;vertical-align:middle"></i> ${esc(cmp.label)}</span>` : ''}${divCum.some(v => v > 0) ? '<span><i style="display:inline-block;width:10px;height:8px;background:rgba(93,202,165,.5);vertical-align:middle"></i> Dividendos acumulados</span>' : ''}</div>
+        <div class="text-xs mt-1.5" style="color:#8FA3C7">${note}</div></div>
+    </div>
+    <div class="mt-2.5" style="${pnl};min-width:0;overflow:hidden"><b style="font-size:14px">Rentabilidade por mês</b>
+      ${years.length ? `<div class="mt-1.5" style="overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch"><table class="num" style="width:100%;min-width:520px;border-collapse:separate;border-spacing:2px;font-size:11.5px;text-align:center"><tr><th></th>${MM.map(m => `<th style="color:#8FA3C7;font-weight:500">${m}</th>`).join('')}<th style="color:#8FA3C7;font-weight:500">Ano</th></tr>${table}</table></div>` : '<div class="text-xs mt-2" style="color:#8FA3C7">Aparece quando houver histórico de preços.</div>'}
+    </div>
+    <div class="text-[11px] mt-2" style="color:#8FA3C7">Rentabilidade = (valor − dinheiro investido) ÷ dinheiro investido. A comparação aplica os mesmos aportes e vendas, nas mesmas datas, a cada referência.</div>
+  </div>`;
+  el.querySelectorAll('[data-dcmp]').forEach(b => b.onclick = () => { UI.dashCmp = b.dataset.dcmp; renderDash(); });
 }
 
 /* ---------- Planear aporte: que ações inteiras comprar com um valor ---------- */
