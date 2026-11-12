@@ -1311,7 +1311,7 @@ function renderHome() {
   const compact = !!S.settings.homeCompact && !empty;
   const spark = pts => { if (!pts || pts.length < 2) return ''; const ys = pts.map(p => p[1] ?? p), lo = Math.min(...ys), hi = Math.max(...ys), sp = (hi - lo) || 1;
     return `<svg width="84" height="34" viewBox="0 0 84 34" aria-hidden="true"><polyline fill="none" stroke="${ys[ys.length - 1] >= ys[0] ? '#A7F3D0' : '#FDA4AF'}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" points="${ys.map((v, i) => `${(i / (ys.length - 1) * 82 + 1).toFixed(1)},${(31 - (v - lo) / sp * 28).toFixed(1)}`).join(' ')}"/></svg>`; };
-  const cardHTML = compact ? `
+  const cardHTML_old = compact ? `
   <div class="rounded-[28px] text-white px-5 py-4 relative overflow-hidden" style="background:linear-gradient(135deg,#1D4ED8,#0A2A66)">
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0"><div class="text-xs text-brand-100 font-medium truncate">Património total${pLabel}</div>
@@ -1335,33 +1335,34 @@ function renderHome() {
       return `<path d="M${P(s0, R)} A${R},${R} 0 ${lg} 1 ${P(s1, R)} L${P(s1, r)} A${r},${r} 0 ${lg} 0 ${P(s0, r)} Z" fill="${x.c}"><title>${esc(x.l)}: ${fmtEUR(x.v)}</title></path>`; }).join('')}
       <text x="60" y="57" text-anchor="middle" font-size="9" fill="currentColor" opacity=".6">Total</text><text x="60" y="71" text-anchor="middle" font-size="11.5" font-weight="800" fill="currentColor">${fmtN(dTot, 0)} €</text></svg>`; };
   const distHTML = dItems.length ? card(`<div class="p-4">
-      <div class="flex items-center justify-between"><h2 class="font-extrabold">Distribuição</h2><button data-aporte class="text-sm font-bold text-brand-600">Planear aporte ›</button></div>
-      <div class="flex items-center gap-4 mt-2">${donut()}
+      <div class="flex items-center justify-between gap-2"><h2 class="font-extrabold">Distribuição</h2><span class="flex gap-3 items-center"><button data-aporte class="text-sm font-bold text-brand-600">Planear aporte ›</button><button data-hdist class="text-xs font-bold text-slate-500">${S.settings.homeDistHide ? '▾ Mostrar' : '▴ Esconder'}</button></span></div>
+      ${S.settings.homeDistHide ? '' : `<div class="flex items-center gap-4 mt-2">${donut()}
         <div class="flex-1 min-w-0 space-y-1 text-[12.5px]">${dItems.map(x => { const p = x.v / dTot * 100, off = x.t != null && Math.abs(p - x.t) >= 3;
           return `<div class="flex items-center justify-between gap-2"><span class="flex items-center gap-1.5 min-w-0"><i class="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style="background:${x.c}"></i><span class="truncate font-semibold">${esc(x.l)}</span></span>
             <span class="num shrink-0"><b class="${off ? 'text-loss' : ''}">${fmtN(p, 0)}%</b>${x.t != null ? ` <span class="text-slate-500">/ ${fmtN(x.t, 0)}%</span>` : ''}</span></div>`; }).join('')}
-          ${Object.keys(tgtA).length ? '' : '<button data-goalcfg class="text-[11px] font-bold text-brand-600 mt-1">Definir a distribuição desejada ›</button>'}</div></div></div>`, 'mt-3') : '';
-  $('#view-home').innerHTML = (cardHTML || `
-  <div class="rounded-[28px] text-white p-5 relative overflow-hidden" style="background:linear-gradient(135deg,#1D4ED8,#0A2A66)">
-    <div class="flex items-start justify-between gap-2"><div class="text-sm text-brand-100 font-medium min-w-0 truncate">Património total${pLabel}</div>
-      ${!empty ? '<button data-hcompact class="h-8 px-2.5 rounded-full bg-white/15 text-xs font-bold shrink-0" aria-label="Reduzir o cartão">▴ Menos</button>' : ''}</div>
-    <div class="num text-[36px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(hasCash ? grand : total)}</div>
-    ${pos.length ? `<div class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm font-bold num mt-1">
+          ${Object.keys(tgtA).length ? '' : '<button data-goalcfg class="text-[11px] font-bold text-brand-600 mt-1">Definir a distribuição desejada ›</button>'}</div></div>`}</div>`, 'mt-3') : '';
+  const mini = (attrs, l, v, cls = '') => `<button ${attrs} class="text-left rounded-xl px-2.5 py-2" style="background:rgba(255,255,255,.07)"><span class="block text-[10.5px] text-brand-100">${l}</span><b class="num text-sm ${cls}">${v}</b></button>`;
+  const lines = pos.length ? `<div class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm font-bold num mt-0.5">
       ${hvD?.ok ? `<span class="${colT(hvD.gain)}">Hoje ${plus(hvD.gain)} (${fmtPct(hvD.pct)})</span>` : '<span class="text-brand-200 font-semibold">Hoje: toque em Preços</span>'}
-      ${AT ? `<span class="${colT(AT.result)}">Desde o início ${plus(AT.result)} (${fmtPct(AT.pct)})</span>` : ''}</div>` : `<div class="text-xs text-brand-100 mt-1">${empty ? 'Comece por importar ou registar a primeira compra.' : 'Sem posições abertas'}</div>`}
-    ${isscPill()}
-    ${pos.length && lastAt ? `<div class="text-[11px] text-brand-200 mt-2">Cotações ${ago(lastAt)}${priced.length < pos.length ? ` · ${pos.length - priced.length} sem preço` : ''}</div>` : ''}
-  </div>
-  ${pos.length || hasCash ? `<div class="grid grid-cols-3 gap-2 mt-3">
-    ${tile('data-go="portfolio"', 'Investido', fmtEUR(invested))}
-    ${tile('data-go="cash"', 'Caixa', fmtEUR(cashV), cashV < 0 ? 'text-loss' : '')}
-    ${tile('data-go="divs"', 'Dividendos', fmtEUR(AT?.divs || 0), (AT?.divs || 0) > 0.004 ? 'text-gain' : '')}</div>` : ''}
-  ${pos.length ? `<div class="rounded-[24px] text-white p-4 mt-3" style="background:#0F1A2E">
-    <div class="flex items-center justify-between gap-2"><h2 class="font-extrabold">Evolução</h2>
+      ${AT ? `<span class="${colT(AT.result)}">Desde o início ${plus(AT.result)} (${fmtPct(AT.pct)})</span>` : ''}</div>`
+    : `<div class="text-xs text-brand-100 mt-1">${empty ? 'Comece por importar ou registar a primeira compra.' : 'Sem posições abertas'}</div>`;
+  $('#view-home').innerHTML = `
+  <div class="rounded-[26px] text-white p-5 relative overflow-hidden" style="background:#0F1A2E">
+    <div class="flex items-start justify-between gap-2"><div class="text-sm text-brand-100 font-medium min-w-0 truncate">Património total${pLabel}</div>
+      ${!empty ? `<button data-hcompact class="h-8 px-2.5 rounded-full bg-white/15 text-xs font-bold shrink-0" aria-label="${compact ? 'Mostrar o cartão completo' : 'Reduzir o cartão'}">${compact ? '▾ Mais' : '▴ Menos'}</button>` : ''}</div>
+    <div class="num text-[34px] leading-tight font-extrabold tracking-tight mt-1">${fmtEUR(hasCash ? grand : total)}</div>
+    ${lines}
+    ${compact ? '' : `
+    ${pos.length || hasCash ? `<div class="grid grid-cols-3 gap-1.5 mt-3">
+      ${mini('data-go="portfolio"', 'Investido', fmtEUR(invested))}
+      ${mini('data-go="cash"', 'Caixa', fmtEUR(cashV), cashV < 0 ? 'text-rose-200' : '')}
+      ${mini('data-go="divs"', 'Dividendos', fmtEUR(AT?.divs || 0), (AT?.divs || 0) > 0.004 ? 'text-emerald-200' : '')}</div>` : ''}
+    ${pos.length ? `<div class="flex items-center justify-between gap-2 mt-4"><h2 class="font-extrabold">Evolução</h2>
       <button data-hbench class="h-8 px-3 rounded-full bg-white/15 text-xs font-bold shrink-0">${homeBenchOn() ? `vs ${esc(benchInfo(homeBenchId()).label)} ▾` : 'Comparar ▾'}</button></div>
-    ${per === 't' ? tudoHTML(AT) : homeVarHTML(hv, hbv, per, priced.length, res, invested)}
-  </div>` : ''}
-  ${distHTML}`) + `
+    ${per === 't' ? tudoHTML(AT) : homeVarHTML(hv, hbv, per, priced.length, res, invested)}` : ''}
+    <div class="flex items-center justify-between gap-2 mt-3">${isscPill()}${pos.length && lastAt ? `<span class="text-[11px] text-brand-200 shrink-0 mt-2">Cotações ${ago(lastAt)}</span>` : ''}</div>`}
+  </div>
+  ${distHTML}` + `
 
   ${pos.length && !compact ? `<div class="grid grid-cols-2 gap-2 mt-3">${goalTileHTML(gd)}${divsTileHTML()}</div>` : pos.length ? `<div class="grid grid-cols-2 gap-2 mt-3">${goalTileHTML(gd)}${divsTileHTML()}</div>` : ''}
 
@@ -1435,7 +1436,7 @@ function homeVarHTML(hv, hbv, per, nPriced, res, invested) {
       <div class="flex justify-between ${rg.real >= 0 ? 'text-emerald-200' : 'text-rose-200'}"><span>${rg.real >= 0 ? 'Ganho real (acima da inflação)' : 'Abaixo da inflação'}</span><b>${eur ? plus(rg.realEur) : `${rg.real >= 0 ? '+' : '−'}${fmtN(Math.abs(rg.real), 1)} pontos`}</b></div>
       <div class="text-[10px] text-brand-200 pt-1">Fonte: Eurostat (inflação oficial) · dados até ${esc(infMonth(rg.last))}${hv.missing.length ? ` · sem dados: ${esc(hv.missing.map(t => t.replace(/\.[A-Z]+$/, '')).join(', '))}` : ''}</div></div>`
       : `<div class="text-[11px] text-brand-200 mt-2 num">Desde a compra: ${plus(res)} (${pctStr(res, invested) || '0%'})${hv.missing.length ? ` · sem dados: ${esc(hv.missing.map(t => t.replace(/\.[A-Z]+$/, '')).join(', '))}` : ''}</div>`) : '';
-  return `${top}${chart}${legend}${diff}${perBar(per)}${bw}${total}`;
+  return `${top}${chart}${legend}${diff}${perBar(per)}${bw}${total ? `<details class="mt-3 pt-2 border-t border-white/15" ${UI.tudoOpen ? 'open' : ''} ontoggle="UI.tudoOpen=this.open"><summary class="text-xs font-bold text-brand-100 cursor-pointer list-none">Ver detalhe ›</summary>${total.replace('mt-3 pt-2 border-t border-white/15', 'mt-2')}</details>` : ''}`;
 }
 function perBar(per) {
   const eur = S.settings.homeUnit === 'eur';
@@ -1533,7 +1534,8 @@ function tudoHTML(AT) {
       <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs mt-1 num"><span><i class="inline-block w-3.5 h-[3px] rounded align-middle" style="background:#A7F3D0"></i> Carteira <b>${fmtPct(own[own.length - 1])}</b></span>${cmp ? `<span><i class="inline-block w-3.5 align-middle" style="border-top:2px dashed #FCD34D"></i> ${esc(cmp.label)} <b>${fmtPct(cmp.pts[cmp.pts.length - 1])}</b></span>` : homeBenchOn() ? `<span class="text-brand-200">${esc(benchInfo(homeBenchId()).label)}: sem histórico</span>` : ''}</div>
       <div class="text-[11px] text-brand-200 mt-1">Rentabilidade = (valor − dinheiro investido) ÷ dinheiro investido. A comparação usa os mesmos aportes, nas mesmas datas.</div>` : ''}
     ${perBar('t')}
-    <div class="text-xs mt-3 pt-2 border-t border-white/15 num space-y-1">
+    <details class="mt-3 pt-2 border-t border-white/15" ${UI.tudoOpen ? 'open' : ''} ontoggle="UI.tudoOpen=this.open"><summary class="text-xs font-bold text-brand-100 cursor-pointer list-none">Ver detalhe do resultado ›</summary>
+    <div class="text-xs mt-2 num space-y-1">
       <div class="flex justify-between"><span class="text-brand-100">Capital investido (máximo aplicado)</span><b>${fmtEUR(AT.invested)}</b></div>
       ${row('Posições abertas (por vender)', AT.open)}
       ${row('Vendas realizadas (mais-valias)', AT.realized)}
@@ -1543,7 +1545,7 @@ function tudoHTML(AT) {
       ${AT.rate != null ? `<div class="flex justify-between"><span class="text-brand-100">Rentabilidade média por ano</span><b class="${col(AT.rate)}">${pr(AT.rate)}</b></div>` : `<div class="text-[11px] text-brand-200">A rentabilidade por ano aparece quando a carteira tiver pelo menos um mês.</div>`}
     </div>
     ${AT.rate != null && (AT.bench?.rate != null || AT.inflY != null) ? `<div class="mt-2 text-xs rounded-xl bg-white/10 px-3 py-2 leading-relaxed">No mesmo período${AT.bench?.rate != null ? `, com os mesmos aportes nas mesmas datas, ${/^Euribor/.test(AT.bench.label) ? 'a' : 'o'} <b>${esc(AT.bench.label)}</b> teria rendido <b>${pr(AT.bench.rate)}</b>` : ''}${AT.inflY != null ? `${AT.bench?.rate != null ? ', e a' : ', a'} <b>inflação ${esc(infPhrase(inflGeoReal()))}</b> foi de <b>${fmtN(AT.inflY * 100, 1)}% / ano</b>${real != null ? `: o seu ganho real foi de cerca de <b>${pr(real)}</b>` : ''}` : ''}.</div>` : ''}
-    <div class="text-[10px] text-brand-200 mt-2">Inclui as vendas e os dividendos registados na app, desde a primeira operação.</div>`;
+    <div class="text-[10px] text-brand-200 mt-2">Inclui as vendas e os dividendos registados na app, desde a primeira operação.</div></details>`;
 }
 
 /* ================= APOIAR ================= */
@@ -4090,7 +4092,7 @@ function accountCardHTML() {
 
 /* ================= Eventos globais e PWA ================= */
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-mkgo],[data-issinfo],[data-ports],[data-psel],[data-pnew],[data-pedit],[data-hcompact],[data-aporte],[data-hm],[data-mhunit],[data-hunit],[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
+  const el = e.target.closest('[data-hdist],[data-mkgo],[data-issinfo],[data-ports],[data-psel],[data-pnew],[data-pedit],[data-hcompact],[data-aporte],[data-hm],[data-mhunit],[data-hunit],[data-hmore],[data-hper],[data-hbench],[data-hbsel],[data-supporthide],[data-signout],[data-delacct],[data-back],[data-theme],[data-report],[data-fiscalcfg],[data-cdtcfg],[data-holdercfg],[data-taxtab],[data-kf],[data-goalcfg],[data-exitdemo],[data-charts],[data-bench],[data-benchadd],[data-period],[data-histref],[data-cash],[data-cashmv],[data-cashcfg],[data-divref],[data-divok],[data-divother],[data-divskip],[data-impcur],[data-refresh],[data-qset],[data-tab],[data-go],[data-add],[data-demo],[data-asset],[data-ptab],[data-hf],[data-edit],[data-close],[data-broker]');
   if (!el) return;
   const d = el.dataset;
   if ('ports' in d) { openPorts(); return; }
@@ -4098,6 +4100,7 @@ document.addEventListener('click', e => {
   if ('pnew' in d) { openPortEdit(null); return; }
   if (d.pedit) { if (isAll()) { flushActive(); } openPortEdit(d.pedit); return; }
   if ('hcompact' in d) { S.settings.homeCompact = !S.settings.homeCompact; save(); renderHome(); return; }
+  if ('hdist' in d) { S.settings.homeDistHide = !S.settings.homeDistHide; save(); renderHome(); return; }
   if ('mkgo' in d) { go('market'); return; }
   if ('issinfo' in d) { openIsscInfo(); return; }
   if ('aporte' in d) { if (needPort()) return; go('market'); setTimeout(() => { $('#mkAporte')?.scrollIntoView({ block: 'start' }); $('#mkAmt')?.focus(); }, 120); return; }
