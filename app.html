@@ -2974,6 +2974,15 @@ function renderMarket() {
       ${I && (cashT === 0 || UI.apCash) ? `<div class="flex items-center justify-between gap-3 ${cashT > 0 ? 'mt-3 pt-3 border-t border-brand-100' : ''}"><span><b>🌡️ Ajustar pelo termómetro</b><span class="block text-[11px] text-slate-500">Opcional · varia no máximo ±${band} pontos${cashT === 0 ? ' (o seu alvo de caixa é 0%)' : ''}</span></span>${sw('mkSwT', adjOn, 'Ajustar pelo termómetro')}</div>
         ${adjOn ? `<input id="mkBand" type="range" min="5" max="25" step="5" value="${band}" class="w-full mt-2" aria-label="Variação máxima"><p class="text-[11px] text-slate-600 mt-1">${delta === 0 ? `Com o termómetro a ${I.v}, a caixa fica no seu alvo.` : `A caixa passa de ${fmtN(cashT, 0)}% para ${cashEff}% (${delta > 0 ? '+' : ''}${delta} pontos) por o mercado estar ${z.l.toLowerCase()}.`}</p>` : ''}` : ''}
     </div>`;
+    const bbOn = !!S.settings.bbAdj, tks = Object.keys(S.settings.goals?.alloc?.targets || {}).filter(k => k !== '__cash');
+    if (bbOn) loadBollinger(tks).then(ch => { if (ch && UI.tab === 'market') draw(); });
+    $('#mkCash').insertAdjacentHTML('beforeend', `<div class="rounded-2xl bg-brand-50/70 p-3 text-sm mt-2">
+      <div class="flex items-center justify-between gap-3"><span><b>📈 Bandas de Bollinger (mensal)</b><span class="block text-[11px] text-slate-500">Opcional · dá prioridade a quem está perto da banda inferior</span></span>${sw('mkSwB', bbOn, 'Ajustar pelas Bandas de Bollinger')}</div>
+      ${bbOn ? `<div class="flex gap-1.5 mt-2">${[[0.4, 'Suave'], [0.8, 'Forte']].map(([k, l]) => `<button data-bbk="${k}" class="flex-1 h-8 rounded-full text-xs font-bold border ${(S.settings.bbK || 0.4) === k ? 'bg-brand-600 text-white border-brand-600' : 'bg-white border-brand-100'}">${l}</button>`).join('')}</div>
+        <div class="mt-2 space-y-1">${tks.map(tk => { const b = bollingerOf(tk), z = bbZone(b);
+          return `<div class="flex justify-between gap-2 text-[12px]"><span class="font-semibold">${esc(tk.replace(/\.[A-Z]+$/, ''))}</span><span class="num ${z.c}">${b && !b.short ? `%B ${fmtN(b.pctB, 2)} · ` : ''}${z.l}</span></div>`; }).join('')}</div>
+        ${bbLoading ? '<p class="text-[11px] text-slate-500 mt-1">A buscar o histórico mensal…</p>' : ''}` : ''}
+    </div>`);
     const useCash = (cashT > 0 && UI.apCash) || (adjOn && cashEff > 0);
     if (amt <= 0) { $('#mkRes').innerHTML = '<p class="text-sm text-slate-500">Escreva o valor e a app diz que ações inteiras comprar para se aproximar da sua distribuição desejada.</p>'; bind(); return; }
     const P = aportePlan(amt, useCash, useCash ? cashEff : null);
@@ -2984,13 +2993,13 @@ function renderMarket() {
       ${buy.length ? `<div class="rounded-2xl border border-brand-100 bg-white divide-y divide-brand-50 mt-2">${buy.map(r => `<div class="px-3 py-2.5">
           <div class="flex justify-between gap-2"><b>${nm(r.tk)} <span class="text-gain">× ${r.n}</span></b><b class="num">${fmtEUR(r.n * r.price)}</b></div>
           <div class="relative h-1.5 rounded-full bg-brand-50 mt-1.5"><i class="absolute inset-y-0 left-0 rounded-full bg-emerald-400" style="width:${Math.min(100, r.after * 2.5)}%"></i><s class="absolute -top-1 w-0.5 h-3.5 bg-ink rounded" style="left:${Math.min(100, (r.targetShown ?? r.target) * 2.5)}%"></s></div>
-          <div class="text-[11px] text-slate-500 num mt-1">${fmtEUR(r.price)}/un. · fica ${fmtN(r.after, 1)}% da carteira (alvo ${fmtN(r.targetShown ?? r.target, 1)}%)</div></div>`).join('')}</div>`
+          <div class="text-[11px] text-slate-500 num mt-1">${fmtEUR(r.price)}/un. · fica ${fmtN(r.after, 1)}% da carteira (alvo ${fmtN(r.targetShown ?? r.target, 1)}%)${S.settings.bbAdj && r.bb && !r.bb.short ? ` · %B ${fmtN(r.bb.pctB, 2)}${r.mult > 1.05 ? ' ↑ prioridade' : r.mult < 0.95 ? ' ↓ prioridade' : ''}` : ''}</div></div>`).join('')}</div>`
         : '<div class="rounded-2xl bg-amber-50 text-amber-900 text-sm p-3 mt-2">Com este valor não dá para comprar nenhuma ação inteira de um ativo abaixo do alvo.</div>'}
       <div class="rounded-2xl bg-ink text-white p-3 mt-2 text-sm num space-y-0.5">
         ${P.reserve > 0.004 ? `<div class="flex justify-between"><span class="text-brand-100">Para a caixa de oportunidade</span><b>${fmtEUR(P.reserve)}</b></div>` : useCash && P.cashFull ? '<div class="flex justify-between"><span class="text-brand-100">Caixa de oportunidade</span><b>já no alvo</b></div>' : ''}
         <div class="flex justify-between"><span class="text-brand-100">Em ações (${buy.reduce((s, r) => s + r.n, 0)} un.)</span><b>${fmtEUR(P.spent)}</b></div>
         <div class="flex justify-between text-emerald-200"><span>Troco (fica na caixa)</span><b>${fmtEUR(P.left)}</b></div></div>
-      <p class="text-[11px] text-slate-500 mt-2">Compra primeiro os ativos mais longe do alvo, só em ações inteiras e enquanto a compra os aproximar do alvo, sem compras extra acima dele. O troco fica na caixa de oportunidade.</p>
+      <p class="text-[11px] text-slate-500 mt-2">Compra primeiro os ativos mais longe do alvo${S.settings.bbAdj ? ' (com prioridade a quem está perto da banda inferior de Bollinger)' : ''}, só em ações inteiras e enquanto a compra os aproximar do alvo, sem compras extra acima dele. O troco fica na caixa de oportunidade.</p>
       ${P.rows.some(r => !r.n && r.price) ? `<p class="text-[11px] text-slate-500 mt-1">Não comprar agora: ${P.rows.filter(r => !r.n && r.price).map(r => nm(r.tk)).join(', ')} (já no alvo, ou uma ação inteira afastá-lo-ia do alvo).</p>` : ''}
       ${P.noPrice.length ? `<p class="text-[11px] text-amber-700 mt-1">Sem preço atual: ${P.noPrice.map(nm).join(', ')}. Toque em Preços no Início.</p>` : ''}
       <p class="text-[11px] text-slate-400 mt-2">Preços ${P.oldest ? ago(P.oldest) : ''}, com cerca de 15 minutos de atraso. Nada é registado na app.</p>`;
@@ -3000,6 +3009,8 @@ function renderMarket() {
     const c = $('#mkSwC'); if (c) c.onclick = () => { UI.apCash = !UI.apCash; draw(); };
     const t = $('#mkSwT'); if (t) t.onclick = () => { if (!S.settings.isscAdj && !S.settings.isscAck) return isscConsent(() => { draw(); }); S.settings.isscAdj = !S.settings.isscAdj; save(); draw(); };
     const b = $('#mkBand'); if (b) b.oninput = e => { S.settings.isscBand = Number(e.target.value); save(); draw(); };
+    const bs = $('#mkSwB'); if (bs) bs.onclick = () => { if (!S.settings.bbAdj && !S.settings.bbAck) return bbConsent(() => draw()); S.settings.bbAdj = !S.settings.bbAdj; save(); draw(); };
+    document.querySelectorAll('[data-bbk]').forEach(x => x.onclick = () => { S.settings.bbK = Number(x.dataset.bbk); save(); draw(); });
   }
   inp.oninput = draw;
   document.querySelectorAll('[data-mkq]').forEach(b => b.onclick = () => { inp.value = b.dataset.mkq; draw(); });
@@ -3157,6 +3168,65 @@ function renderDash() {
   el.querySelectorAll('[data-dcmp]').forEach(b => b.onclick = () => { UI.dashCmp = b.dataset.dcmp; renderDash(); });
 }
 
+
+/* ---------- Bandas de Bollinger mensais (filtro tático opcional do "Planear aporte") ----------
+   Fechos mensais (último fecho semanal de cada mês, até 5 anos), média de 20 meses ± 2 desvios-padrão.
+   %B = (preço − banda inferior) ÷ (banda superior − banda inferior): 0 = na banda inferior, 1 = na banda superior.
+   Só muda a PRIORIDADE entre ativos que já estão abaixo do alvo: nunca compra um ativo acima do alvo nem vende nada. */
+const BB_N = 20, BB_K = 2;
+let bbLoading = null;
+function bbMonthly(pts) {
+  const m = new Map(); for (const [d, c] of pts || []) if (c != null) m.set(d.slice(0, 7), Number(c)); // fica o último fecho de cada mês
+  return [...m.entries()].sort((x, y) => x[0].localeCompare(y[0]));
+}
+function bollingerOf(tk) {
+  const h = S.bb?.[tk]; if (!h?.pts?.length) return null;
+  const mm = h.pts; if (mm.length < BB_N) return { short: true, n: mm.length };
+  const win = mm.slice(-BB_N).map(x => x[1]), sma = win.reduce((s, v) => s + v, 0) / BB_N;
+  const sd = Math.sqrt(win.reduce((s, v) => s + (v - sma) ** 2, 0) / BB_N), up = sma + BB_K * sd, lo = sma - BB_K * sd;
+  const last = win[win.length - 1], pctB = up - lo > 1e-9 ? (last - lo) / (up - lo) : 0.5;
+  return { pctB, sma, up, lo, last, month: mm[mm.length - 1][0], n: mm.length, cur: h.cur };
+}
+function bbZone(b) {
+  if (!b) return { l: 'sem dados', c: 'text-slate-400' };
+  if (b.short) return { l: `histórico curto (${b.n} de ${BB_N} meses)`, c: 'text-slate-400' };
+  if (b.pctB < 0) return { l: 'abaixo da banda inferior', c: 'text-gain' };
+  if (b.pctB < 0.2) return { l: 'perto da banda inferior', c: 'text-gain' };
+  if (b.pctB > 1) return { l: 'acima da banda superior', c: 'text-loss' };
+  if (b.pctB > 0.8) return { l: 'perto da banda superior', c: 'text-loss' };
+  return { l: 'zona neutra', c: 'text-slate-500' };
+}
+// Peso de prioridade: 1 + intensidade × (0,5 − %B), limitado. %B 0 → mais prioridade; %B 1 → menos.
+function bbMult(tk) {
+  if (!S.settings.bbAdj) return 1;
+  const b = bollingerOf(tk); if (!b || b.short) return 1;
+  const k = S.settings.bbK || 0.4, x = Math.max(-0.5, Math.min(1.5, b.pctB));
+  return Math.max(0.25, Math.min(1.75, 1 + k * (0.5 - x) * 2));
+}
+function loadBollinger(tks) {
+  if (bbLoading || !useWorker() || !navigator.onLine) return bbLoading || Promise.resolve(false);
+  S.bb ||= {};
+  const todo = tks.filter(tk => { const h = S.bb[tk]; return ySymOf(tk) && (!h || Date.now() - h.at > 24 * 3600e3); });
+  if (!todo.length) return Promise.resolve(false);
+  bbLoading = Promise.all(todo.map(async tk => {
+    try { const r = await fetch(`${workerBase()}/history?symbol=${encodeURIComponent(ySymOf(tk))}&range=5y`), j = r.ok ? await r.json() : null;
+      if (j?.pts?.length) S.bb[tk] = { at: Date.now(), cur: normCur(j.currency), pts: bbMonthly(j.pts) }; } catch (e) {}
+  })).then(() => { bbLoading = null; saveLocal(); return true; });
+  return bbLoading;
+}
+function bbConsent(done) {
+  openModal(`${modalHead('Bandas de Bollinger no aporte')}
+    <div class="text-sm text-slate-700 space-y-2 leading-relaxed">
+      <p>Ao ligar, a calculadora passa a dar <b>mais prioridade</b> aos ativos que estão perto da <b>banda inferior</b> mensal (preço baixo face aos últimos 20 meses) e <b>menos</b> aos que estão perto da <b>banda superior</b>.</p>
+      <p>Os limites não mudam: <b>só compra ativos abaixo do seu alvo</b>, nunca vende e nunca ultrapassa a sua distribuição desejada. O filtro só decide a ordem quando o dinheiro não chega para todos.</p>
+      <p><b>Lembre-se:</b> as Bandas de Bollinger descrevem o passado recente. Um ativo na banda inferior pode continuar a cair, e um na banda superior pode continuar a subir durante muito tempo. Não é uma recomendação de investimento.</p>
+      <p>Ativos com menos de 20 meses de histórico não são ajustados.</p></div>
+    <button id="bbOk" class="w-full mt-4 h-12 rounded-2xl bg-brand-600 text-white font-bold">Percebi, ligar o filtro</button>
+    <button id="bbNo" class="w-full mt-2 h-10 rounded-2xl text-slate-500 text-sm font-bold">Agora não</button>`);
+  $('#bbOk').onclick = () => { S.settings.bbAck = true; S.settings.bbAdj = true; save(); closeModal(); done(); };
+  $('#bbNo').onclick = () => closeModal();
+}
+
 /* ---------- Planear aporte: que ações inteiras comprar com um valor ---------- */
 function aportePlan(amount, withCash = false, cashTOverride = null) {
   const al = S.settings.goals?.alloc || {}, t = al.targets || {};
@@ -3186,8 +3256,11 @@ function aportePlan(amount, withCash = false, cashTOverride = null) {
     let best = null, bs = 0;
     for (const r of rows) {
       if (!r.price || r.price > left + 1e-9) continue;
-      const v = r.cur + r.n * r.price, gap = r.target / 100 * tot - v; if (gap <= 0) continue;
-      const score = gap - Math.abs(gap - r.price); if (score > bs) { bs = score; best = r; }
+      const tv = r.target / 100 * tot, v = r.cur + r.n * r.price, gap = tv - v;
+      // só compra se a ação aproximar o ativo do alvo (não passa do alvo mais do que lhe falta)
+      if (gap <= 0 || tv <= 0 || r.price >= 2 * gap) continue;
+      // prioridade: quem está mais longe do alvo (em % do seu alvo), ponderado pelas Bandas de Bollinger se ligadas
+      const score = gap / tv * bbMult(r.tk); if (score > bs) { bs = score; best = r; }
     }
     if (!best) break; best.n++; left -= best.price;
   }
@@ -3195,7 +3268,7 @@ function aportePlan(amount, withCash = false, cashTOverride = null) {
   const spent = rows.reduce((s, r) => s + r.n * r.price, 0);
   // Mostrar na mesma base das Metas: % da carteira toda depois do aporte (investimentos + caixa, incluindo o troco)
   const totalAll = inv + cashNow + amount;
-  rows.forEach(r => { r.after = totalAll > 0 ? (r.cur + r.n * (r.price || 0)) / totalAll * 100 : 0; r.targetShown = tg0[r.tk]; });
+  rows.forEach(r => { r.after = totalAll > 0 ? (r.cur + r.n * (r.price || 0)) / totalAll * 100 : 0; r.targetShown = tg0[r.tk]; r.bb = bollingerOf(r.tk); r.mult = bbMult(r.tk); });
   rows.sort((x, y) => (y.n * (y.price || 0)) - (x.n * (x.price || 0)) || y.target - x.target);
   return { rows, spent, left: Math.max(0, left), reserve, cashT, cashFull, noPrice: rows.filter(r => !r.price).map(r => r.tk), oldest: Math.min(...rows.filter(r => r.price).map(r => S.assets[r.tk]?.priceAt || Date.now())) };
 }
