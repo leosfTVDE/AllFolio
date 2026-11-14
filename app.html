@@ -309,10 +309,10 @@ const TF = (() => {
 
     const dmap = new Map();
     for (const d of state.div.filter(d => d.date.startsWith(y))) {
-      const a = state.assets[d.ticker] || {}, c = Number(d.country || a.country) || 840;
-      const m = dmap.get(c) || { country: c, code: 'E11', gross: 0, taxForeign: 0, taxPT: 0, n: 0 };
-      m.gross += d.gross || 0; m.taxForeign += d.taxForeign || 0; m.taxPT += d.taxPT || 0; m.n++;
-      dmap.set(c, m);
+      const a = state.assets[d.ticker] || {}, c = Number(d.country || a.country) || 840, code = d.code || 'E11', k = code + '|' + c;
+      const m = dmap.get(k) || { country: c, code, gross: 0, taxForeign: 0, taxPT: 0, n: 0, brokers: new Set() };
+      m.gross += d.gross || 0; m.taxForeign += d.taxForeign || 0; m.taxPT += d.taxPT || 0; m.n++; if (d.broker) m.brokers.add(d.broker);
+      dmap.set(k, m);
     }
     const cdt = { ...CDT, ...(st.cdt || {}) };
     const D = [...dmap.values()].sort((a, b) => b.gross - a.gross).map(d => {
@@ -326,7 +326,9 @@ const TF = (() => {
     const saldo = ganhos + perdas;
     const saldoCurto = sum(lines.filter(l => l.days < 365), 'ganho');
     const mvTax = Math.max(0, saldo) * 0.28, divTax = sum(DJ, 'irs');
-    return { year: y, J, G, D: DJ, DPT,
+    const acc = new Set(); state.tx.filter(t => t.date.startsWith(y) || t.date <= y + '-12-31').forEach(t => t.broker && acc.add(t.broker)); state.div.filter(d => d.date.startsWith(y)).forEach(d => d.broker && acc.add(d.broker));
+    const Q11 = [...acc].map(b => ({ broker: b, name: BROKERS[b]?.name || b, cp: BROKERS[b]?.cp })).filter(x => x.cp && x.cp !== 620);
+    return { year: y, J, G, D: DJ, DPT, Q11,
       totals: { ganhos, perdas, saldo, saldoCurto, mvTax, divGross: sum(DJ, 'gross'), divForeign: sum(DJ, 'taxForeign'), divCredit: sum(DJ, 'credit'),
         divPT: sum(DJ, 'taxPT'), divTax, total: mvTax + divTax,
         realJ: sum(J, 'realizacao'), aqJ: sum(J, 'aquisicao'), despJ: sum(J, 'despesas'), realG: sum(G, 'realizacao'), aqG: sum(G, 'aquisicao'), despG: sum(G, 'despesas') },
@@ -414,27 +416,43 @@ const TF = (() => {
       iQ = idx(h, 'no. of shares'), iP = idx(h, 'price / share'), iPC = idx(h, 'currency (price / share)'),
       iX = idx(h, 'exchange rate'), iTot = idx(h, 'total'), iTotC = idx(h, 'currency (total)'),
       iW = idx(h, 'withholding tax'), iWC = idx(h, 'currency (withholding tax)');
+    let interest = 0;
+    // A Trading 212 já exportou o câmbio nos dois sentidos (USD por 1 EUR, ex. 1,16; ou EUR por 1 USD, ex. 0,86).
+    // Escolhe o sentido que bate com o total em EUR da própria linha; sem total, usa o valor típico.
+    const conv = (v, cur, fx, chk) => {
+      if (!v || cur === 'EUR' || !fx || fx === 1) return v;
+      if (chk) return Math.abs(v * fx - chk) <= Math.abs(v / fx - chk) ? v * fx : v / fx;
+      return fx < 0.97 && cur === 'USD' ? v * fx : v / fx;
+    };
     for (let r = hi + 1; r < rows.length; r++) {
       const row = rows[r], act = norm(cell(row, iA)), date = parseDate(cell(row, iD));
+      const total = num(cell(row, iTot)), totCur = T(cell(row, iTotC)) || 'EUR';
+      if (/interest/.test(act)) {
+        if (totCur === 'EUR' && total > 0 && date) { interest += total;
+          out.push({ kind: 'div', date, ticker: 'JUROS-T212', name: 'Juros sobre o dinheiro (Trading 212)', isin: '', broker: 'T212', gross: r2(total), taxForeign: 0, taxPT: 0, code: 'E21', country: 196 }); }
+        continue; }
       const ticker = T(cell(row, iTk)); if (!date || !ticker) continue;
       const qty = num(cell(row, iQ)), price = num(cell(row, iP)), cur = T(cell(row, iPC)) || 'EUR', fx = num(cell(row, iX)) || 1;
-      const total = num(cell(row, iTot)), totCur = T(cell(row, iTotC)) || 'EUR';
       const base = { date, ticker, name: cell(row, iN), isin: T(cell(row, iI)), broker: 'T212' };
-      if (/buy|sell/.test(act) && qty > 0) {
-        const isBuy = /buy/.test(act);
-        let pe = cur === 'EUR' ? price : price / fx, fees = 0, note = '';
+      if (/buy|sell|bonus|free share|reward|promot/.test(act) && qty > 0) {
+        const isBuy = !/sell/.test(act), gift = /bonus|free share|reward|promot/.test(act);
+        const gross = conv(qty * price, cur, fx, totCur === 'EUR' && total > 0 ? total : 0);
+        let pe = gross / qty, fees = 0, note = gift ? 'Ação gratuita (promoção): confirme o valor de aquisição com a contabilista' : '';
         if (totCur === 'EUR' && total > 0) {
-          fees = isBuy ? total - qty * pe : qty * pe - total;
-          if (fees < 0 || fees > total * 0.05) { pe = total / qty; fees = 0; note = 'Preço calculado a partir do total em EUR'; }
+          fees = isBuy ? total - gross : gross - total;
+          if (fees < -0.005 || fees > total * 0.05) { pe = total / qty; fees = 0; note = note || 'Preço calculado a partir do total em EUR'; }
         }
         out.push({ ...base, kind: isBuy ? 'buy' : 'sell', qty: r8(qty), price: pe, fees: r2(Math.max(0, fees)), note });
       } else if (/dividend/.test(act)) {
-        const w = num(cell(row, iW)), wc = T(cell(row, iWC)) || cur;
-        const taxForeign = Math.abs(wc === 'EUR' ? w : w / fx);
-        const gross = (totCur === 'EUR' && total) ? total + taxForeign : (cur === 'EUR' ? qty * price : qty * price / fx);
-        out.push({ ...base, kind: 'div', gross: r2(gross), taxForeign: r2(taxForeign), taxPT: 0 });
+        // Na Trading 212, "Price / share" e "Total" do dividendo já vêm líquidos da retenção na fonte
+        const w = Math.abs(num(cell(row, iW))), wc = T(cell(row, iWC)) || cur;
+        const netEUR = totCur === 'EUR' && total ? total : conv(qty * price, cur, fx, 0);
+        const fxW = cur === wc ? conv(1, wc, fx, totCur === 'EUR' && total ? total / (qty * price || 1) : 0) : null;
+        const taxForeign = wc === 'EUR' ? w : fxW ? w * fxW : conv(w, wc, fx, 0);
+        out.push({ ...base, kind: 'div', gross: r2(netEUR + taxForeign), taxForeign: r2(taxForeign), taxPT: 0 });
       }
     }
+    if (interest > 0.004) warn.push(`Juros sobre o dinheiro não investido: ${interest.toFixed(2).replace('.', ',')} € importados como rendimento de capitais (Anexo J, quadro 8A, código E21, país 196 Chipre). Confirme com a contabilista.`);
     return { out, warn };
   }
 
@@ -2859,6 +2877,7 @@ function renderTax() {
     <summary class="font-bold cursor-pointer">Como preencher no Portal das Finanças</summary>
     <div class="text-sm text-slate-700 space-y-2 mt-3 leading-relaxed">
       <p>As vendas na XTB já vêm pré-preenchidas no Anexo G, Quadro 9, só com a realização: a app calcula o ano, mês, dia e valor de aquisição e as despesas que faltam. Use o botão Relatório para a contabilista para enviar tudo de uma vez.</p>
+      <p><b>Trading 212 e outras corretoras estrangeiras:</b> nada vem pré-preenchido. Importe o histórico (Trading 212 › Histórico › Exportar, um ficheiro por cada 12 meses) e o relatório traz todas as linhas do Anexo J: quadro 9.2A (vendas pelo FIFO), quadro 8A (dividendos e juros) e quadro 11 (conta no estrangeiro).</p>
       <p>Cada linha do Quadro 9.2A corresponde a um lote FIFO: uma venda casada com uma compra. O valor de realização e o de aquisição vão sem despesas; as comissões de compra e venda vão na coluna própria de despesas e encargos.</p>
       <p>O código G01 aplica-se a ações. Para ETFs a app sugere G20 (unidades de participação em fundos), mas confirme o código com as instruções do anexo do ano em causa; pode alterá-lo em cada ativo na Carteira.</p>
       <p>Valores em moeda estrangeira são convertidos para euros com o câmbio de referência da data de cada operação: o da compra para o valor de aquisição e o da venda para o valor de realização.</p>
@@ -3547,9 +3566,12 @@ function reportData(rep) {
     S: { title: 'Vendas do ano (como a corretora as comunica às Finanças)',
       head: ['Venda', 'Data', 'Ativo', 'Quantidade', 'Valor realização', 'Valor aquisição', 'Despesas', 'Ganho/perda', 'Linhas FIFO', 'Anexo', 'Corretora'],
       money: [4, 5, 6, 7], rows: sales.map(s => [s.n, fmtD(s.date), s.ticker, fmtQ(s.qty), TF.r2(s.real), TF.r2(s.aq), TF.r2(s.desp), TF.r2(s.ganho), s.lots, s.anexo, bname(s.broker)]) },
-    D: { title: 'Anexo J - Quadro 8 (dividendos de fonte estrangeira)',
+    D: { title: 'Anexo J - Quadro 8A (dividendos e juros de fonte estrangeira)',
       head: ['N.º', 'Código', 'País fonte', 'Rendimento bruto', 'Imposto pago no estrangeiro', 'Imposto retido em Portugal', 'Crédito estimado', 'Observação'],
-      money: [3, 4, 5, 6], rows: rep.D.map((d, i) => [i + 1, d.code, TF.pad3(d.country), TF.r2(d.gross), TF.r2(d.taxForeign), TF.r2(d.taxPT), TF.r2(d.credit), `${cname(d.country)} · ${d.n} pagamento(s) · CDT ${d.rate}%`]) },
+      money: [3, 4, 5, 6], rows: rep.D.map((d, i) => [i + 1, d.code, TF.pad3(d.country), TF.r2(d.gross), TF.r2(d.taxForeign), TF.r2(d.taxPT), TF.r2(d.credit), `${d.code === 'E21' ? 'Juros' : 'Dividendos'} · ${cname(d.country)} · ${d.n} pagamento(s)${[...(d.brokers || [])].length ? ' · ' + [...d.brokers].map(bname).join(', ') : ''}`]) },
+    Q11: { title: 'Anexo J - Quadro 11 (contas de títulos em instituições fora de Portugal)',
+      head: ['N.º', 'Corretora', 'País (código)', 'Identificação da conta', 'Observação'], money: [],
+      rows: (rep.Q11 || []).map((q, i) => [i + 1, q.name, `${cname(q.cp)} (${TF.pad3(q.cp)})`, 'IBAN ou n.º da conta (ver na app da corretora)', 'Confirmar com a contabilista se a conta deve constar']) },
     M: { title: 'Movimentos dos ativos vendidos (base do cálculo FIFO)',
       head: ['Ativo', 'Data', 'Tipo', 'Quantidade', 'Preço unit. (EUR)', 'Total (EUR)', 'Comissões (EUR)', 'Moeda original', 'Corretora'],
       money: [4, 5, 6], rows: moves }
@@ -3558,9 +3580,12 @@ function reportData(rep) {
 
 const reportNotes = (rep, R) => [
   'Método: FIFO (as unidades compradas há mais tempo são as primeiras a ser vendidas), com quantidades fracionadas até 8 casas decimais.',
-  'Valores em EUR. Conta XTB em euros: usam-se os montantes efetivamente debitados e creditados. Operações noutra moeda: câmbio de referência do BCE do dia de cada operação.',
-  'As vendas na XTB vêm pré-preenchidas no Anexo G, Quadro 9, com a data e o valor de realização. Faltam o ano, mês, dia e valor de aquisição e as despesas, indicados abaixo.',
-  R.sales.some(s => s.lots > 1) ? 'Quando uma venda corresponde a compras de datas diferentes, aparece em várias linhas (mesmo número na coluna "Venda") e o valor de realização foi repartido proporcionalmente. No portal, a linha pré-preenchida dessa venda deve ser dividida nessas linhas.' : 'Cada venda corresponde a uma única data de compra.',
+  `Valores em EUR.${R.sales.some(s => s.broker === 'XTB') ? ' Conta XTB em euros: usam-se os montantes efetivamente debitados e creditados.' : ''}${R.sales.some(s => s.broker === 'T212') || rep.D.some(d => (d.brokers || new Set()).has('T212')) ? ' Trading 212: usam-se os totais em euros que a corretora debitou e creditou em cada operação (câmbio da própria corretora).' : ''} Operações registadas noutra moeda sem total em euros: câmbio de referência do BCE do dia de cada operação.`,
+  ...(R.sales.some(s => s.broker === 'XTB') ? ['As vendas na XTB vêm pré-preenchidas no Anexo G, Quadro 9, com a data e o valor de realização. Faltam o ano, mês, dia e valor de aquisição e as despesas, indicados abaixo.'] : []),
+  ...([...new Set([...R.sales.map(s => s.broker), ...rep.D.flatMap(d => [...(d.brokers || [])])])].filter(b => b && b !== 'XTB').length
+    ? [`Corretoras estrangeiras (${[...new Set([...R.sales.map(s => s.broker), ...rep.D.flatMap(d => [...(d.brokers || [])])])].filter(b => b && b !== 'XTB').map(bname).join(', ')}): não comunicam às Finanças, nada vem pré-preenchido. Todas as linhas do Anexo J (quadros 8A e 9.2A) têm de ser introduzidas à mão, pela ordem das colunas das tabelas abaixo.`] : []),
+  ...(rep.D.some(d => d.code === 'E21') ? ['Juros sobre o dinheiro não investido (Trading 212): indicados no quadro 8A com o código E21 e o país da entidade que os paga (Chipre, 196). Confirmar o código e o país.'] : []),
+  R.sales.some(s => s.lots > 1) ? 'Quando uma venda corresponde a compras de datas diferentes, aparece em várias linhas (mesmo número na coluna "Venda") e o valor de realização foi repartido proporcionalmente. ' + (R.sales.some(s => s.lots > 1 && s.broker === 'XTB') ? 'Na XTB, a linha pré-preenchida dessa venda no portal deve ser dividida nessas linhas.' : 'No Anexo J, cada linha introduz-se separadamente.') : 'Cada venda corresponde a uma única data de compra.',
   'Despesas e encargos: comissões de compra (proporcionais à quantidade vendida) e de venda.',
   rep.issues.length ? `ATENÇÃO: ${rep.issues.length} venda(s) sem compras suficientes registadas no histórico. As linhas respetivas estão incompletas.` : 'Todas as vendas têm compras correspondentes no histórico importado.'
 ];
@@ -3584,7 +3609,7 @@ function exportAccountantPDF(rep) {
       ['Ganhos', e(T.ganhos), 'Total de aquisição', e(T.aqG + T.aqJ)],
       ['Perdas', e(T.perdas), 'Despesas e encargos', e(T.despG + T.despJ)],
       ['Saldo de mais-valias', e(T.saldo), 'Saldo de títulos detidos < 365 dias', e(T.saldoCurto)],
-      ['Dividendos estrangeiros (bruto)', e(T.divGross), 'Imposto retido no estrangeiro', e(T.divForeign)]],
+      ['Dividendos e juros estrangeiros (bruto)', e(T.divGross), 'Imposto retido no estrangeiro', e(T.divForeign)]],
     margin: { left: 32, right: W / 2 } });
   let y = doc.lastAutoTable.finalY + 16;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text('Notas para a contabilista', 32, y); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
@@ -3598,7 +3623,7 @@ function exportAccountantPDF(rep) {
       alternateRowStyles: { fillColor: [244, 247, 252] }, margin: { left: 24, right: 24 }, columnStyles: { [t.head.length - 1]: { halign: 'left' } }, ...opts });
   };
   table(R.S, { columnStyles: { 1: { halign: 'left' }, 2: { halign: 'left' }, 10: { halign: 'left' } } });
-  table(R.G); table(R.J); table(R.D); table(R.M, { columnStyles: { 0: { halign: 'left' }, 1: { halign: 'left' }, 2: { halign: 'left' }, 7: { halign: 'left' }, 8: { halign: 'left' } } });
+  table(R.G); table(R.J); table(R.D); table(R.Q11, { columnStyles: { 1: { halign: 'left' }, 2: { halign: 'left' }, 3: { halign: 'left' }, 4: { halign: 'left' } } }); table(R.M, { columnStyles: { 0: { halign: 'left' }, 1: { halign: 'left' }, 2: { halign: 'left' }, 7: { halign: 'left' }, 8: { halign: 'left' } } });
   const pages = doc.getNumberOfPages();
   for (let p = 1; p <= pages; p++) { doc.setPage(p); doc.setFontSize(7); doc.setTextColor(120);
     doc.text(`Página ${p} de ${pages} - valores calculados a partir dos extratos importados; confirmar com os documentos da corretora.`, 32, H - 16); }
@@ -3612,9 +3637,9 @@ function exportAccountantXLSX(rep) {
   const resumo = [[`IRS ${rep.year} - Mais-valias e dividendos`], [S.settings.holderName || '', S.settings.holderNif ? 'NIF ' + S.settings.holderNif : ''], [],
     ['Vendas no ano', R.sales.length], ['Total de realização', TF.r2(T.realG + T.realJ)], ['Total de aquisição', TF.r2(T.aqG + T.aqJ)], ['Despesas e encargos', TF.r2(T.despG + T.despJ)],
     ['Ganhos', TF.r2(T.ganhos)], ['Perdas', TF.r2(T.perdas)], ['Saldo de mais-valias', TF.r2(T.saldo)], ['Saldo < 365 dias', TF.r2(T.saldoCurto)],
-    ['Dividendos estrangeiros (bruto)', TF.r2(T.divGross)], ['Imposto retido no estrangeiro', TF.r2(T.divForeign)], [], ['Notas'], ...reportNotes(rep, R).map(n => [n])];
+    ['Dividendos e juros estrangeiros (bruto)', TF.r2(T.divGross)], ['Imposto retido no estrangeiro', TF.r2(T.divForeign)], [], ['Notas'], ...reportNotes(rep, R).map(n => [n])];
   XLSX.utils.book_append_sheet(wb, sheet(resumo, [34, 16]), 'Resumo');
-  for (const [t, name] of [[R.S, 'Vendas'], [R.G, 'Anexo G Q9'], [R.J, 'Anexo J Q9.2A'], [R.D, 'Dividendos J Q8'], [R.M, 'Movimentos']])
+  for (const [t, name] of [[R.S, 'Vendas'], [R.G, 'Anexo G Q9'], [R.J, 'Anexo J Q9.2A'], [R.D, 'Dividendos e juros J Q8A'], [R.Q11, 'Contas J Q11'], [R.M, 'Movimentos']])
     if (t.rows.length) XLSX.utils.book_append_sheet(wb, sheet([t.head, ...t.rows], t.head.map(h => Math.max(10, h.length + 2))), name);
   const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   return shareFile(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `IRS_${rep.year}_mais-valias.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -3832,7 +3857,7 @@ function commitImport() {
       }
       nFix++;
     } else {
-      if (r.kind === 'div') S.div.push({ id: uid(), created: t0++, date: r.date, ticker, gross: r.gross, taxForeign: r.taxForeign || 0, taxPT: r.taxPT || 0, broker: r.broker });
+      if (r.kind === 'div') S.div.push({ id: uid(), created: t0++, date: r.date, ticker, gross: r.gross, taxForeign: r.taxForeign || 0, taxPT: r.taxPT || 0, broker: r.broker, ...(r.code ? { code: r.code } : {}), ...(r.country ? { country: r.country } : {}) });
       else S.tx.push({ id: uid(), created: t0++, type: r.kind, ticker, date: r.date, qty: r.qty, price: r.price, priceOrig: r.priceOrig ?? r.price, currency: r.currency || 'EUR', fx: r.fx ?? null, fees: r.fees || 0, broker: r.broker, src: 'import' });
       nNew++;
     }

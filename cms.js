@@ -239,7 +239,7 @@ ${list.length ? list.map(a => listCard(a, true)).join('\n') : '<p>A primeira edi
     const u = (loc, lm, cf, pr) => `  <url><loc>${SITE}${loc}</loc><lastmod>${lm}</lastmod><changefreq>${cf}</changefreq><priority>${pr}</priority></url>`;
     return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${[u('', now, 'weekly', '1.0'), u('guias', now, 'weekly', '0.7'), u('semana', now, 'weekly', '0.7'), u('privacidade.html', '2026-10-26', 'yearly', '0.3'), u('termos.html', '2026-10-26', 'yearly', '0.3'), u('como-ganhamos-dinheiro.html', '2026-10-30', 'yearly', '0.3'), u('sobre.html', '2026-11-06', 'yearly', '0.4'), u('contacto.html', '2026-11-06', 'yearly', '0.3'),
+${[u('', now, 'weekly', '1.0'), u('guias', now, 'weekly', '0.7'), u('semana', now, 'weekly', '0.7'), u('privacidade.html', '2026-10-26', 'yearly', '0.3'), u('termos.html', '2026-10-26', 'yearly', '0.3'), u('como-ganhamos-dinheiro.html', '2026-10-30', 'yearly', '0.3'), u('sobre.html', '2026-11-06', 'yearly', '0.4'), u('irs-trading-212.html', '2026-11-14', 'monthly', '0.6'), u('contacto.html', '2026-11-06', 'yearly', '0.3'),
   ...pubList(reg).map(a => u(a.slug, a.updated || a.date, a.type === 'semana' ? 'yearly' : 'monthly', a.type === 'semana' ? '0.6' : '0.8'))].join('\n')}
 </urlset>
 `;
