@@ -32,6 +32,14 @@
   .tbl{overflow-x:auto;border:1px solid #DCE7F8;border-radius:14px}
   footer{border-top:1px solid #DCE7F8;background:#fff}
   .foot{max-width:820px;margin:0 auto;padding:22px 24px;display:flex;flex-wrap:wrap;gap:10px 22px;font-size:14px;color:#475569}
+  .wl{background:linear-gradient(135deg,#0A2A66,#1D4ED8);color:#fff;border-radius:22px;padding:18px 18px 20px;margin:18px 0}
+  .wl h3{margin:0;font-size:20px;color:#fff;line-height:1.25}.wl p{margin:6px 0 0;color:#E6EEFC;font-size:15px}
+  .wl-form{display:grid;gap:8px;margin-top:12px;max-width:520px}.wl-form input[type=email],.wl-form select{width:100%;border:none;border-radius:12px;padding:12px;font:inherit;font-size:16px;color:#0A2A66;background:#fff}
+  .wl-c{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#E6EEFC;line-height:1.4}.wl-c input{margin-top:3px;width:18px;height:18px;flex:none}.wl-c a{color:#fff}
+  .wl-form button,.wl-go{border:none;border-radius:12px;padding:12px 16px;font:inherit;font-weight:800;font-size:16px;background:#fff;color:#0A2A66;cursor:pointer;text-decoration:none;display:inline-block;text-align:center}
+  .wl-msg{margin:2px 0 0;font-size:14px;min-height:1em}.wl-msg.ok{color:#A7F3D0}.wl-msg.err{color:#FECACA}.wl-more{color:#fff;font-weight:700;font-size:14px;display:inline-block;margin-top:10px}
+  [hidden]{display:none!important}
+  .why{display:grid;gap:10px;margin:18px 0}.why div{background:#fff;border:1px solid #DCE7F8;border-radius:16px;padding:12px 14px}.why b{display:block}
 </style>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2352895338707924" crossorigin="anonymous"></script>
 </head>
@@ -46,6 +54,26 @@
 
 <p>A Trading 212 é uma corretora com sede no Chipre e <strong>não comunica nada às Finanças portuguesas</strong>. Ao contrário da XTB, nada aparece pré-preenchido: cada dividendo, cada juro e cada venda tem de ser introduzido à mão no Anexo J, com a data e o valor de compra de cada lote.</p>
 <p>O AllFolio faz esse trabalho por si a partir do histórico que a própria Trading 212 lhe dá.</p>
+
+
+<div class="why">
+  <div><b>🔒 Os seus ficheiros não saem do aparelho</b>O histórico da Trading 212 é lido no seu telemóvel ou computador. Nada é enviado para um servidor.</div>
+  <div><b>🧾 Linha a linha</b>Cada venda dividida pelas datas de compra (FIFO), na ordem exata das colunas do Anexo J no Portal.</div>
+  <div><b>✂️ Ações fracionadas</b>As frações da Trading 212 entram com até 8 casas decimais, sem arredondamentos que estraguem as contas.</div>
+  <div><b>👩‍💼 Para a contabilista</b>Um PDF e um Excel com o resumo, as notas e todos os movimentos que serviram de base ao cálculo.</div>
+</div>
+
+<div class="wl" data-flag="waitlist" hidden>
+  <h3>Quer ser avisado quando sair da fase de testes?</h3>
+  <p>Já pode experimentar na app. Deixe o email e avisamos quando o relatório da Trading 212 estiver validado com contabilistas, antes da época do IRS.</p>
+  <form class="wl-form" novalidate>
+    <input type="email" name="email" placeholder="O seu email" autocomplete="email" aria-label="Email">
+    <select name="broker" aria-label="Que corretora usa?"><option value="">Que corretora usa?</option><option>XTB</option><option selected>Trading 212</option><option>DEGIRO</option><option>Revolut</option><option>Interactive Brokers</option><option>Outra</option></select>
+    <label class="wl-c"><input type="checkbox" name="consent"> <span>Aceito receber um email quando abrir. Posso sair a qualquer momento (<a href="privacidade.html#lista-de-espera">saber mais</a>).</span></label>
+    <button type="submit">Avise-me</button>
+    <p class="wl-msg" role="status"></p>
+  </form>
+</div>
 
 <h2>O que recebe</h2>
 <ul>
@@ -62,7 +90,6 @@
   <li>No separador <strong>IRS</strong>, escolha o ano e toque em <strong>Relatório para a contabilista</strong> para gerar o PDF ou o Excel. Se tiver também XTB, o relatório junta tudo, porque é o mesmo titular.</li>
 </ol>
 
-<div class="box"><strong>Os seus ficheiros não saem do telemóvel.</strong> O histórico é lido no aparelho; só os resultados ficam guardados na sua conta, se usar a sincronização.</div>
 
 <h2>Limites, com franqueza</h2>
 <ul>
