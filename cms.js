@@ -14,7 +14,7 @@
   const FOOT = `
 </main>
 <footer><div class="foot">
-  <a href="./">Início</a><a href="semana">A semana do investidor</a><a href="guias">Guias</a><a href="https://ko-fi.com/allfolio" rel="noopener">Apoie o AllFolio</a><a href="privacidade.html">Política de privacidade</a><a href="termos.html">Termos de utilização</a><a href="como-ganhamos-dinheiro.html">Como ganhamos dinheiro</a><a href="sobre.html">Sobre</a><a href="contacto.html">Contacto</a>
+  <a href="./">Início</a><a href="semana">A semana do investidor</a><a href="guias">Guias</a><a href="https://ko-fi.com/allfolio" rel="noopener">Apoie o AllFolio</a><a href="privacidade.html">Política de privacidade</a><a href="termos.html">Termos de utilização</a><a href="como-ganhamos-dinheiro.html">Como ganhamos dinheiro</a><a href="irs-trading-212.html">IRS da Trading 212</a><a href="sobre.html">Sobre</a><a href="contacto.html">Contacto</a>
 </div></footer>
 <script src="site-flags.js" defer></script>
 <script src="track.js" defer></script>
@@ -218,6 +218,7 @@ ${DISC[type](a.updated || a.date)}` + FOOT;
       + `<p class="crumbs"><a href="./">Início</a> › Guias</p>
 <h1>Guias</h1>
 <p class="meta">Explicações práticas, com exemplos, para investir e declarar os seus investimentos sem dores de cabeça.</p>
+<div class="box" style="margin:14px 0 4px"><strong>🧾 Conta na Trading 212?</strong> Nada vem pré-preenchido no IRS. Importe o histórico na app e receba os quadros 8A, 9.2A e 11 do Anexo J prontos. <a href="irs-trading-212.html">Ver como →</a></div>
 <div class="cards">
 ${list.map(a => listCard(a, false)).join('\n')}
 </div>
