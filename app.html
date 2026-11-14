@@ -2865,6 +2865,7 @@ function renderTax() {
     <button id="btnCopyAll" class="w-full h-11 rounded-2xl bg-brand-50 hover:bg-brand-100 text-brand-700 text-sm font-bold">Copiar tabelas para Excel</button>
   </div>
   ${xtbAnnualCard()}
+  ${t212Card(rep)}
 
   <div class="no-print flex gap-1 p-1 rounded-2xl bg-brand-100/70 mt-4">${[['G', 'Anexo G', rep.G.length], ['J', 'Anexo J', rep.J.length], ['D', 'Dividendos', rep.D.length]].map(([k, l, n]) =>
     `<button data-taxtab="${k}" class="flex-1 h-10 rounded-xl text-sm font-bold ${taxTab === k ? 'bg-white shadow-sm text-ink' : 'text-slate-500'}">${l}${n ? ` <span class="text-xs opacity-70">${n}</span>` : ''}</button>`).join('')}</div>
@@ -3346,7 +3347,28 @@ function xtbAnnualCard() {
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Carregar PDF da XTB
       <input type="file" id="xtbAnnualIn" accept="application/pdf,.pdf" class="hidden"></label></div>`;
 }
+function t212Card(rep) {
+  const y = rep.year, st = irsState();
+  const sales = [...rep.J, ...rep.G].filter(l => l.broker === 'T212'), saleN = new Set(sales.map(l => l.saleId)).size;
+  const divs = (st.div || []).filter(d => d.broker === 'T212' && d.date.startsWith(y));
+  const dv = divs.filter(d => (d.code || 'E11') !== 'E21'), ju = divs.filter(d => d.code === 'E21'), sum = (a, f) => a.reduce((s, x) => s + (x[f] || 0), 0);
+  const has = (st.tx || []).some(t => t.broker === 'T212') || (st.div || []).some(d => d.broker === 'T212');
+  const row = (l, v, s = '') => `<div class="flex justify-between gap-2 text-xs py-1"><span class="text-slate-600">${l}</span><b class="num">${v}${s ? ` <span class="font-normal text-slate-500">${s}</span>` : ''}</b></div>`;
+  return `<div class="no-print mt-3 rounded-3xl border border-brand-100 bg-white p-4">
+    <div class="flex items-center gap-2"><span class="w-9 h-9 rounded-xl bg-[#00A7E1] text-white grid place-items-center text-[10px] font-extrabold shrink-0">T212</span>
+      <div><div class="font-bold leading-tight">Trading 212 <span class="ml-1 text-[10px] font-bold text-amber-700 bg-amber-50 rounded-full px-1.5 py-0.5 align-middle">em testes</span></div><div class="text-[11px] text-slate-500">Anexo J: nada vem pré-preenchido</div></div></div>
+    ${has ? `<div class="mt-2 rounded-2xl bg-brand-50/60 px-3 py-1.5 divide-y divide-brand-100">
+        ${row(`Vendas em ${esc(y)} · quadro 9.2A`, saleN ? `${saleN} venda(s)` : '0', saleN ? `${sales.length} linha(s) FIFO` : '')}
+        ${row('Dividendos · quadro 8A (E11)', fmtEUR(sum(dv, 'gross')), dv.length ? `retido ${fmtEUR(sum(dv, 'taxForeign'))}` : '')}
+        ${row('Juros · quadro 8A (E21)', fmtEUR(sum(ju, 'gross')))}
+        ${row('Conta no estrangeiro · quadro 11', 'Chipre (196)')}</div>
+      <p class="text-[11px] text-slate-500 mt-2">Tudo isto já está no <b>Relatório para a contabilista</b> (PDF e Excel), pela ordem das colunas do Portal.</p>`
+    : `<p class="text-xs text-slate-600 mt-2 leading-relaxed">A Trading 212 não comunica às Finanças. Importe o histórico (Trading 212 › Histórico › Exportar, um ficheiro por cada 12 meses, desde a abertura da conta) e a app prepara os quadros 8A, 9.2A e 11 do Anexo J.</p>`}
+    <button data-t212imp class="mt-3 w-full h-11 rounded-2xl bg-brand-50 text-brand-700 text-sm font-bold flex items-center justify-center gap-2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>${has ? 'Importar mais histórico' : 'Importar histórico da Trading 212'}</button></div>`;
+}
 function bindXtbAnnualCard() {
+  const ti = document.querySelector('[data-t212imp]'); if (ti) ti.onclick = () => { UI.broker = 'T212'; go('import'); };
   const inp = $('#xtbAnnualIn'); if (inp) inp.onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadXtbAnnual(f); };
   document.querySelectorAll('[data-xtbguide]').forEach(b => b.onclick = () => openXtbGuide(b.dataset.xtbguide));
 }
