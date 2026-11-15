@@ -94,113 +94,101 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
   }
 
 
-/* ==========================================================
-   ALLFOLIO — REDESIGN VISUAL v1
-   Camada exclusivamente visual. Não altera funções, cálculos,
-   eventos, armazenamento, importação ou regras fiscais.
-   ========================================================== */
-:root {
-  --af-bg:#F3F6FB; --af-surface:#FFFFFF; --af-ink:#14233D;
-  --af-muted:#71809A; --af-line:#E5EAF2; --af-blue:#315FE8;
-  --af-blue-dark:#173B9A; --af-teal:#12A887; --af-shadow:0 8px 28px rgba(24,45,86,.065);
-}
-html { background:var(--af-bg); }
-body { background:var(--af-bg); color:var(--af-ink); letter-spacing:-.012em; }
-body::before { background:var(--af-bg); }
-.hdr { background:rgba(255,255,255,.88)!important; border-color:var(--af-line)!important; box-shadow:0 2px 14px rgba(20,35,61,.035); backdrop-filter:blur(18px); }
-.hdr > div { max-width:1180px!important; height:72px!important; padding-left:clamp(18px,3vw,34px)!important; padding-right:clamp(18px,3vw,34px)!important; }
-.hdr img { width:42px!important; height:42px!important; border-radius:14px!important; box-shadow:none!important; }
-.hdr .font-extrabold { letter-spacing:-.045em; }
-main { max-width:1180px!important; padding:28px clamp(16px,3vw,34px) 132px!important; }
-[data-view] { animation:afIn .24s ease both; }
-@keyframes afIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
-/* Superfícies e cartões existentes */
-main .bg-white, main .rounded-2xl, main .rounded-3xl, main .rounded-\[26px\], main .rounded-\[28px\] {
-  border-color:var(--af-line);
-}
-main .bg-white.border, main .bg-white.shadow-sm, main [class*="border-brand-100"].bg-white {
-  box-shadow:var(--af-shadow); border-color:var(--af-line)!important;
-}
-main .rounded-2xl.bg-white, main .rounded-2xl.border, main .rounded-3xl.bg-white {
-  border-radius:20px!important;
-}
-main h1, main h2, main h3 { letter-spacing:-.035em; color:#172844; }
-main h2 { font-size:1.02rem; }
-main .text-slate-500 { color:#75839A!important; }
-main .text-slate-600 { color:#53627B!important; }
-main .text-brand-600, main .text-brand-700 { color:var(--af-blue)!important; }
-main .bg-brand-50 { background:#EFF3FF!important; }
-main .border-brand-100 { border-color:var(--af-line)!important; }
-main .bg-brand-600 { background:var(--af-blue)!important; }
-main button { transition:background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
-main button:active { transform:scale(.985); }
-main button.bg-brand-600, main button.bg-brand-700 { box-shadow:0 5px 13px rgba(49,95,232,.2); }
-main button.rounded-full.border, main button.rounded-full.bg-brand-50 { border-radius:999px; }
-.field { border:1px solid #DCE3EE!important; border-radius:13px!important; min-height:46px; box-shadow:0 1px 2px rgba(20,35,61,.025); }
-.field:focus { border-color:var(--af-blue)!important; box-shadow:0 0 0 4px rgba(49,95,232,.11)!important; }
-.lbl { color:#5F6F88!important; font-size:.75rem; letter-spacing:.015em; }
-.tbl { border-collapse:separate; border-spacing:0; }
-.tbl th { background:#F2F5FA!important; color:#52627D!important; font-size:.72rem; text-transform:uppercase; letter-spacing:.045em; }
-.tbl td, .tbl th { border-color:#E9EDF4!important; }
-/* Cartão de património: mantém os valores e a estrutura originais */
-#view-home > div:first-child { border-radius:26px!important; background:linear-gradient(130deg,#173B9A 0%,#244FC5 56%,#315FE8 100%)!important; box-shadow:0 15px 34px rgba(31,69,170,.19); padding:25px!important; }
-#view-home > div:first-child h2 { color:#fff; }
-#view-home > div:first-child [data-hcompact], #view-home > div:first-child [data-hbench] { border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.13); }
-#view-home > div:first-child .text-brand-100 { color:#DCE7FF!important; }
-#view-home > div:first-child .text-brand-200 { color:#C5D6FF!important; }
-#view-home > div:first-child .grid.grid-cols-3 > button { background:rgba(255,255,255,.105)!important; border:1px solid rgba(255,255,255,.12); border-radius:15px!important; padding:11px 10px!important; }
-#view-home > div:first-child .grid.grid-cols-3 > button div { color:#D5E1FF!important; }
-/* Distribuição, listas e blocos */
-#view-home .rounded-2xl, #view-home .rounded-3xl { border-radius:20px!important; }
-main .divide-brand-50 > :not([hidden]) ~ :not([hidden]) { border-color:#EDF0F5!important; }
-main .shadow-sm { box-shadow:var(--af-shadow)!important; }
-/* Navegação inferior mais discreta e atual */
-.navbar { background:rgba(255,255,255,.94)!important; border-color:var(--af-line)!important; box-shadow:0 -7px 26px rgba(22,39,73,.055); backdrop-filter:blur(18px); }
-.navbar > div { max-width:820px!important; }
-.navbtn { min-height:62px; color:#8793A8; font-size:11px!important; letter-spacing:.005em; padding-top:10px!important; padding-bottom:9px!important; }
-.navbtn svg { width:21px; height:21px; }
-.navbtn[aria-current="page"] { color:var(--af-blue)!important; }
-.navbtn[aria-current="page"] svg { filter:drop-shadow(0 2px 4px rgba(49,95,232,.18)); }
-/* Modal e avisos */
-#modalBody { border:1px solid rgba(226,232,240,.8); box-shadow:0 22px 70px rgba(15,30,60,.2); }
-#toast { border-radius:14px!important; box-shadow:0 8px 28px rgba(15,30,60,.22); }
-/* Autenticação e modo escuro continuam suportados */
-html.dark { --af-bg:#0B1428; --af-surface:#13213B; --af-ink:#E6EEFF; --af-muted:#9AA8C0; --af-line:#263653; --af-shadow:0 8px 28px rgba(0,0,0,.15); }
-html.dark body, html.dark body::before { background:#0B1428; }
-html.dark .hdr, html.dark .navbar { background:rgba(16,29,53,.94)!important; border-color:#263653!important; }
-html.dark main h1, html.dark main h2, html.dark main h3 { color:#E6EEFF; }
-html.dark main .bg-white, html.dark main .rounded-2xl.bg-white, html.dark main .rounded-3xl.bg-white { background:#13213B!important; border-color:#263653!important; }
-html.dark main .text-slate-500 { color:#9AA8C0!important; }
-html.dark main .text-slate-600 { color:#B8C4D8!important; }
-html.dark main .bg-brand-50 { background:#1A2C50!important; }
-html.dark .field { background:#0F1B32!important; border-color:#304364!important; }
-html.dark .tbl th { background:#1A2C50!important; color:#C6D5F2!important; }
-html.dark .tbl td, html.dark .tbl th { border-color:#263653!important; }
-@media(min-width:900px) {
-  main { padding-top:38px!important; }
-  .navbar { position:sticky!important; bottom:0; margin-top:-90px; }
-  .navbar > div { max-width:760px!important; }
-  #view-home > div:first-child { padding:30px!important; }
-}
-@media(max-width:640px) {
-  .hdr > div { height:64px!important; }
-  main { padding-top:18px!important; padding-bottom:118px!important; }
-  #view-home > div:first-child { border-radius:23px!important; padding:20px!important; }
-  .navbar > div { padding-left:4px; padding-right:4px; }
-  .navbtn { min-height:60px; }
-  #modalBody { border-radius:24px 24px 0 0!important; }
-}
-@media(prefers-reduced-motion:reduce) { [data-view] { animation:none; } main button { transition:none; } }
-
+  /* ===== Visual limpo (Início, telemóvel e computador) ===== */
+  body{background:#F1F4F9}
+  .dkc{background:#fff; border:1px solid #E3E9F3; border-radius:20px; box-shadow:0 1px 2px rgba(10,42,102,.03)}
+  html.dark .dkc{background:#13224A; border-color:#22386F}
+  .dk-r1,.dk-r2{display:flex; flex-direction:column; gap:12px; margin-top:12px}
+  .dk-seg{display:flex; background:#F1F4F9; border-radius:10px; padding:3px; gap:2px}
+  .dk-seg button{height:28px; padding:0 10px; border-radius:8px; font-size:12px; font-weight:700; color:#64748B}
+  .dk-seg button.on{background:#fff; color:#0A2A66; box-shadow:0 1px 3px rgba(10,42,102,.12)}
+  html.dark .dk-seg{background:#0F1B3A} html.dark .dk-seg button.on{background:#22386F; color:#E6EEFF}
+  .dk-tabs{display:flex; gap:18px; border-bottom:1px solid #E3E9F3}
+  .dk-tabs button{padding:10px 2px; font-size:13px; font-weight:700; color:#64748B; border-bottom:2px solid transparent; margin-bottom:-1px}
+  .dk-tabs button.on{color:#1D4ED8; border-color:#1D4ED8}
+  html.dark .dk-tabs{border-color:#22386F} html.dark .dk-tabs button.on{color:#8FB0FA; border-color:#8FB0FA}
+  .dk-ai{background:linear-gradient(160deg,#EAF0FE 0%,#F6F8FE 60%,#fff 100%); border:1px solid #D6E1FA; border-radius:20px}
+  html.dark .dk-ai{background:linear-gradient(160deg,#1A2C5C,#13224A); border-color:#2A3F78}
+  .dk-in{height:42px; border-radius:12px; border:1px solid #D6E1FA; background:#fff; padding:0 12px; font-weight:700; width:100%; outline:0; min-width:0}
+  html.dark .dk-in{background:#0F1B3A; border-color:#2A3F78; color:#E6EEFF}
+  .dk-plot{position:relative; height:190px; touch-action:pan-y}
+  .dk-tip{position:absolute; top:6px; pointer-events:none; background:#0F1A2E; color:#fff; border-radius:12px; padding:9px 12px; font-size:12px; min-width:160px; box-shadow:0 8px 20px rgba(10,42,102,.2); z-index:2}
+  .dk-home details > summary::-webkit-details-marker{display:none}
+  /* ===== Versão computador (ecrãs a partir de 1024px) ===== */
+  .dk-only{display:none !important}
+  @media (min-width:1024px){
+    .dk-only{display:block !important} button.dk-only,a.dk-only,label.dk-only{display:flex !important}
+    .mb-only,.dk-hide,nav.navbar .navbtn[data-tab="more"]{display:none !important}
+    body{padding-left:264px; background:#F1F4F9}
+    html.dark body{background:#0B1530}
+    header.hdr{background:rgba(241,244,249,.88) !important; border-bottom:0 !important}
+    html.dark header.hdr{background:rgba(11,21,48,.88) !important}
+    header.hdr > div, #demoBar > div{max-width:1320px !important; padding-left:24px; padding-right:24px}
+    main{max-width:1320px !important; padding:4px 24px 48px !important}
+    nav.navbar{top:16px; bottom:16px; left:16px; right:auto !important; width:232px; border:1px solid #E3E9F3 !important; border-radius:22px; box-shadow:0 1px 2px rgba(10,42,102,.04),0 8px 24px rgba(10,42,102,.05); overflow-y:auto}
+    html.dark nav.navbar{border-color:rgba(255,255,255,.08) !important}
+    nav.navbar > div{display:flex !important; flex-direction:column; max-width:none !important; min-height:100%; padding:18px 12px; gap:2px; margin:0 !important}
+    nav.navbar .navbtn{flex-direction:row !important; justify-content:flex-start; align-items:center; gap:12px !important; padding:9px 12px !important; border-radius:12px; font-size:13.5px !important; width:100%; color:#64748B}
+    nav.navbar .navbtn svg{width:19px; height:19px}
+    nav.navbar .navbtn[aria-current="page"]{background:#EEF3FD; color:#1D4ED8 !important}
+    html.dark nav.navbar .navbtn[aria-current="page"]{background:rgba(143,176,250,.12); color:#8FB0FA !important}
+    nav.navbar .navbtn:hover{background:#F4F7FC} html.dark nav.navbar .navbtn:hover{background:rgba(255,255,255,.05)}
+    .dk-brand{display:flex !important; align-items:center; gap:10px; padding:2px 8px 14px}
+    .dk-sec{font-size:10.5px; font-weight:800; letter-spacing:.14em; color:#94A3B8; padding:16px 12px 6px; text-transform:uppercase}
+    .dk-grow{flex:1}
+    .dk-search{align-items:center; gap:8px; width:300px; height:40px; padding:0 14px; border-radius:12px; background:#fff; border:1px solid #E3E9F3; color:#94A3B8; margin-right:14px}
+    .dk-search input{border:0; outline:0; background:transparent; font-size:13.5px; width:100%; color:inherit}
+    html.dark .dk-search{background:#13224A; border-color:#22386F}
+    #dkTicker{display:flex !important; gap:26px; overflow:hidden; white-space:nowrap; width:calc(100% - 48px); margin:2px auto 0; padding:10px 18px; border-radius:14px; background:#fff; border:1px solid #E3E9F3; font-size:12.5px; max-width:1272px}
+    html.dark #dkTicker{background:#13224A; border-color:#22386F}
+    .dkc{background:#fff; border:1px solid #E3E9F3; border-radius:20px; box-shadow:0 1px 2px rgba(10,42,102,.03)}
+    html.dark .dkc{background:#13224A; border-color:#22386F}
+    .dk-r1{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:16px; margin-top:16px}
+    .dk-r2{display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:16px; margin-top:16px; align-items:start}
+    .dk-seg{display:flex; background:#F1F4F9; border-radius:10px; padding:3px; gap:2px}
+    .dk-seg button{height:28px; padding:0 11px; border-radius:8px; font-size:12px; font-weight:700; color:#64748B}
+    .dk-seg button.on{background:#fff; color:#0A2A66; box-shadow:0 1px 3px rgba(10,42,102,.12)}
+    html.dark .dk-seg{background:#0F1B3A} html.dark .dk-seg button.on{background:#22386F; color:#E6EEFF}
+    .dk-tabs{display:flex; gap:22px; border-bottom:1px solid #E3E9F3}
+    .dk-tabs button{padding:10px 2px; font-size:13px; font-weight:700; color:#64748B; border-bottom:2px solid transparent; margin-bottom:-1px}
+    .dk-tabs button.on{color:#1D4ED8; border-color:#1D4ED8}
+    html.dark .dk-tabs{border-color:#22386F} html.dark .dk-tabs button.on{color:#8FB0FA; border-color:#8FB0FA}
+    .dk-tbl{width:100%; border-collapse:collapse; font-size:13.5px}
+    .dk-tbl th{font-size:11px; color:#94A3B8; font-weight:700; text-align:right; padding:11px 14px; background:#F7F9FC; white-space:nowrap}
+    .dk-tbl td{padding:12px 14px; white-space:nowrap; text-align:right; border-top:1px solid #EEF2F8; vertical-align:middle}
+    .dk-tbl th:first-child,.dk-tbl td:first-child{text-align:left; padding-left:20px} .dk-tbl th:last-child,.dk-tbl td:last-child{padding-right:20px}
+    .dk-tbl tbody tr{cursor:pointer} .dk-tbl tbody tr:hover{background:#F7F9FC}
+    html.dark .dk-tbl th{background:rgba(255,255,255,.03)} html.dark .dk-tbl td{border-color:rgba(255,255,255,.06)} html.dark .dk-tbl tbody tr:hover{background:rgba(255,255,255,.03)}
+    .dk-ai{background:linear-gradient(160deg,#EAF0FE 0%,#F6F8FE 60%,#fff 100%); border:1px solid #D6E1FA; border-radius:20px}
+    html.dark .dk-ai{background:linear-gradient(160deg,#1A2C5C,#13224A); border-color:#2A3F78}
+    .dk-in{height:42px; border-radius:12px; border:1px solid #D6E1FA; background:#fff; padding:0 12px; font-weight:700; width:100%; outline:0}
+    html.dark .dk-in{background:#0F1B3A; border-color:#2A3F78; color:#E6EEFF}
+    .dk-plot{position:relative; height:300px}
+    .dk-tip{position:absolute; top:6px; pointer-events:none; background:#0F1A2E; color:#fff; border-radius:12px; padding:9px 12px; font-size:12px; min-width:170px; box-shadow:0 8px 20px rgba(10,42,102,.2)}
+    #modalBody{max-width:560px}
+    #view-market:not(.hidden){display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.35fr); gap:16px; align-items:start; margin-top:12px}
+    #view-market > h1{grid-column:1/-1; margin-bottom:0 !important}
+    #view-market > *{margin-top:0 !important}
+    #view-more:not(.hidden), #view-settings:not(.hidden){max-width:880px}
+    main > section:not(#view-home){padding-top:12px}
+    .dkc:has(> .dk-tbl), .dkc .dk-tbl{overflow-x:auto}
+  }
+  @media (min-width:1024px) and (max-width:1399px){
+    .dk-r2{grid-template-columns:minmax(0,1fr)}
+    .dk-r2 > .space-y-4{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; align-items:start}
+    .dk-r2 > .space-y-4 > *{margin-top:0 !important}
+    .dk-r2 > .space-y-4 > .grid{grid-template-columns:minmax(0,1fr)}
+  }
 </style>
 </head>
 <body class="text-ink antialiased">
 
 <header class="hdr sticky z-30 bg-white/95 backdrop-blur border-b border-brand-100">
   <div class="max-w-3xl mx-auto px-4 h-16 flex items-center gap-2 sm:gap-3">
-    <img src="icon-192.png" width="40" height="40" alt="" style="border-radius:22%;flex-shrink:0;box-shadow:0 0 0 1px rgba(10,42,102,.10)">
+    <img src="icon-192.png" width="40" height="40" alt="" class="dk-hide" style="border-radius:22%;flex-shrink:0;box-shadow:0 0 0 1px rgba(10,42,102,.10)">
+    <label class="dk-only dk-search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="dkQ" type="search" placeholder="Procurar uma posição…" autocomplete="off" oninput="dkSearch(this.value)"></label>
     <div class="flex-1 min-w-0">
-      <div class="font-extrabold tracking-tight leading-none text-[17px]">AllFolio<span class="font-semibold text-slate-500">.pt</span></div>
+      <div class="dk-hide font-extrabold tracking-tight leading-none text-[17px]">AllFolio<span class="font-semibold text-slate-500">.pt</span></div>
       <div class="flex items-center gap-1.5 text-xs text-slate-500 mt-1 whitespace-nowrap overflow-hidden">
         <span id="netDot" class="w-2 h-2 rounded-full bg-gain shrink-0"></span><button id="portBtn" data-ports class="hidden shrink-0 max-w-[120px] truncate font-bold text-ink bg-brand-50 rounded-full px-2 py-0.5" aria-label="Escolher carteira"></button><span id="netTxt">Online</span><button id="fxBtn" class="hidden font-bold text-brand-700 num" aria-label="Ver câmbio do euro"></button><span id="pwaTxt"></span>
       </div>
@@ -217,6 +205,7 @@ html.dark .tbl td, html.dark .tbl th { border-color:#263653!important; }
     </button>
   </div>
 </header>
+<div id="dkTicker" class="dk-only"></div>
 <div id="demoBar" class="hidden sticky z-20 bg-amber-100 border-b border-amber-200" style="top:calc(4rem + env(safe-area-inset-top,0px))">
   <div class="max-w-3xl mx-auto px-4 py-2.5 flex items-center gap-3">
     <div class="flex-1 min-w-0 text-sm leading-tight text-amber-950"><b>Dados de exemplo</b><br><span class="text-xs">Nada disto é seu. Os seus dados estão guardados.</span></div>
@@ -240,6 +229,8 @@ html.dark .tbl td, html.dark .tbl th { border-color:#263653!important; }
 
 <nav class="navbar fixed bottom-0 inset-x-0 z-30 bg-white border-t border-brand-100">
   <div class="max-w-3xl mx-auto grid grid-cols-5">
+    <div class="dk-only dk-brand"><img src="icon-192.png" width="36" height="36" alt="" style="border-radius:22%;box-shadow:0 0 0 1px rgba(10,42,102,.10)"><div class="font-extrabold tracking-tight text-[18px]">AllFolio<span class="font-semibold text-slate-500">.pt</span></div></div>
+    <div class="dk-only dk-sec">Menu principal</div>
     <button data-tab="home" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Início</button>
     <button data-tab="portfolio" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
@@ -250,6 +241,17 @@ html.dark .tbl td, html.dark .tbl th { border-color:#263653!important; }
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/></svg>IRS</button>
     <button data-tab="more" class="navbtn flex flex-col items-center gap-1 py-2.5 text-xs font-semibold">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>Mais</button>
+    <div class="dk-only dk-sec">A sua carteira</div>
+    <button data-tab="divs" class="navbtn dk-only text-xs font-semibold"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.6-1-1.7-1.5-3-1.5-1.7 0-3 .9-3 2.1 0 2.9 6 1.4 6 4.2 0 1.2-1.3 2.2-3 2.2-1.4 0-2.6-.6-3.1-1.6M12 6v2M12 16.5v1.5"/></svg>Dividendos</button>
+    <button data-tab="goals" class="navbtn dk-only text-xs font-semibold"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>Metas</button>
+    <button data-tab="cash" class="navbtn dk-only text-xs font-semibold"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v12H3z"/><path d="M16 13h2M3 10h18"/></svg>Caixa</button>
+    <button data-tab="dash" class="navbtn dk-only text-xs font-semibold"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Gráficos</button>
+    <button data-tab="import" class="navbtn dk-only text-xs font-semibold"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Importar</button>
+    <div class="dk-only dk-grow"></div>
+    <div class="dk-only dk-sec">Ajuda</div>
+    <button data-tab="settings" class="navbtn dk-only text-xs font-semibold"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Definições</button>
+    <a href="guias.html" target="_blank" rel="noopener" class="navbtn dk-only text-xs font-semibold"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg>Guias</a>
+    <a href="contacto.html" target="_blank" rel="noopener" class="navbtn dk-only text-xs font-semibold"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v12H8l-4 4z"/></svg>Contacto</a>
   </div>
 </nav>
 
@@ -1229,7 +1231,7 @@ function go(tab, isBack = false) {
   if (NAV_TABS.includes(tab)) UI.hist = [];
   UI.tab = tab; try { localStorage.setItem(KEY + '.tab', tab); } catch (e) {}
   document.querySelectorAll('[data-view]').forEach(v => v.classList.toggle('hidden', v.id !== 'view-' + tab));
-  const navOn = NAV_TABS.includes(tab) ? tab : 'more';
+  const navOn = NAV_TABS.includes(tab) || document.querySelector(`.navbtn[data-tab="${tab}"]`) ? tab : 'more';
   document.querySelectorAll('.navbtn').forEach(b => {
     const on = b.dataset.tab === navOn;
     b.classList.toggle('text-brand-600', on); b.classList.toggle('text-slate-400', !on);
@@ -1239,8 +1241,8 @@ function go(tab, isBack = false) {
 }
 function render() {
   const bar = $('#demoBar'); if (bar) bar.classList.toggle('hidden', !S.demo);
-  updatePortBtn(); const nt = $('#netTxt'); if (nt) nt.classList.toggle('hidden', (S.ports || []).length > 0);
-  ({ home: renderHome, portfolio: renderPortfolio, market: renderMarket, dash: renderDash, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs, goals: renderGoals, more: renderMore, settings: renderSettings })[UI.tab]();
+  dkTickerFill(); updatePortBtn(); const nt = $('#netTxt'); if (nt) nt.classList.toggle('hidden', (S.ports || []).length > 0);
+  ({ home: renderHome, portfolio: renderPortfolio, market: renderMarket, dash: renderDash, tax: renderTax, import: renderImport, cash: renderCash, divs: renderDivs, goals: renderGoals, more: renderMore, settings: renderSettings })[UI.tab](); dkFilter();
 }
 
 /* ---------- Componentes ---------- */
@@ -1311,6 +1313,172 @@ function benchVariation(per, id, grid) {
   const pts = grid.map(t => { const px = t === t0 ? now : per === 'd' ? start : pxEUR(h, cur, t); return px ? (px / start - 1) * 100 : null; });
   return { label: b.label, ok: true, pct: (now / start - 1) * 100, pts };
 }
+/* ================= VERSÃO COMPUTADOR ================= */
+const MES_C = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const dShort = d => { const [y, m, dd] = d.split('-'); return `${+dd} ${MES_C[+m - 1]}`; };
+const dayChg = a => a && a.price && a.pricePrev ? (a.price / a.pricePrev - 1) * 100 : null;
+function dkColors() {
+  const pos = TF.positions(TF.fifo(S.tx).lots, S.assets).map(p => ({ tk: p.ticker, v: p.value ?? p.cost })).filter(x => x.v > 0).sort((x, y) => y.v - x.v);
+  return Object.fromEntries(pos.map((x, k) => [x.tk, DASH_COL[k % DASH_COL.length]]));
+}
+function dkTable(pos, peso = false) {
+  const C = dkColors(), tot = pos.reduce((s, p) => s + (p.value ?? p.cost), 0) || 1;
+  return `<table class="dk-tbl num"><thead><tr><th>Ativo</th><th>Qtd.</th><th>Preço médio</th><th>Preço atual</th><th>Hoje</th><th>Valor</th><th>Resultado</th>${peso ? '<th>Peso</th>' : ''}</tr></thead><tbody>${pos.map(p => {
+    const a = S.assets[p.ticker] || {}, dc = dayChg(a), r = p.value != null ? p.value - p.cost : null, nm = a.name || '';
+    return `<tr data-asset="${esc(p.ticker)}" data-q="${esc((p.ticker + ' ' + nm).toLowerCase())}"><td><span class="flex items-center gap-3"><i class="w-3 h-3 rounded-full inline-block shrink-0" style="background:${C[p.ticker] || '#94A3B8'}"></i><span class="min-w-0"><b>${esc(p.ticker.replace(/\.[A-Z]+$/, ''))}</b> <span class="text-[11px] font-bold text-slate-400">${p.kind === 'etf' ? 'ETF' : 'Ação'}</span><span class="block text-xs text-slate-500 truncate max-w-[210px]">${esc(nm || p.ticker)}</span></span></span></td>
+      <td>${fmtQ(p.qty)}</td><td>${fmtEUR(p.avg)}</td><td>${p.value != null ? fmtEUR(p.value / p.qty) : '—'}</td>
+      <td class="font-bold ${dc == null ? 'text-slate-400' : dc >= 0 ? 'text-gain' : 'text-loss'}">${dc == null ? '—' : fmtPct(dc)}</td>
+      <td class="font-bold">${fmtEUR(p.value ?? p.cost)}</td>
+      <td class="font-bold ${r == null ? 'text-slate-400' : sgn(r)}">${r == null ? '—' : `${plus(r)}<span class="block text-[11px] font-semibold">${pctStr(r, p.cost) || '0%'}</span>`}</td>
+      ${peso ? `<td>${fmtN((p.value ?? p.cost) / tot * 100, 1)}%</td>` : ''}</tr>`; }).join('')}</tbody></table>`;
+}
+function dkList(pos) {
+  const C = dkColors();
+  return pos.map(p => { const a = S.assets[p.ticker] || {}, r = p.value != null ? p.value - p.cost : null, nm = a.name || '';
+    return `<button data-asset="${esc(p.ticker)}" data-q="${esc((p.ticker + ' ' + nm).toLowerCase())}" class="w-full text-left px-4 py-3 flex items-center gap-3 border-t border-brand-50"><i class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background:${C[p.ticker] || '#94A3B8'}"></i>
+      <span class="flex-1 min-w-0"><b>${esc(p.ticker.replace(/\.[A-Z]+$/, ''))}</b> <span class="text-[11px] font-bold text-slate-400">${p.kind === 'etf' ? 'ETF' : 'Ação'}</span><span class="block text-xs text-slate-500 truncate">${esc(nm || p.ticker)} · ${fmtQ(p.qty)} un.</span></span>
+      <span class="text-right num shrink-0"><b class="block">${fmtEUR(p.value ?? p.cost)}</b><span class="text-xs font-bold ${r == null ? 'text-slate-400' : sgn(r)}">${r == null ? 'sem preço' : `${plus(r)} · ${pctStr(r, p.cost) || '0%'}`}</span></span></button>`; }).join('');
+}
+function dkSearch(q) { UI.dkQ = q; if (!['home', 'portfolio'].includes(UI.tab)) go('portfolio'); dkFilter(); }
+function dkFilter() {
+  const q = (UI.dkQ || '').trim().toLowerCase();
+  document.querySelectorAll('[data-q]').forEach(tr => { tr.style.display = !q || tr.dataset.q.includes(q) ? '' : 'none'; });
+}
+function dkTickerFill() {
+  const el = document.getElementById('dkTicker'); if (!el) return;
+  const pos = TF.positions(TF.fifo(S.tx).lots, S.assets), C = dkColors();
+  el.innerHTML = pos.length ? pos.map(p => { const a = S.assets[p.ticker], dc = dayChg(a);
+    return `<button data-asset="${esc(p.ticker)}" class="inline-flex items-center gap-1.5"><i class="w-3 h-3 rounded-full inline-block" style="background:${C[p.ticker] || '#94A3B8'}"></i><b>${esc(p.ticker.replace(/\.[A-Z]+$/, ''))}</b><span class="num text-slate-500">${p.value != null ? fmtEUR(p.value / p.qty) : ''}</span>${dc == null ? '' : `<span class="num font-bold ${dc >= 0 ? 'text-gain' : 'text-loss'}">${dc >= 0 ? '▲' : '▼'} ${fmtN(Math.abs(dc), 2)}%</span>`}</button>`; }).join('')
+    : '<span class="text-slate-500">As cotações das suas posições aparecem aqui.</span>';
+}
+function dkVar(per) {
+  if (per !== 't') return homeVariation(per);
+  const f = S.tx.filter(t => t.type === 'buy').map(t => t.date).sort()[0]; if (!f) return null;
+  HP.__all = { l: 'Tudo', w: 'desde o início', days: Math.max(7, Math.round((Date.parse(today()) - Date.parse(f)) / 864e5) + 1) };
+  try { return homeVariation('__all'); } finally { delete HP.__all; }
+}
+function dkChart(hv, hbv) {
+  if (!hv?.ok) return `<div class="dk-plot grid place-items-center text-sm text-slate-500">${useWorker() ? 'A carregar o histórico de preços…' : 'Toque em Preços para ver a evolução.'}</div>`;
+  const p = hv.pts, b = hbv?.ok ? hbv.pts : null, all = [0, ...p, ...(b || []).filter(v => v != null)];
+  let lo = Math.min(...all), hi = Math.max(...all); const pd = (hi - lo) * 0.12 || 0.5; lo -= pd; hi += pd;
+  const raw = (hi - lo) / 4, mag = Math.pow(10, Math.floor(Math.log10(raw))), step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(x => x >= raw);
+  const ticks = []; for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-9; t += step) ticks.push(+t.toFixed(6));
+  const W = 1000, H = 300, n = p.length, X = k => n > 1 ? k / (n - 1) * W : 0, Y = v => H - (v - lo) / (hi - lo) * H;
+  const ln = arr => arr.map((v, k) => v == null ? null : `${X(k).toFixed(1)},${Y(v).toFixed(1)}`).filter(Boolean).join(' ');
+  const xl = n > 1 ? [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(f * (n - 1))).filter((k, i, a) => a.indexOf(k) === i) : [0];
+  window.__dkC = { grid: hv.grid, p, b, bl: hbv?.label || '', lo, hi };
+  return `<div class="flex gap-2"><div class="relative w-10 shrink-0 text-[11px] text-slate-400 num">${ticks.map(t => `<span class="absolute right-0 -translate-y-1/2" style="top:${(Y(t) / H * 100).toFixed(2)}%">${fmtN(t, step < 1 ? 1 : 0)}%</span>`).join('')}</div>
+    <div class="flex-1 min-w-0"><div class="dk-plot" onmousemove="dkHover(event,this)" onmouseleave="dkHover(null,this)" ontouchstart="this._t=Date.now();dkHover(event.touches[0],this)" ontouchmove="this._t=Date.now();dkHover(event.touches[0],this)" ontouchend="setTimeout(()=>dkHover(null,this),1500)">
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="100%" class="block" role="img" aria-label="Evolução da carteira">
+        <defs><linearGradient id="dkA1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F62E0" stop-opacity=".22"/><stop offset="1" stop-color="#2F62E0" stop-opacity="0"/></linearGradient>
+        <linearGradient id="dkA2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F08A5D" stop-opacity=".16"/><stop offset="1" stop-color="#F08A5D" stop-opacity="0"/></linearGradient></defs>
+        ${ticks.map(t => `<line x1="0" x2="${W}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" stroke="${t === 0 ? 'rgba(100,116,139,.45)' : 'rgba(100,116,139,.16)'}" stroke-dasharray="${t === 0 ? '0' : '3 5'}" vector-effect="non-scaling-stroke"/>`).join('')}
+        ${b ? `<polygon points="0,${H} ${ln(b)} ${W},${H}" fill="url(#dkA2)"/><polyline points="${ln(b)}" fill="none" stroke="#F08A5D" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>` : ''}
+        <polygon points="0,${H} ${ln(p)} ${W},${H}" fill="url(#dkA1)"/>
+        <polyline points="${ln(p)}" fill="none" stroke="#2F62E0" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+      <div class="dk-hv hidden absolute top-0 bottom-0 w-px" style="border-left:1.5px dashed #2F62E0"></div>
+      <i class="dk-hp1 hidden absolute w-2.5 h-2.5 rounded-full -translate-x-1/2 -translate-y-1/2" style="background:#2F62E0;box-shadow:0 0 0 3px #fff"></i>
+      <i class="dk-hp2 hidden absolute w-2.5 h-2.5 rounded-full -translate-x-1/2 -translate-y-1/2" style="background:#F08A5D;box-shadow:0 0 0 3px #fff"></i>
+      <div class="dk-tip hidden"></div></div>
+    <div class="relative h-6 mt-2 text-[11px] text-slate-400">${xl.map(k => `<span class="absolute whitespace-nowrap ${k === 0 ? '' : k === n - 1 ? '-translate-x-full' : '-translate-x-1/2'}" style="left:${(n > 1 ? k / (n - 1) * 100 : 0).toFixed(2)}%">${dShort(hv.grid[k])}</span>`).join('')}</div></div></div>`;
+}
+function dkHover(e, el) {
+  const c = window.__dkC, q = s => el.querySelector(s); if (!c) return;
+  const parts = ['.dk-hv', '.dk-hp1', '.dk-hp2', '.dk-tip'];
+  if (!e && el._t && Date.now() - el._t < 1400) return;
+  if (!e) { parts.forEach(s => q(s)?.classList.add('hidden')); return; }
+  const r = el.getBoundingClientRect(), n = c.p.length, k = Math.max(0, Math.min(n - 1, Math.round((e.clientX - r.left) / r.width * (n - 1)))), x = n > 1 ? k / (n - 1) * 100 : 0;
+  const yp = v => ((1 - (v - c.lo) / (c.hi - c.lo)) * 100).toFixed(2) + '%';
+  q('.dk-hv').style.left = x + '%'; q('.dk-hv').classList.remove('hidden');
+  Object.assign(q('.dk-hp1').style, { left: x + '%', top: yp(c.p[k]) }); q('.dk-hp1').classList.remove('hidden');
+  const bv = c.b?.[k]; if (bv != null) { Object.assign(q('.dk-hp2').style, { left: x + '%', top: yp(bv) }); q('.dk-hp2').classList.remove('hidden'); } else q('.dk-hp2').classList.add('hidden');
+  const t = q('.dk-tip'); t.innerHTML = `<div class="text-[11px] opacity-70 mb-1">${fmtD(c.grid[k])}</div><div class="flex justify-between gap-4"><span><i class="inline-block w-2 h-2 rounded-full mr-1.5" style="background:#2F62E0"></i>Carteira</span><b class="num">${fmtPct(c.p[k])}</b></div>${bv != null ? `<div class="flex justify-between gap-4"><span><i class="inline-block w-2 h-2 rounded-full mr-1.5" style="background:#F08A5D"></i>${esc(c.bl)}</span><b class="num">${fmtPct(bv)}</b></div>` : ''}`;
+  t.classList.remove('hidden'); const right = x > 60; t.style.left = right ? '' : `calc(${x}% + 12px)`; t.style.right = right ? `calc(${100 - x}% + 12px)` : '';
+}
+function dkDetail(res, invested) {
+  const rg = realGain(inflGeoReal());
+  return `<details class="mt-2" ${UI.tudoOpen ? 'open' : ''} ontoggle="UI.tudoOpen=this.open"><summary class="text-[12.5px] font-bold text-brand-600 cursor-pointer list-none">Ver detalhe ›</summary>
+    <div class="text-[12.5px] num mt-2 divide-y divide-brand-50">
+      <div class="flex justify-between py-1.5"><span class="text-slate-600">Desde a compra</span><b class="${sgn(res)}">${plus(res)} (${pctStr(res, invested) || '0%'})</b></div>
+      ${rg ? `<div class="flex justify-between py-1.5"><span class="text-slate-600">Inflação ${esc(infPhrase(rg.geo))} no mesmo período</span><b>${fmtPct(rg.infl)}</b></div>
+      <div class="flex justify-between py-1.5"><span class="text-slate-600">${rg.real >= 0 ? 'Ganho real (acima da inflação)' : 'Abaixo da inflação'}</span><b class="${sgn(rg.realEur)}">${plus(rg.realEur)}</b></div>
+      <div class="text-[10.5px] text-slate-400 pt-1.5">Fonte: Eurostat · dados até ${esc(infMonth(rg.last))}</div>` : ''}</div></details>`;
+}
+function dkHome(c) {
+  const { F, pos, invested, total, cashV, grand, hasCash, AT, hvD, dItems, dTot, tgtA, gd, yr, rep, divYear, lastAt, pLabel } = c;
+  const per = homePer(), hv = pos.length ? dkVar(per) : null, hbv = hv?.ok && homeBenchOn() ? benchVariation(per === 't' ? 'm' : per, homeBenchId(), hv.grid) : null;
+  let hb = hbv; if (per === 't' && hv?.ok && homeBenchOn()) { const f = S.tx.filter(t => t.type === 'buy').map(t => t.date).sort()[0]; HP.__all = { days: Math.max(7, Math.round((Date.parse(today()) - Date.parse(f)) / 864e5) + 1) }; try { hb = benchVariation('__all', homeBenchId(), hv.grid); } finally { delete HP.__all; } }
+  const wPer = ({ d: 'no último dia', w: 'esta semana', m: 'este mês', y: 'num ano', t: 'desde o início' })[per];
+  const mini = (attrs, l, v, cls = '') => `<button ${attrs} class="text-left rounded-xl bg-brand-50 px-3 py-2"><span class="block text-[11px] text-slate-500 font-semibold">${l}</span><b class="num text-[13.5px] ${cls}">${v}</b></button>`;
+  const totalCard = `<div class="dkc p-5 flex flex-col">
+    <div class="flex items-center justify-between gap-2"><h2 class="font-extrabold text-[15px]">Património total</h2><span class="text-xs text-slate-500 truncate">${esc(pLabel.replace(/^ · /, ''))}</span></div>
+    <div class="num text-[34px] leading-tight font-extrabold tracking-tight mt-2">${fmtEUR(hasCash ? grand : total)}</div>
+    <div class="text-[13px] font-bold num mt-0.5">${AT ? `<span class="${sgn(AT.result)}">${AT.result >= 0 ? '▲' : '▼'} ${fmtN(Math.abs(AT.pct), 1)}% · ${plus(AT.result)}</span> <span class="text-slate-500 font-semibold">desde o início</span>` : ''}</div>
+    ${hvD?.ok ? `<div class="text-[13px] font-bold num"><span class="${sgn(hvD.gain)}">${plus(hvD.gain)} (${fmtPct(hvD.pct)})</span> <span class="text-slate-500 font-semibold">hoje</span></div>` : ''}
+    <div class="grid grid-cols-3 gap-2 mt-4">${mini('data-go="portfolio"', 'Investido', fmtEUR(invested))}${mini('data-go="cash"', 'Caixa', fmtEUR(cashV), cashV < 0 ? 'text-loss' : '')}${mini('data-go="divs"', 'Dividendos', fmtEUR(AT?.divs || 0), (AT?.divs || 0) > 0.004 ? 'text-gain' : '')}</div>
+    <div class="flex items-center justify-between mt-5"><b class="text-[13px]">Distribuição</b>${Object.keys(tgtA).length ? '<span class="text-[11px] text-slate-400">atual · alvo</span>' : '<button data-goalcfg class="text-[11px] font-bold text-brand-600">Definir alvos ›</button>'}</div>
+    <div class="flex gap-1 h-2.5 mt-2">${dItems.map(x => `<i class="block rounded-full" style="flex:${x.v.toFixed(2)};background:${x.c}" title="${esc(x.l)}"></i>`).join('')}</div>
+    <div class="mt-2 text-[13px]">${dItems.map(x => { const pc = x.v / dTot * 100, off = x.t != null && Math.abs(pc - x.t) >= 3;
+      return `<div class="flex items-center justify-between gap-2 py-[5px]"><span class="flex items-center gap-2 min-w-0"><i class="w-2 h-2 rounded-full inline-block shrink-0" style="background:${x.c}"></i><b class="truncate">${esc(x.l)}</b><span class="text-[11.5px] text-slate-500 num">${fmtN(pc, 0)}%${x.t != null ? ` · <span class="${off ? 'text-loss font-bold' : ''}">${fmtN(x.t, 0)}%</span>` : ''}</span></span><b class="num">${fmtEUR(x.v)}</b></div>`; }).join('')}</div>
+    <div class="flex-1"></div>
+    <button data-aporte class="mt-4 h-10 rounded-xl bg-brand-50 text-brand-700 font-bold text-sm w-full">Planear aporte</button></div>`;
+  const segB = k => `<button data-hper="${k}" class="${per === k ? 'on' : ''}">${({ d: '1D', w: '1S', m: '1M', y: '1A', t: 'Tudo' })[k]}</button>`;
+  const nm = t => esc(t.replace(/\.[A-Z]+$/, ''));
+  const chartCard = `<div class="dkc p-5 flex flex-col">
+    <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-extrabold text-[15px]">Evolução da carteira</h2>
+      <div class="flex items-center gap-2 flex-wrap"><button data-hbench class="h-[34px] px-3 rounded-[10px] border border-brand-100 text-xs font-bold">${homeBenchOn() ? `vs ${esc(benchInfo(homeBenchId()).label)} ▾` : 'Comparar ▾'}</button><div class="dk-seg">${['d', 'w', 'm', 'y', 't'].map(segB).join('')}</div></div></div>
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-1 text-[12.5px] mt-2 mb-4 num">
+      ${hv?.ok ? `<span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full inline-block" style="background:#2F62E0"></i>Carteira <b class="${sgn(hv.gain)}">${fmtPct(hv.pct)} (${plus(hv.gain)})</b></span>` : ''}
+      ${hb?.ok ? `<span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full inline-block" style="background:#F08A5D"></i>${esc(hb.label)} <b>${fmtPct(hb.pct)}</b></span>` : hb ? `<span class="text-slate-400">${esc(hb.label)}: ${hb.monthly ? 'mede-se por mês' : 'a carregar…'}</span>` : ''}
+      <span class="text-slate-400">${wPer}</span></div>
+    ${dkChart(hv, hb?.ok ? hb : null)}
+    <div class="flex-1"></div>
+    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-3 pt-3 border-t border-brand-50 text-[12px] text-slate-500 num">
+      <span>${hv?.ok && hv.best && hv.worst ? `Melhor: <b class="text-gain">${nm(hv.best.tk)} ${fmtPct(hv.best.pct)}</b> · Pior: <b class="text-loss">${nm(hv.worst.tk)} ${fmtPct(hv.worst.pct)}</b>` : ''}</span>
+      <span>${hv?.ok && hb?.ok ? (hv.pct - hb.pct >= 0 ? `<b class="text-gain">${fmtN(hv.pct - hb.pct, 1)} pontos acima</b> do ${esc(hb.label)}` : `<b class="text-loss">${fmtN(hb.pct - hv.pct, 1)} pontos abaixo</b> do ${esc(hb.label)}`) + (lastAt ? ' · ' : '') : ''}${lastAt ? `Cotações ${ago(lastAt)}` : ''}</span></div>
+    ${dkDetail(total - invested, invested)}
+    <div>${isscPill(false)}</div></div>`;
+  const f = UI.dkF || 'all', fpos = f === 'all' ? pos : f === 'cash' ? [] : pos.filter(p => f === 'etf' ? p.kind === 'etf' : p.kind !== 'etf');
+  const tabB = (k, l, nn) => `<button onclick="UI.dkF='${k}';renderHome()" class="${f === k ? 'on' : ''}">${l} <span class="text-slate-400 font-semibold">${nn}</span></button>`;
+  const nE = pos.filter(p => p.kind === 'etf').length;
+  const holdCard = `<div class="dkc overflow-hidden">
+    <div class="flex items-center justify-between px-5 pt-4"><h2 class="font-extrabold text-[15px]">As suas posições</h2>
+      <span class="flex gap-4 text-[13px] font-bold text-brand-600"><button data-refresh class="dk-only">Atualizar preços</button><button data-charts class="dk-only">Gráficos</button><button data-go="portfolio">Ver carteira ›</button></span></div>
+    <div class="dk-tabs px-4 lg:px-5 mt-1">${tabB('all', 'Todos', pos.length)}${tabB('etf', 'ETFs', nE)}${tabB('stock', 'Ações', pos.length - nE)}${tabB('cash', 'Caixa', '')}</div>
+    ${f === 'cash' ? `<div class="p-5 flex items-center justify-between"><div><b>Caixa de oportunidade</b><div class="text-xs text-slate-500">Dinheiro à espera de oportunidade</div></div><div class="text-right"><b class="num text-lg">${fmtEUR(cashV)}</b><button data-go="cash" class="block ml-auto text-xs font-bold text-brand-600">Ver movimentos ›</button></div></div>`
+      : fpos.length ? `<div class="dk-only">${dkTable(fpos)}</div><div class="mb-only">${dkList(fpos)}</div>` : '<div class="p-6 text-sm text-slate-500">Sem posições neste filtro.</div>'}</div>`;
+  const tg = dItems.filter(x => x.t != null), sug = tg.map(x => ({ ...x, cur: x.v / dTot * 100, gap: x.t / 100 * dTot - x.v })).sort((x, y) => y.gap - x.gap)[0];
+  const sName = sug?.tk ? S.assets[sug.tk]?.name || sug.tk : 'Caixa de oportunidade';
+  const aiCard = `<div class="dk-ai p-5">
+    <div class="flex items-center gap-2 text-[12px] font-extrabold text-brand-600"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19.5 9.5l-5.7 1.9L12 17l-1.8-5.6L4.5 9.5l5.7-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Próximo aporte</div>
+    ${sug && sug.gap > 0.5 ? `<div class="font-extrabold text-[16px] mt-2">${esc(sug.l)} <span class="text-slate-500 font-semibold text-[13px]">· ${esc(sName.slice(0, 32))}</span></div>
+      <div class="text-[12.5px] mt-1"><b class="text-brand-700">Está em ${fmtN(sug.cur, 0)}%</b> · <b class="text-brand-700">alvo ${fmtN(sug.t, 0)}%</b></div>
+      <p class="text-[12.5px] text-slate-600 mt-2 leading-relaxed">É o que está mais longe da distribuição que definiu: faltam cerca de <b class="num">${fmtEUR(sug.gap)}</b> para chegar ao alvo.</p>`
+      : tg.length ? '<p class="text-[13px] text-slate-600 mt-2">A carteira está dentro da distribuição que definiu. Escreva o valor e a app divide-o pelos ativos.</p>'
+      : '<p class="text-[13px] text-slate-600 mt-2">Defina a distribuição desejada e a app mostra onde investir cada aporte para se aproximar dela.</p>'}
+    ${tg.length ? `<label class="block text-[11px] font-bold text-slate-500 mt-4 mb-1" for="dkAmt">Quanto vai investir?</label>
+      <div class="flex gap-2"><input id="dkAmt" class="dk-in num" inputmode="decimal" placeholder="Ex.: 150 €"><button data-aporte data-dkamt class="h-[42px] px-4 rounded-xl bg-brand-600 text-white text-sm font-bold shrink-0">Ver o que comprar</button></div>`
+      : '<button data-goalcfg class="mt-4 h-[42px] w-full rounded-xl bg-brand-600 text-white text-sm font-bold">Definir distribuição</button>'}
+    <p class="text-[10.5px] text-slate-400 mt-3">Com base nos alvos das suas Metas. Não é uma recomendação de investimento.</p></div>`;
+  const resumo = `<div class="dkc p-5"><div class="flex items-center justify-between"><h2 class="font-extrabold text-[15px]">Resumo de ${yr}</h2><button data-tab="tax" class="text-[13px] font-bold text-brand-600">IRS ›</button></div>
+    <div class="text-[13px] num mt-2 divide-y divide-brand-50">
+      <div class="flex justify-between py-2"><span class="text-slate-600">Saldo de mais-valias</span><b class="${sgn(rep.totals.saldo)}">${plus(rep.totals.saldo)}</b></div>
+      <div class="flex justify-between py-2"><span class="text-slate-600">Dividendos (bruto)</span><b>${fmtEUR(divYear)}</b></div>
+      <div class="flex justify-between py-2"><span class="text-slate-600">IRS estimado</span><b class="text-amber-700">${fmtEUR(rep.totals.total)}</b></div></div>
+    <button data-report class="mt-2 h-10 w-full rounded-xl bg-brand-50 text-brand-700 text-sm font-bold">Relatório para a contabilista</button></div>`;
+  const qa = (icon, label, attrs, primary = false) => `<button ${attrs} class="flex flex-col items-center gap-1.5 text-xs font-semibold"><span class="w-12 h-12 rounded-2xl grid place-items-center ${primary ? 'bg-brand-600 text-white' : 'bg-white border border-brand-100 text-brand-600'}">${icon}</span>${label}</button>`;
+  const ic = d => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const qaRow = `<div class="mb-only grid grid-cols-5 gap-1.5">${qa(ic('<path d="M12 5v14M5 12h14"/>'), 'Nova', 'data-add="buy"', true)}${qa(ic('<path d="M3 7h18v12H3z"/><path d="M16 13h2M3 10h18"/>'), 'Aporte', 'data-aporte')}${qa(ic('<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>'), 'Importar', 'data-go="import"')}${qa(ic('<path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/>'), 'Preços', 'data-refresh')}${qa(ic('<path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h8M9 17h6"/>'), 'Relatório', 'data-report')}</div>`;
+  const issues = F?.issues?.length ? `<div class="mt-3 rounded-3xl bg-loss/5 border border-loss/25 p-4 text-sm"><div class="font-bold text-loss">Há vendas sem compras suficientes registadas</div>
+    <ul class="mt-1 text-slate-700 space-y-0.5">${F.issues.slice(0, 4).map(i => `<li>${esc(i.ticker)}: faltam ${fmtQ(i.qty)} unidades na venda de ${fmtD(i.date)}</li>`).join('')}</ul>
+    <p class="text-slate-500 mt-1">Importe ou registe as compras anteriores para o cálculo ficar correto.</p></div>` : '';
+  return `<div class="dk-home">${issues}
+    <div class="dk-r1">${totalCard}${qaRow}${chartCard}</div>
+    <div class="dk-r2"><div>${holdCard}<div class="mt-3">${jobBanner()}</div></div><div class="space-y-4">${aiCard}${resumo}<div class="grid grid-cols-2 gap-2">${goalTileHTML(gd)}${divsTileHTML()}</div></div></div>
+    <div class="mt-4">${supportCardHTML()}</div>
+    <p class="text-[11px] text-slate-400 mt-4">As estimativas não substituem a validação no Portal das Finanças nem o aconselhamento de um contabilista certificado.</p></div>`;
+}
+
 function homeChart(p, bpts) {
   const all = [0, ...p, ...(bpts || []).filter(v => v != null)], lo = Math.min(...all), hi = Math.max(...all), span = (hi - lo) || 1;
   const W = 300, H = 84, Y = v => (6 + (H - 12) * (1 - (v - lo) / span)).toFixed(1), X = (k, n) => (n > 1 ? k / (n - 1) * W : 0).toFixed(1);
@@ -1318,6 +1486,8 @@ function homeChart(p, bpts) {
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" class="mt-3 block" role="img" aria-label="Variação da carteira${bpts ? ' e do índice' : ''}">
     <line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="rgba(255,255,255,.28)" stroke-dasharray="2 4" vector-effect="non-scaling-stroke"/>
     ${bpts ? `<polyline points="${line(bpts)}" fill="none" stroke="#FCD34D" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>` : ''}
+    <defs><linearGradient id="hcArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A7F3D0" stop-opacity=".32"/><stop offset="1" stop-color="#A7F3D0" stop-opacity="0"/></linearGradient></defs>
+    <polygon points="0,${H} ${line(p)} ${W},${H}" fill="url(#hcArea)"/>
     <polyline points="${line(p)}" fill="none" stroke="#A7F3D0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
 let homeLoadAt = 0;
@@ -1456,7 +1626,7 @@ function renderHome() {
       ${hvD?.ok ? `<span class="${colT(hvD.gain)}">Hoje ${plus(hvD.gain)} (${fmtPct(hvD.pct)})</span>` : '<span class="text-brand-200 font-semibold">Hoje: toque em Preços</span>'}
       ${AT ? `<span class="${colT(AT.result)}">Desde o início ${plus(AT.result)} (${fmtPct(AT.pct)})</span>` : ''}</div>`
     : `<div class="text-xs text-brand-100 mt-1">${empty ? 'Comece por importar ou registar a primeira compra.' : 'Sem posições abertas'}</div>`;
-  $('#view-home').innerHTML = `
+  $('#view-home').innerHTML = `<div class="${empty ? '' : 'hidden'}">
   <div class="rounded-[26px] text-white p-5 relative overflow-hidden" style="background:#0F1A2E">
     <div class="flex items-start justify-between gap-2"><div class="text-sm text-brand-100 font-medium min-w-0 truncate">Património total${pLabel}</div>
       ${!empty ? `<button data-hcompact class="h-8 px-2.5 rounded-full bg-white/15 text-xs font-bold shrink-0" aria-label="${compact ? 'Mostrar o cartão completo' : 'Reduzir o cartão'}">${compact ? '▾ Mais' : '▴ Menos'}</button>` : ''}</div>
@@ -1511,7 +1681,7 @@ function renderHome() {
   <div class="mt-4 rounded-2xl bg-brand-50 border border-brand-100 px-4 py-3 flex items-center gap-3 text-sm">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="shrink-0"><circle cx="12" cy="12" r="9" stroke="#B9CEF1" stroke-width="3"/><path d="M12 3a9 9 0 0 1 8.5 6" stroke="#1D4ED8" stroke-width="3" stroke-linecap="round"/></svg>
     <span><b>Suporte total a ações fracionadas</b> <span class="text-slate-600">· até 8 casas decimais, FIFO por fração</span></span></div>
-  <p class="text-[11px] text-slate-400 mt-4 leading-relaxed">As estimativas não substituem a validação no Portal das Finanças nem o aconselhamento de um contabilista certificado.</p>`;
+  <p class="text-[11px] text-slate-400 mt-4 leading-relaxed">As estimativas não substituem a validação no Portal das Finanças nem o aconselhamento de um contabilista certificado.</p></div>` + (empty ? '' : dkHome({ F, pos, invested, total, cashV, grand, hasCash, AT, hvD, dItems, dTot, tgtA, gd, yr, rep, divYear, lastAt, pLabel }));
   if (pos.length) setTimeout(ensureHomeData, 0);
 }
 function homeVarHTML(hv, hbv, per, nPriced, res, invested) {
@@ -2637,7 +2807,7 @@ function renderPortfolio() {
     const fpos = kf === 'all' ? pos : pos.filter(p => (p.kind === 'etf' ? 'etf' : 'acao') === kf);
     const kchip = (k, l) => `<button data-kf="${k}" class="h-8 px-3.5 rounded-full text-xs font-bold border ${kf === k ? 'bg-brand-600 text-white border-brand-600' : 'bg-white border-brand-100 text-slate-600'}">${l}</button>`;
     body = `<div class="flex gap-2 mb-3">${kchip('all', 'Todos')}${kchip('acao', 'Ações')}${kchip('etf', 'ETFs')}</div>`
-      + (fpos.length ? card(fpos.map(p => posRow(p)).join(''), 'divide-y divide-brand-50 overflow-hidden') : card('<div class="p-6 text-sm text-slate-500 text-center">Sem posições abertas.</div>'))
+      + (fpos.length ? card(fpos.map(p => posRow(p)).join(''), 'mb-only divide-y divide-brand-50 overflow-hidden') + `<div class="dk-only dkc overflow-hidden">${dkTable(fpos, true)}</div>` : card('<div class="p-6 text-sm text-slate-500 text-center">Sem posições abertas.</div>'))
       + (closed.length ? `<h3 class="font-bold mt-6 mb-2 text-slate-600">Ativos sem posição</h3>${card(closed.map(k => `<button data-asset="${esc(k)}" class="w-full text-left px-4 py-3 flex justify-between hover:bg-brand-50/60"><span class="font-semibold">${esc(k)}</span><span class="text-xs text-slate-500">${esc(S.assets[k].name)}</span></button>`).join(''), 'divide-y divide-brand-50 overflow-hidden')}` : '');
   } else if (UI.ptab === 'charts') {
     body = renderChartsBody(pos);
@@ -4315,7 +4485,7 @@ document.addEventListener('click', e => {
   if ('hdist' in d) { S.settings.homeDistHide = !S.settings.homeDistHide; save(); renderHome(); return; }
   if ('mkgo' in d) { go('market'); return; }
   if ('issinfo' in d) { openIsscInfo(); return; }
-  if ('aporte' in d) { if (needPort()) return; go('market'); setTimeout(() => { $('#mkAporte')?.scrollIntoView({ block: 'start' }); $('#mkAmt')?.focus(); }, 120); return; }
+  if ('aporte' in d) { if (needPort()) return; const dkA = 'dkamt' in d ? ($('#dkAmt')?.value || '').trim() : ''; go('market'); setTimeout(() => { $('#mkAporte')?.scrollIntoView({ block: 'start' }); const mi = $('#mkAmt'); if (mi && dkA) { mi.value = dkA; mi.dispatchEvent(new Event('input', { bubbles: true })); } mi?.focus(); }, 120); return; }
   if (d.hm) { UI.hm = d.hm; render(); return; }
   if (d.mhunit) { S.settings.homeUnit = d.mhunit === 'eur' ? 'eur' : 'pct'; save(); render(); return; }
   if (d.hunit) { S.settings.homeUnit = d.hunit === 'eur' ? 'eur' : 'pct'; save(); renderHome(); return; }
