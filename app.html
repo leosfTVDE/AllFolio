@@ -92,6 +92,106 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
     .print-wrap { overflow:visible !important; }
     .tbl { font-size:8pt; }
   }
+
+
+/* ==========================================================
+   ALLFOLIO — REDESIGN VISUAL v1
+   Camada exclusivamente visual. Não altera funções, cálculos,
+   eventos, armazenamento, importação ou regras fiscais.
+   ========================================================== */
+:root {
+  --af-bg:#F3F6FB; --af-surface:#FFFFFF; --af-ink:#14233D;
+  --af-muted:#71809A; --af-line:#E5EAF2; --af-blue:#315FE8;
+  --af-blue-dark:#173B9A; --af-teal:#12A887; --af-shadow:0 8px 28px rgba(24,45,86,.065);
+}
+html { background:var(--af-bg); }
+body { background:var(--af-bg); color:var(--af-ink); letter-spacing:-.012em; }
+body::before { background:var(--af-bg); }
+.hdr { background:rgba(255,255,255,.88)!important; border-color:var(--af-line)!important; box-shadow:0 2px 14px rgba(20,35,61,.035); backdrop-filter:blur(18px); }
+.hdr > div { max-width:1180px!important; height:72px!important; padding-left:clamp(18px,3vw,34px)!important; padding-right:clamp(18px,3vw,34px)!important; }
+.hdr img { width:42px!important; height:42px!important; border-radius:14px!important; box-shadow:none!important; }
+.hdr .font-extrabold { letter-spacing:-.045em; }
+main { max-width:1180px!important; padding:28px clamp(16px,3vw,34px) 132px!important; }
+[data-view] { animation:afIn .24s ease both; }
+@keyframes afIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+/* Superfícies e cartões existentes */
+main .bg-white, main .rounded-2xl, main .rounded-3xl, main .rounded-\[26px\], main .rounded-\[28px\] {
+  border-color:var(--af-line);
+}
+main .bg-white.border, main .bg-white.shadow-sm, main [class*="border-brand-100"].bg-white {
+  box-shadow:var(--af-shadow); border-color:var(--af-line)!important;
+}
+main .rounded-2xl.bg-white, main .rounded-2xl.border, main .rounded-3xl.bg-white {
+  border-radius:20px!important;
+}
+main h1, main h2, main h3 { letter-spacing:-.035em; color:#172844; }
+main h2 { font-size:1.02rem; }
+main .text-slate-500 { color:#75839A!important; }
+main .text-slate-600 { color:#53627B!important; }
+main .text-brand-600, main .text-brand-700 { color:var(--af-blue)!important; }
+main .bg-brand-50 { background:#EFF3FF!important; }
+main .border-brand-100 { border-color:var(--af-line)!important; }
+main .bg-brand-600 { background:var(--af-blue)!important; }
+main button { transition:background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+main button:active { transform:scale(.985); }
+main button.bg-brand-600, main button.bg-brand-700 { box-shadow:0 5px 13px rgba(49,95,232,.2); }
+main button.rounded-full.border, main button.rounded-full.bg-brand-50 { border-radius:999px; }
+.field { border:1px solid #DCE3EE!important; border-radius:13px!important; min-height:46px; box-shadow:0 1px 2px rgba(20,35,61,.025); }
+.field:focus { border-color:var(--af-blue)!important; box-shadow:0 0 0 4px rgba(49,95,232,.11)!important; }
+.lbl { color:#5F6F88!important; font-size:.75rem; letter-spacing:.015em; }
+.tbl { border-collapse:separate; border-spacing:0; }
+.tbl th { background:#F2F5FA!important; color:#52627D!important; font-size:.72rem; text-transform:uppercase; letter-spacing:.045em; }
+.tbl td, .tbl th { border-color:#E9EDF4!important; }
+/* Cartão de património: mantém os valores e a estrutura originais */
+#view-home > div:first-child { border-radius:26px!important; background:linear-gradient(130deg,#173B9A 0%,#244FC5 56%,#315FE8 100%)!important; box-shadow:0 15px 34px rgba(31,69,170,.19); padding:25px!important; }
+#view-home > div:first-child h2 { color:#fff; }
+#view-home > div:first-child [data-hcompact], #view-home > div:first-child [data-hbench] { border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.13); }
+#view-home > div:first-child .text-brand-100 { color:#DCE7FF!important; }
+#view-home > div:first-child .text-brand-200 { color:#C5D6FF!important; }
+#view-home > div:first-child .grid.grid-cols-3 > button { background:rgba(255,255,255,.105)!important; border:1px solid rgba(255,255,255,.12); border-radius:15px!important; padding:11px 10px!important; }
+#view-home > div:first-child .grid.grid-cols-3 > button div { color:#D5E1FF!important; }
+/* Distribuição, listas e blocos */
+#view-home .rounded-2xl, #view-home .rounded-3xl { border-radius:20px!important; }
+main .divide-brand-50 > :not([hidden]) ~ :not([hidden]) { border-color:#EDF0F5!important; }
+main .shadow-sm { box-shadow:var(--af-shadow)!important; }
+/* Navegação inferior mais discreta e atual */
+.navbar { background:rgba(255,255,255,.94)!important; border-color:var(--af-line)!important; box-shadow:0 -7px 26px rgba(22,39,73,.055); backdrop-filter:blur(18px); }
+.navbar > div { max-width:820px!important; }
+.navbtn { min-height:62px; color:#8793A8; font-size:11px!important; letter-spacing:.005em; padding-top:10px!important; padding-bottom:9px!important; }
+.navbtn svg { width:21px; height:21px; }
+.navbtn[aria-current="page"] { color:var(--af-blue)!important; }
+.navbtn[aria-current="page"] svg { filter:drop-shadow(0 2px 4px rgba(49,95,232,.18)); }
+/* Modal e avisos */
+#modalBody { border:1px solid rgba(226,232,240,.8); box-shadow:0 22px 70px rgba(15,30,60,.2); }
+#toast { border-radius:14px!important; box-shadow:0 8px 28px rgba(15,30,60,.22); }
+/* Autenticação e modo escuro continuam suportados */
+html.dark { --af-bg:#0B1428; --af-surface:#13213B; --af-ink:#E6EEFF; --af-muted:#9AA8C0; --af-line:#263653; --af-shadow:0 8px 28px rgba(0,0,0,.15); }
+html.dark body, html.dark body::before { background:#0B1428; }
+html.dark .hdr, html.dark .navbar { background:rgba(16,29,53,.94)!important; border-color:#263653!important; }
+html.dark main h1, html.dark main h2, html.dark main h3 { color:#E6EEFF; }
+html.dark main .bg-white, html.dark main .rounded-2xl.bg-white, html.dark main .rounded-3xl.bg-white { background:#13213B!important; border-color:#263653!important; }
+html.dark main .text-slate-500 { color:#9AA8C0!important; }
+html.dark main .text-slate-600 { color:#B8C4D8!important; }
+html.dark main .bg-brand-50 { background:#1A2C50!important; }
+html.dark .field { background:#0F1B32!important; border-color:#304364!important; }
+html.dark .tbl th { background:#1A2C50!important; color:#C6D5F2!important; }
+html.dark .tbl td, html.dark .tbl th { border-color:#263653!important; }
+@media(min-width:900px) {
+  main { padding-top:38px!important; }
+  .navbar { position:sticky!important; bottom:0; margin-top:-90px; }
+  .navbar > div { max-width:760px!important; }
+  #view-home > div:first-child { padding:30px!important; }
+}
+@media(max-width:640px) {
+  .hdr > div { height:64px!important; }
+  main { padding-top:18px!important; padding-bottom:118px!important; }
+  #view-home > div:first-child { border-radius:23px!important; padding:20px!important; }
+  .navbar > div { padding-left:4px; padding-right:4px; }
+  .navbtn { min-height:60px; }
+  #modalBody { border-radius:24px 24px 0 0!important; }
+}
+@media(prefers-reduced-motion:reduce) { [data-view] { animation:none; } main button { transition:none; } }
+
 </style>
 </head>
 <body class="text-ink antialiased">
