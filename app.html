@@ -153,9 +153,9 @@ if (window.tailwind) tailwind.config = { theme: { extend: {
     .dk-tabs button{padding:10px 2px; font-size:13px; font-weight:700; color:#64748B; border-bottom:2px solid transparent; margin-bottom:-1px}
     .dk-tabs button.on{color:#1D4ED8; border-color:#1D4ED8}
     html.dark .dk-tabs{border-color:#22386F} html.dark .dk-tabs button.on{color:#8FB0FA; border-color:#8FB0FA}
-    .dk-tbl{width:100%; border-collapse:collapse; font-size:13.5px}
-    .dk-tbl th{font-size:11px; color:#94A3B8; font-weight:700; text-align:right; padding:11px 14px; background:#F7F9FC; white-space:nowrap}
-    .dk-tbl td{padding:12px 14px; white-space:nowrap; text-align:right; border-top:1px solid #EEF2F8; vertical-align:middle}
+    .dk-tbl{width:100%; border-collapse:collapse; font-size:13px}
+    .dk-tbl th{font-size:11px; color:#94A3B8; font-weight:700; text-align:right; padding:11px 10px; background:#F7F9FC; white-space:nowrap}
+    .dk-tbl td{padding:12px 10px; white-space:nowrap; text-align:right; border-top:1px solid #EEF2F8; vertical-align:middle}
     .dk-tbl th:first-child,.dk-tbl td:first-child{text-align:left; padding-left:20px} .dk-tbl th:last-child,.dk-tbl td:last-child{padding-right:20px}
     .dk-tbl tbody tr{cursor:pointer} .dk-tbl tbody tr:hover{background:#F7F9FC}
     html.dark .dk-tbl th{background:rgba(255,255,255,.03)} html.dark .dk-tbl td{border-color:rgba(255,255,255,.06)} html.dark .dk-tbl tbody tr:hover{background:rgba(255,255,255,.03)}
@@ -277,6 +277,9 @@ const TF = (() => {
   const NIF_DEFAULT = {XTB:'980436613'};
   const BROKERS = {XTB:{name:'XTB',cp:620},DEGIRO:{name:'DEGIRO',cp:276},T212:{name:'Trading 212',cp:196},REVOLUT:{name:'Revolut',cp:440},OUTRA:{name:'Outra',cp:''}};
   const ETF_HINT = /\b(ETF|UCITS|ISHARES|VANGUARD|XTRACKERS|AMUNDI|SPDR|LYXOR|INVESCO|WISDOMTREE|VANECK)\b/i;
+  // ADR e ações cotadas nos EUA de empresas de fora: o país da fonte é o da empresa, não o do ISIN americano
+  const ADR_COUNTRY = { BDORY: 76, ELP: 76, VALE: 76, SBS: 76, PBR: 76, 'PBR-A': 76, ITUB: 76, BBD: 76, BBDO: 76, ABEV: 76, BSBR: 76, CIG: 76, EBR: 76, SID: 76, GGB: 76, UGP: 76, BRFS: 76, SUZ: 76, TIMB: 76, VIV: 76, ERJ: 76, EMBJ: 76, BAK: 76, CSAN: 76, AZUL: 76, GOL: 76, CBD: 76, XP: 136, NU: 136, PAGS: 136, STNE: 136, VTEX: 136, ARCO: 136 };
+  const adrCountry = t => ADR_COUNTRY[String(t || '').toUpperCase().replace(/\.US$/, '')] || null;
   const US_ETF = new Set(['SPY','VOO','VTI','IVV','QQQ','SCHD','VYM','VT','SMH','DIA','VUG','VEA','VWO','BND','GLD']);
   const ETF_TICKERS = new Set(['VWCE','VWRL','VWRA','IWDA','SWDA','EUNL','CSPX','SXR8','VUSA','VUAA','SPYL','SPPW','EQQQ','CNDX','IS3N','EIMI','XDWD','XDEW','EXSA','MEUD','IUSQ','ISAC','SSAC','VHVE','VEVE','VFEM','XMME','AGGH','IBGS','ZPRV','ZPRX','QDVE','IUIT','SXRV','INRG','VGWL','VGWD','TDIV','VHYL','FWRA','FWIA','WEBN','XNAS','DFNS',...US_ETF]);
   const EPS = 1e-9;
@@ -322,6 +325,7 @@ const TF = (() => {
 
   function guessKind(ticker, name) { return (ETF_TICKERS.has(root(ticker)) || ETF_HINT.test(name || '')) ? 'etf' : 'acao'; }
   function guessCountry(ticker, isin, kind) {
+    if (kind !== 'etf' && adrCountry(T(ticker))) return adrCountry(T(ticker));
     if (isin && /^[A-Z]{2}/i.test(isin)) { const c = ISO2[isin.slice(0, 2).toUpperCase()]; if (c) return c; }
     if (kind === 'etf') return US_ETF.has(root(ticker)) || /\.US$/i.test(ticker) ? 840 : 372;
     const m = T(ticker).match(/\.([A-Z]{1,5})$/);
@@ -338,7 +342,7 @@ const TF = (() => {
       a = state.assets[k] = { name: name || k, isin: isin || '', kind: kd, country: country || guessCountry(k, isin, kd), code: defaultCode(kd), price: null };
     } else {
       if (name && (!a.name || a.name === k)) a.name = name;
-      if (isin && !a.isin) { a.isin = isin; const c = ISO2[isin.slice(0, 2).toUpperCase()]; if (c) a.country = c; }
+      if (isin && !a.isin) { a.isin = isin; const c = adrCountry(k) || ISO2[isin.slice(0, 2).toUpperCase()]; if (c) a.country = c; }
     }
     return a;
   }
@@ -778,7 +782,7 @@ const TF = (() => {
     return { ok: true, assign: res.map(r => ({ value: r.value / 100, parts: r.parts.map(p => ({ lot: lots[p.i], frac: p.frac, real: p.c / 100 })) })) };
   }
 
-  return { COUNTRIES, ISO2, CDT, BROKERS, ANEXO_G_DEFAULT, NIF_DEFAULT, EPS, r2, r8, pad3, num, parseDate, norm, daysBetween, guessKind, guessCountry, defaultCode,
+  return { COUNTRIES, ISO2, adrCountry, CDT, BROKERS, ANEXO_G_DEFAULT, NIF_DEFAULT, EPS, r2, r8, pad3, num, parseDate, norm, daysBetween, guessKind, guessCountry, defaultCode,
     ensureAsset, fifo, positions, yearReport, years, parseCSV, parseSheets, parseXTBText, parseXTBDaily, fingerprint, parseXtbAnnual, portalGroups, matchPortal };
 })();
 if (typeof module !== 'undefined') module.exports = TF;
@@ -922,6 +926,7 @@ function load() {
   S.settings ||= {}; S.settings.brokerCp ||= {}; S.settings.cdt ||= {};
   portsInit(); if (isAll()) loadActive();
   fixXtbAnnual();
+  if (!S.settings.adrFix1) { for (const [tk, a] of Object.entries(S.assets || {})) { const c = TF.adrCountry(tk); if (c && a.kind !== 'etf' && Number(a.country) === 840) a.country = c; } S.settings.adrFix1 = 1; }
   try { UI.tab = localStorage.getItem(KEY + '.tab') || 'home'; } catch (e) {}
 }
 function saveLocal() {
@@ -1325,8 +1330,8 @@ function dkTable(pos, peso = false) {
   const C = dkColors(), tot = pos.reduce((s, p) => s + (p.value ?? p.cost), 0) || 1;
   return `<table class="dk-tbl num"><thead><tr><th>Ativo</th><th>Qtd.</th><th>Preço médio</th><th>Preço atual</th><th>Hoje</th><th>Valor</th><th>Resultado</th>${peso ? '<th>Peso</th>' : ''}</tr></thead><tbody>${pos.map(p => {
     const a = S.assets[p.ticker] || {}, dc = dayChg(a), r = p.value != null ? p.value - p.cost : null, nm = a.name || '';
-    return `<tr data-asset="${esc(p.ticker)}" data-q="${esc((p.ticker + ' ' + nm).toLowerCase())}"><td><span class="flex items-center gap-3"><i class="w-3 h-3 rounded-full inline-block shrink-0" style="background:${C[p.ticker] || '#94A3B8'}"></i><span class="min-w-0"><b>${esc(p.ticker.replace(/\.[A-Z]+$/, ''))}</b> <span class="text-[11px] font-bold text-slate-400">${p.kind === 'etf' ? 'ETF' : 'Ação'}</span><span class="block text-xs text-slate-500 truncate max-w-[210px]">${esc(nm || p.ticker)}</span></span></span></td>
-      <td>${fmtQ(p.qty)}</td><td>${fmtEUR(p.avg)}</td><td>${p.value != null ? fmtEUR(p.value / p.qty) : '—'}</td>
+    return `<tr data-asset="${esc(p.ticker)}" data-q="${esc((p.ticker + ' ' + nm).toLowerCase())}"><td><span class="flex items-center gap-3"><i class="w-3 h-3 rounded-full inline-block shrink-0" style="background:${C[p.ticker] || '#94A3B8'}"></i><span class="min-w-0"><b>${esc(p.ticker.replace(/\.[A-Z]+$/, ''))}</b> <span class="text-[11px] font-bold text-slate-400">${p.kind === 'etf' ? 'ETF' : 'Ação'}</span>${portDots(p.ticker)}<span class="block text-xs text-slate-500 truncate max-w-[190px]">${esc(nm || p.ticker)}</span></span></span></td>
+      <td>${Number.isInteger(+TF.r8(p.qty)) ? fmtQ(p.qty) : fmtN(p.qty, 4)}</td><td>${fmtEUR(p.avg)}</td><td>${p.value != null ? fmtEUR(p.value / p.qty) : '—'}</td>
       <td class="font-bold ${dc == null ? 'text-slate-400' : dc >= 0 ? 'text-gain' : 'text-loss'}">${dc == null ? '—' : fmtPct(dc)}</td>
       <td class="font-bold">${fmtEUR(p.value ?? p.cost)}</td>
       <td class="font-bold ${r == null ? 'text-slate-400' : sgn(r)}">${r == null ? '—' : `${plus(r)}<span class="block text-[11px] font-semibold">${pctStr(r, p.cost) || '0%'}</span>`}</td>
@@ -1336,7 +1341,7 @@ function dkList(pos) {
   const C = dkColors();
   return pos.map(p => { const a = S.assets[p.ticker] || {}, r = p.value != null ? p.value - p.cost : null, nm = a.name || '';
     return `<button data-asset="${esc(p.ticker)}" data-q="${esc((p.ticker + ' ' + nm).toLowerCase())}" class="w-full text-left px-4 py-3 flex items-center gap-3 border-t border-brand-50"><i class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background:${C[p.ticker] || '#94A3B8'}"></i>
-      <span class="flex-1 min-w-0"><b>${esc(p.ticker.replace(/\.[A-Z]+$/, ''))}</b> <span class="text-[11px] font-bold text-slate-400">${p.kind === 'etf' ? 'ETF' : 'Ação'}</span><span class="block text-xs text-slate-500 truncate">${esc(nm || p.ticker)} · ${fmtQ(p.qty)} un.</span></span>
+      <span class="flex-1 min-w-0"><b>${esc(p.ticker.replace(/\.[A-Z]+$/, ''))}</b> <span class="text-[11px] font-bold text-slate-400">${p.kind === 'etf' ? 'ETF' : 'Ação'}</span>${portDots(p.ticker)}<span class="block text-xs text-slate-500 truncate">${esc(nm || p.ticker)} · ${fmtQ(p.qty)} un.</span></span>
       <span class="text-right num shrink-0"><b class="block">${fmtEUR(p.value ?? p.cost)}</b><span class="text-xs font-bold ${r == null ? 'text-slate-400' : sgn(r)}">${r == null ? 'sem preço' : `${plus(r)} · ${pctStr(r, p.cost) || '0%'}`}</span></span></button>`; }).join('');
 }
 function dkSearch(q) { UI.dkQ = q; if (!['home', 'portfolio'].includes(UI.tab)) go('portfolio'); dkFilter(); }
@@ -1404,6 +1409,42 @@ function dkDetail(res, invested) {
       <div class="flex justify-between py-1.5"><span class="text-slate-600">${rg.real >= 0 ? 'Ganho real (acima da inflação)' : 'Abaixo da inflação'}</span><b class="${sgn(rg.realEur)}">${plus(rg.realEur)}</b></div>
       <div class="text-[10.5px] text-slate-400 pt-1.5">Fonte: Eurostat · dados até ${esc(infMonth(rg.last))}</div>` : ''}</div></details>`;
 }
+/* ---------- Painel consolidado (todas as carteiras) e ADR ---------- */
+function portStats(p) {
+  const d = (!isAll() && p.id === S.portActive) ? portSnap() : (p.data || {});
+  try { const pos = TF.positions(TF.fifo(d.tx || []).lots, S.assets), value = pos.reduce((s, x) => s + (x.value ?? x.cost), 0), cost = pos.reduce((s, x) => s + x.cost, 0), cash = cashSaldoOf(d);
+    return { value, cost, cash, n: pos.length, tot: value + Math.max(0, cash), tks: pos.map(x => x.ticker) }; } catch (e) { return { value: 0, cost: 0, cash: 0, n: 0, tot: 0, tks: [] }; }
+}
+function portPills() {
+  if ((S.ports || []).length < 2) return '';
+  const pill = (id, name, col) => { const on = S.portActive === id;
+    return `<button data-psel="${id}" class="h-9 px-3.5 rounded-full text-[13px] font-bold whitespace-nowrap inline-flex items-center gap-1.5 border ${on ? 'bg-ink text-white border-ink' : 'bg-white border-brand-100 text-slate-600'}"><i class="w-2 h-2 rounded-full inline-block" style="background:${col}"></i>${esc(name)}</button>`; };
+  return `<div class="flex gap-2 overflow-x-auto mt-3 pb-0.5">${pill('all', 'Todas', '#0A2A66')}${S.ports.map(p => pill(p.id, p.name, p.color)).join('')}</div>`;
+}
+function portDots(tk) {
+  if (!isAll()) return '';
+  const ps = S.ports.filter(p => portStats(p).tks.includes(tk));
+  return ps.length ? ` <span class="inline-flex gap-0.5 align-middle ml-0.5">${ps.map(p => `<i class="w-1.5 h-1.5 rounded-full inline-block" title="${esc(p.name)}" style="background:${p.color}"></i>`).join('')}</span>` : '';
+}
+function portCard() {
+  const st = S.ports.map(p => ({ p, ...portStats(p) })), all = st.reduce((s, x) => s + x.tot, 0) || 1;
+  return `<div class="dkc p-5">
+    <div class="flex items-center justify-between"><h2 class="font-extrabold text-[15px]">Por carteira</h2><span class="text-[11px] text-slate-400">${st.length} carteiras</span></div>
+    <div class="flex gap-1 h-2.5 mt-3">${st.map(x => `<i class="block rounded-full" style="flex:${Math.max(x.tot, 0.01).toFixed(2)};background:${x.p.color}"></i>`).join('')}</div>
+    <div class="mt-2 divide-y divide-brand-50">${st.map(x => { const r = x.value - x.cost;
+      return `<button data-psel="${x.p.id}" class="w-full text-left py-3 flex items-center gap-3"><i class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background:${x.p.color}"></i>
+        <span class="flex-1 min-w-0"><b class="block truncate">${esc(x.p.name)}</b><span class="text-xs text-slate-500">${x.n} ativo(s)${Math.abs(x.cash) > 0.004 ? ' · caixa ' + fmtEUR(x.cash) : ''} · ${fmtN(x.tot / all * 100, 0)}%</span></span>
+        <span class="text-right num shrink-0"><b class="block">${fmtEUR(x.tot)}</b><span class="text-xs font-bold ${sgn(r)}">${plus(r)} · ${pctStr(r, x.cost) || '0%'}</span></span><span class="text-slate-300 font-bold">›</span></button>`; }).join('')}</div>
+    <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">Vista só para consultar. Toque numa carteira para registar operações ou planear um aporte. O IRS junta sempre as carteiras do mesmo titular.</p></div>`;
+}
+function adrNote(tk) {
+  const c = TF.adrCountry(tk); if (!c) return '';
+  const br = c === 76;
+  return `<div class="mt-2 rounded-2xl bg-amber-50 border border-amber-200 p-3 text-[12px] text-amber-900 leading-relaxed">
+    <b>${br ? 'ADR de empresa brasileira' : 'Empresa com sede nas Ilhas Caimão'}.</b> ${br
+      ? 'Cotada nos EUA, mas os dividendos vêm do Brasil: no IRS vão para o Anexo J, quadro 8A, com o país 076 (Brasil). Desde 2026 o Brasil retém 10% nos dividendos pagos a não residentes (lucros até 2025 ficam de fora), e o banco do ADR pode cobrar uma pequena taxa por ação.'
+      : 'Cotada nos EUA, mas a sociedade é das Ilhas Caimão (país 136). Este território está na lista portuguesa de regimes fiscais mais favoráveis: os dividendos podem ser tributados a 35% em vez de 28%.'} Confirme com a contabilista.</div>`;
+}
 function dkHome(c) {
   const { F, pos, invested, total, cashV, grand, hasCash, AT, hvD, dItems, dTot, tgtA, gd, yr, rep, divYear, lastAt, pLabel } = c;
   const per = homePer(), hv = pos.length ? dkVar(per) : null, hbv = hv?.ok && homeBenchOn() ? benchVariation(per === 't' ? 'm' : per, homeBenchId(), hv.grid) : null;
@@ -1416,7 +1457,7 @@ function dkHome(c) {
     <div class="text-[13px] font-bold num mt-0.5">${AT ? `<span class="${sgn(AT.result)}">${AT.result >= 0 ? '▲' : '▼'} ${fmtN(Math.abs(AT.pct), 1)}% · ${plus(AT.result)}</span> <span class="text-slate-500 font-semibold">desde o início</span>` : ''}</div>
     ${hvD?.ok ? `<div class="text-[13px] font-bold num"><span class="${sgn(hvD.gain)}">${plus(hvD.gain)} (${fmtPct(hvD.pct)})</span> <span class="text-slate-500 font-semibold">hoje</span></div>` : ''}
     <div class="grid grid-cols-3 gap-2 mt-4">${mini('data-go="portfolio"', 'Investido', fmtEUR(invested))}${mini('data-go="cash"', 'Caixa', fmtEUR(cashV), cashV < 0 ? 'text-loss' : '')}${mini('data-go="divs"', 'Dividendos', fmtEUR(AT?.divs || 0), (AT?.divs || 0) > 0.004 ? 'text-gain' : '')}</div>
-    <div class="flex items-center justify-between mt-5"><b class="text-[13px]">Distribuição</b>${Object.keys(tgtA).length ? '<span class="text-[11px] text-slate-400">atual · alvo</span>' : '<button data-goalcfg class="text-[11px] font-bold text-brand-600">Definir alvos ›</button>'}</div>
+    <div class="flex items-center justify-between mt-5"><b class="text-[13px]">Distribuição</b>${Object.keys(tgtA).length ? '<span class="text-[11px] text-slate-400">atual · alvo</span>' : isAll() ? '' : '<button data-goalcfg class="text-[11px] font-bold text-brand-600">Definir alvos ›</button>'}</div>
     <div class="flex gap-1 h-2.5 mt-2">${dItems.map(x => `<i class="block rounded-full" style="flex:${x.v.toFixed(2)};background:${x.c}" title="${esc(x.l)}"></i>`).join('')}</div>
     <div class="mt-2 text-[13px]">${dItems.map(x => { const pc = x.v / dTot * 100, off = x.t != null && Math.abs(pc - x.t) >= 3;
       return `<div class="flex items-center justify-between gap-2 py-[5px]"><span class="flex items-center gap-2 min-w-0"><i class="w-2 h-2 rounded-full inline-block shrink-0" style="background:${x.c}"></i><b class="truncate">${esc(x.l)}</b><span class="text-[11.5px] text-slate-500 num">${fmtN(pc, 0)}%${x.t != null ? ` · <span class="${off ? 'text-loss font-bold' : ''}">${fmtN(x.t, 0)}%</span>` : ''}</span></span><b class="num">${fmtEUR(x.v)}</b></div>`; }).join('')}</div>
@@ -1449,7 +1490,7 @@ function dkHome(c) {
       : fpos.length ? `<div class="dk-only">${dkTable(fpos)}</div><div class="mb-only">${dkList(fpos)}</div>` : '<div class="p-6 text-sm text-slate-500">Sem posições neste filtro.</div>'}</div>`;
   const tg = dItems.filter(x => x.t != null), sug = tg.map(x => ({ ...x, cur: x.v / dTot * 100, gap: x.t / 100 * dTot - x.v })).sort((x, y) => y.gap - x.gap)[0];
   const sName = sug?.tk ? S.assets[sug.tk]?.name || sug.tk : 'Caixa de oportunidade';
-  const aiCard = `<div class="dk-ai p-5">
+  const aiCard = isAll() ? portCard() : `<div class="dk-ai p-5">
     <div class="flex items-center gap-2 text-[12px] font-extrabold text-brand-600"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19.5 9.5l-5.7 1.9L12 17l-1.8-5.6L4.5 9.5l5.7-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Próximo aporte</div>
     ${sug && sug.gap > 0.5 ? `<div class="font-extrabold text-[16px] mt-2">${esc(sug.l)} <span class="text-slate-500 font-semibold text-[13px]">· ${esc(sName.slice(0, 32))}</span></div>
       <div class="text-[12.5px] mt-1"><b class="text-brand-700">Está em ${fmtN(sug.cur, 0)}%</b> · <b class="text-brand-700">alvo ${fmtN(sug.t, 0)}%</b></div>
@@ -1472,7 +1513,7 @@ function dkHome(c) {
   const issues = F?.issues?.length ? `<div class="mt-3 rounded-3xl bg-loss/5 border border-loss/25 p-4 text-sm"><div class="font-bold text-loss">Há vendas sem compras suficientes registadas</div>
     <ul class="mt-1 text-slate-700 space-y-0.5">${F.issues.slice(0, 4).map(i => `<li>${esc(i.ticker)}: faltam ${fmtQ(i.qty)} unidades na venda de ${fmtD(i.date)}</li>`).join('')}</ul>
     <p class="text-slate-500 mt-1">Importe ou registe as compras anteriores para o cálculo ficar correto.</p></div>` : '';
-  return `<div class="dk-home">${issues}
+  return `<div class="dk-home">${portPills()}${issues}
     <div class="dk-r1">${totalCard}${qaRow}${chartCard}</div>
     <div class="dk-r2"><div>${holdCard}<div class="mt-3">${jobBanner()}</div></div><div class="space-y-4">${aiCard}${resumo}<div class="grid grid-cols-2 gap-2">${goalTileHTML(gd)}${divsTileHTML()}</div></div></div>
     <div class="mt-4">${supportCardHTML()}</div>
@@ -3008,7 +3049,7 @@ function openAsset(tk) {
       <div><label class="lbl" for="aIsin">ISIN</label><input id="aIsin" class="field uppercase" value="${esc(a.isin)}" placeholder="ex.: IE00BK5BQT80"></div>
     </div>
     <div><label class="lbl" for="aCountry">País da fonte (emitente)</label><select id="aCountry" class="field">${countries}</select>
-      <p class="text-[11px] text-slate-500 mt-1">Portugal vai para o Anexo G; os restantes países vão para o Anexo J. Para ETFs UCITS é normalmente o domicílio do fundo (ex.: Irlanda), indicado pelas 2 primeiras letras do ISIN.</p></div>
+      <p class="text-[11px] text-slate-500 mt-1">Portugal vai para o Anexo G; os restantes países vão para o Anexo J. Para ETFs UCITS é normalmente o domicílio do fundo (ex.: Irlanda), indicado pelas 2 primeiras letras do ISIN.</p>${adrNote(tk)}</div>
     <div class="grid grid-cols-2 gap-3">
       <div><label class="lbl" for="aCode">Código IRS</label><input id="aCode" class="field uppercase" list="codes" value="${esc(a.code)}">
         <datalist id="codes"><option value="G01">Ações e partes sociais</option><option value="G20">Unidades de participação em fundos (ETF)</option></datalist></div>
