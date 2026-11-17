@@ -648,52 +648,60 @@ const TF = (() => {
   }
 
   // Confirmação diária de ordens da XTB (PDF "Confirmação das ordens executadas"), em texto
-  // Extrato de atividade da Trading 212 em PDF (português ou inglês)
+  // Extrato de atividade da Trading 212 em PDF (português ou inglês).
+  // Lê o texto "achatado": não depende de cada operação ficar numa só linha (o iPhone parte as linhas de outra forma).
   const T212_NAME = { BDORY: 'Banco do Brasil', EMBJ: 'Embraer', ERJ: 'Embraer', ELP: 'Copel', VALE: 'Vale', SBS: 'Sabesp', PBR: 'Petrobras', ITUB: 'Itaú Unibanco', BBD: 'Bradesco', ABEV: 'Ambev', XP: 'XP Inc.', NU: 'Nu Holdings', PAGS: 'PagSeguro', STNE: 'StoneCo', SBUX: 'Starbucks' };
   function parseT212Pdf(text, force = false) {
-    const t = String(text || ''); if (!force && !/Trading 212/i.test(t)) return { rows: [], warn: [] };
-    const L0 = t.split('\n').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean), L = [];
-    // o PDF às vezes parte a linha: a data/hora fica sozinha e o resto passa para a linha seguinte
-    for (let i = 0; i < L0.length; i++) { if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(L0[i]) && L0[i + 1] && !/^\d{4}-\d{2}-\d{2}/.test(L0[i + 1])) { L.push(L0[i] + ' ' + L0[i + 1]); i++; } else L.push(L0[i]); }
+    const t = String(text || '').replace(/ /g, ' '); if (!force && !/Trading\s*212/i.test(t)) return { rows: [], warn: [] };
+    const flat = t.replace(/\s+/g, ' ');
     const CUR = { '$': 'USD', '€': 'EUR', '£': 'GBP' }, cu = c => CUR[c] || String(c || '').toUpperCase();
-    const ts = (d, h) => d + 'T' + h;
-    const reTx = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (\S+) ([A-Z]{2}[A-Z0-9]{9}\d) (\S+) (Comprar|Vender|Buy|Sell) ([\d.,]+) ([$€£]|[A-Z]{3}) ?([\d.,]+) ([$€£]|[A-Z]{3}) ?([\d.,]+)(.*)$/i;
-    const reConv = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (?:Câmbio de moeda|Currency conversion) ([$£]|[A-Z]{3}) ?([\d.,]+) \(€ ?([\d.,]+)\)/i;
-    const reFee = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (?:Taxa de câmbio|Currency conversion fee|FX fee) -? ?([$£€]|[A-Z]{3}) ?([\d.,]+)(?: \(-? ?€ ?([\d.,]+)\))?/i;
-    const convs = [], fees = [], out = [], warn = [];
-    for (const l of L) {
-      let m;
-      if ((m = l.match(reConv))) { const a = num(m[4]), e = num(m[5]); if (a > 0 && e > 0) convs.push({ at: ts(m[1], m[2]), cur: cu(m[3]), amt: a, eur: e }); continue; }
-      if ((m = l.match(reFee))) { const e = m[5] != null ? num(m[5]) : cu(m[3]) === 'EUR' ? num(m[4]) : 0; if (e > 0) fees.push({ at: ts(m[1], m[2]), eur: e, used: false }); continue; }
-      if ((m = l.match(reTx))) {
-        const qty = num(m[7]), price = num(m[9]), cur = cu(m[8]); if (!(qty > 0) || !(price > 0)) continue;
-        const rest = m[12] || '', fxT = num((rest.match(/(?:^|\s)(\d+(?:[.,]\d+)?)(?=\s|$)/) || [])[1] || '1') || 1;
-        const amts = [...rest.matchAll(/-? ?([$€£]) ?([\d.,]+)/g)].map(a => ({ cur: cu(a[1]), v: num(a[2]) }));
-        const feeEur = amts.slice(0, -1).filter(a => a.cur === 'EUR').reduce((x, a) => x + a.v, 0);
-        out.push({ kind: /vender|sell/i.test(m[6]) ? 'sell' : 'buy', date: m[1], time: m[2], at: ts(m[1], m[2]), ticker: T(m[3]), name: T212_NAME[T(m[3])] || '', isin: T(m[4]), orderId: m[5],
-          qty: r8(qty), priceOrig: price, currency: cur, fxT, fees: feeEur, broker: 'T212' });
-      }
+    const STAMP = /(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})/g;
+    const stampBefore = (pos, win = 30) => { const m = [...flat.slice(Math.max(0, pos - win), pos).matchAll(STAMP)].pop(); return m ? m[1] + 'T' + m[2] : null; };
+    const lastStamp = pos => { const m = [...flat.slice(0, pos).matchAll(STAMP)].pop(); return m ? m[1] + 'T' + m[2] : ''; };
+    // 1) ordens executadas
+    const a0 = flat.search(/transa[cç][õo]es executadas|executed (?:transactions|orders)/i);
+    const b0 = flat.search(/resumo das posi[cç][õo]es|open positions/i);
+    const s0 = a0 > -1 ? a0 : 0, sec = flat.slice(s0, b0 > s0 ? b0 : undefined);
+    const reT = /([A-Z0-9][A-Z0-9.\-]{0,11}) ([A-Z]{2}[A-Z0-9]{9}\d) (\d{5,}) (Comprar|Vender|Buy|Sell) ([\d.,]+) ([$€£]|[A-Z]{3}) ?([\d.,]+) ([$€£]|[A-Z]{3}) ?([\d.,]+)/gi;
+    const hits = [...sec.matchAll(reT)], stamps = [...sec.matchAll(STAMP)].map(m => m[1] + 'T' + m[2]);
+    const out = [], warn = [];
+    hits.forEach((m, i) => {
+      const qty = num(m[5]), price = num(m[7]); if (!(qty > 0) || !(price > 0)) return;
+      const near = (() => { const x = [...sec.slice(Math.max(0, m.index - 30), m.index).matchAll(STAMP)].pop(); return x ? x[1] + 'T' + x[2] : null; })();
+      const at = near || stamps[i] || null; if (!at) return;
+      const rest = sec.slice(m.index + m[0].length, i + 1 < hits.length ? hits[i + 1].index : m.index + m[0].length + 140);
+      const fxT = num((rest.replace(STAMP, ' ').match(/(?:^|\s)(\d+(?:[.,]\d+)?)(?=\s|$)/) || [])[1] || '1') || 1;
+      const amts = [...rest.replace(STAMP, ' ').matchAll(/-? ?([$€£]) ?([\d.,]+)/g)].map(a => ({ cur: cu(a[1]), v: num(a[2]) }));
+      const feeEur = amts.slice(0, -1).filter(a => a.cur === 'EUR').reduce((x, a) => x + a.v, 0);
+      const tk = T(m[1]);
+      out.push({ kind: /vender|sell/i.test(m[4]) ? 'sell' : 'buy', date: at.slice(0, 10), time: at.slice(11), at, ticker: tk, name: T212_NAME[tk] || '', isin: T(m[2]), orderId: m[3],
+        qty: r8(qty), priceOrig: price, currency: cu(m[6]), fxT, fees: feeEur, broker: 'T212' });
+    });
+    // 2) conversões de euros e taxas de câmbio (para o preço em euros)
+    const convs = [], fees = [];
+    for (const m of flat.matchAll(/(?:C[âa]mbio de moeda|Currency conversion) ([$£]|[A-Z]{3}) ?([\d.,]+) \(€ ?([\d.,]+)\)/gi)) {
+      const a = num(m[2]), e = num(m[3]); if (a > 0 && e > 0) convs.push({ at: stampBefore(m.index) || lastStamp(m.index), cur: cu(m[1]), amt: a, eur: e });
+    }
+    for (const m of flat.matchAll(/(?:Taxa de c[âa]mbio|Currency conversion fee|FX fee) -? ?([$£€]|[A-Z]{3}) ?([\d.,]+)(?: \(-? ?€ ?([\d.,]+)\))?/gi)) {
+      const e = m[3] != null ? num(m[3]) : cu(m[1]) === 'EUR' ? num(m[2]) : 0; if (e > 0) fees.push({ at: stampBefore(m.index) || lastStamp(m.index), eur: e, used: false });
     }
     out.sort((a, b) => a.at < b.at ? -1 : 1);
     let prev = '';
     for (const r of out) {
-      // taxas de câmbio cobradas desde a ordem anterior entram como despesa desta compra
-      if (r.kind === 'buy') { fees.filter(x => !x.used && x.at <= r.at && x.at > prev).forEach(x => { r.fees += x.eur; x.used = true; }); }
+      if (r.kind === 'buy') fees.filter(x => !x.used && x.at <= r.at && x.at > prev).forEach(x => { r.fees += x.eur; x.used = true; });
       const since = convs.filter(x => x.cur === r.currency && x.at <= r.at && x.at > prev);
       prev = r.at;
       if (r.currency === 'EUR') { r.price = r.priceOrig; continue; }
       if (r.fxT && Math.abs(r.fxT - 1) > 1e-9) continue; // conversão na própria ordem: resolvida com a taxa do BCE
-      // Pago com saldo na moeda do ativo: usa o câmbio real das conversões de euros feitas antes da ordem
       const grp = since.length ? since : convs.filter(x => x.cur === r.currency && x.at <= r.at).slice(-1);
       if (grp.length) { const a = grp.reduce((s, x) => s + x.amt, 0), e = grp.reduce((s, x) => s + x.eur, 0); r.price = r.priceOrig / (a / e); r.fxSrc = 'conversão'; }
     }
     out.forEach(r => { r.fees = r2(r.fees || 0); if (r.price) r.fx = r.priceOrig / r.price; delete r.at; });
-    const iDiv = L.findIndex(l => /^(Dividendos|Dividends)$/i.test(l));
-    if (iDiv > -1 && L.slice(iDiv + 1, iDiv + 30).some(l => /^\S+ [A-Z]{2}[A-Z0-9]{9}\d .*\d{4}-\d{2}-\d{2}/.test(l)))
+    const d0 = flat.search(/ (Dividendos|Dividends) (INSTRUMENTO|INSTRUMENT|MONTANTE|TOTAL)/i);
+    if (d0 > -1 && /[A-Z]{2}[A-Z0-9]{9}\d/.test(flat.slice(d0, d0 + 600).replace(/Sem dados dispon[íi]veis.*$|No data available.*$/i, '')))
       warn.push('Este PDF tem dividendos, mas só as compras e vendas foram lidas. Para os dividendos, importe o CSV da Trading 212 (Histórico › Exportar).');
     return { rows: out, warn };
   }
-
   function parseXTBDaily(text) {
     const t = String(text || '').replace(/\s+/g, ' ');
     const re = /(\d{8,12})\s+([A-Z0-9][A-Z0-9\-]{0,9}\.[A-Z]{2,4})\s+(.*?)\s(Buy|Sell|Compra|Venda)\s+(-?[\d.,]+)\s+(\d{2}[\/.]\d{2}[\/.]\d{4})(?:\s+(\d{2}:\d{2}(?::\d{2})?))?\s+(?:[^\s]+\s+){0,2}?(?:market|limit|stop|mercado|limite)\s+([\d.,]+)\s+([\d.,]+)\s+(\S+)\s+([A-Z]{3})\s+([\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)/gi;
@@ -4140,12 +4148,12 @@ async function handleFile(file) {
       if (text == null) return toast(navigator.onLine ? `Não consegui abrir o PDF (${UI.pdfErr || 'erro desconhecido'}). Tente o CSV ou cole o texto do extrato.` : 'Leitor de PDF indisponível sem internet. Tente com ligação.');
       if (/Trading 212/i.test(text)) {
         const t2 = TF.parseT212Pdf(text);
-        if (!t2.rows.length) return toast(t2.warn[0] || 'Não encontrei compras nem vendas neste extrato da Trading 212.');
+        if (!t2.rows.length) return pdfDiag(text, t2.warn[0] || 'Não encontrei compras nem vendas neste extrato da Trading 212.');
         return showPreview(await resolveT212Fx({ rows: t2.rows, warn: t2.warn, broker: 'T212' }));
       }
       let rows = TF.parseXTBDaily(text);
       if (!rows.length) rows = TF.parseXTBText(text);
-      if (!rows.length) return toast('Não reconheci este PDF. Use a confirmação diária de ordens da XTB, o extrato de atividade da Trading 212 ou o Excel das operações de caixa.');
+      if (!rows.length) return pdfDiag(text, 'Não reconheci este PDF. Use a confirmação diária de ordens da XTB, o extrato de atividade da Trading 212 ou o Excel das operações de caixa.');
       return showPreview(await resolveXtbFx({ rows, warn: [], broker: 'XTB' }));
     }
     if (/\.xlsx?$/.test(name)) {
@@ -4171,6 +4179,14 @@ async function pdfLib() {
     window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     return window.pdfjsLib;
   }
+}
+// Quando um PDF não é reconhecido: mostra o texto lido, para poder enviá-lo e corrigirmos a leitura
+function pdfDiag(text, msg) {
+  UI.pdfDiagText = String(text || '').slice(0, 6000);
+  openModal(`<h3 class="text-lg font-extrabold">PDF não reconhecido</h3><p class="text-sm text-slate-600 mt-1">${esc(msg)}</p>
+    <p class="text-xs text-slate-500 mt-3">Este é o texto que a app conseguiu ler do PDF. Copie-o e envie-o ao suporte para melhorarmos a leitura deste tipo de extrato.</p>
+    <textarea readonly rows="9" class="field mt-2 text-[11px] font-mono w-full">${esc(UI.pdfDiagText)}</textarea>
+    <div class="flex gap-2 mt-3"><button onclick="navigator.clipboard?.writeText(UI.pdfDiagText).then(()=>toast('Texto copiado'),()=>toast('Selecione o texto e copie'))" class="flex-1 h-11 rounded-2xl bg-brand-600 text-white text-sm font-bold">Copiar texto</button><button data-close class="flex-1 h-11 rounded-2xl bg-brand-50 text-brand-700 text-sm font-bold">Fechar</button></div>`);
 }
 async function pdfText(file) {
   UI.pdfErr = '';
