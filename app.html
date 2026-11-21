@@ -709,7 +709,7 @@ const TF = (() => {
   }
   function parseXTBDaily(text) {
     const t = String(text || '').replace(/\s+/g, ' ');
-    const re = /(\d{8,12})\s+([A-Z0-9][A-Z0-9\-]{0,9}\.[A-Z]{2,4})\s+(.*?)\s(Buy|Sell|Compra|Venda)\s+(-?[\d.,]+)\s+(\d{2}[\/.]\d{2}[\/.]\d{4})(?:\s+(\d{2}:\d{2}(?::\d{2})?))?\s+(?:[^\s]+\s+){0,2}?(?:market|limit|stop|mercado|limite)\s+([\d.,]+)\s+([\d.,]+)\s+(\S+)\s+([A-Z]{3})\s+([\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)/gi;
+    const re = /(\d{8,12})\s+([A-Z0-9][A-Z0-9\-]{0,9}\.[A-Z]{2,4})\s+(.*?)\s(?:(Buy|Sell|Compra|Venda)\s+)?(-?[\d.,]+)\s+(\d{2}[\/.]\d{2}[\/.]\d{4})(?:\s+(\d{2}:\d{2}(?::\d{2})?))?\s+(?:[^\s]+\s+){0,2}?(?:market|limit|stop|mercado|limite)\s+([\d.,]+)\s+([\d.,]+)\s+(.+?)\s+([A-Z]{3})\s+([\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)\s+(-?[\d.,]+)/gi;
     const out = []; let m; const hits = [];
     while ((m = re.exec(t))) hits.push({ m, end: re.lastIndex, start: m.index });
     hits.forEach((h, i) => {
@@ -717,7 +717,10 @@ const TF = (() => {
       const after = t.slice(h.end, i + 1 < hits.length ? hits[i + 1].start : h.end + 80);
       const time = m[7] || (after.match(/\b(\d{2}:\d{2}:\d{2})\b/) || [])[1] || '';
       const price = num(m[8]), cur = m[11].toUpperCase(), conv = Math.abs(num(m[13])), comm = Math.abs(num(m[14])), tot = Math.abs(num(m[15]));
-      const isBuy = /buy|compra/i.test(m[4]);
+      // no iPhone a etiqueta "Buy" (desenhada) não aparece no texto: usa o título da secção ("Ordens de compra/venda")
+      const sec = [...t.slice(0, h.start).matchAll(/ordens de (compra|venda)|(buy|sell) orders/gi)].pop();
+      const dir = m[4] || (sec ? (sec[1] || sec[2]) : 'buy');
+      const isBuy = /buy|compra/i.test(dir);
       const pol = /\bDIST\b/i.test(m[3] + ' ' + after) ? 'dist' : /\bACC\b/i.test(m[3] + ' ' + after) ? 'acc' : '';
       out.push({ kind: isBuy ? 'buy' : 'sell', date: parseDate(m[6]), time, ticker: T(m[2]), name: '',
         qty: r8(qty), price, priceOrig: price, currency: cur, xtbFx: num(m[12]), fees: r2(tot || conv + comm), broker: 'XTB', orderId: m[1], policy: pol });
