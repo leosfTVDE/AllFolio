@@ -2945,7 +2945,7 @@ function renderPortfolio() {
 
 /* ================= MODAL ================= */
 function openModal(html) { $('#modalBody').innerHTML = html; $('#modal').classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
-function closeModal() { $('#modal').classList.add('hidden'); document.body.style.overflow = ''; }
+function closeModal() { $('#modal').classList.add('hidden'); document.body.style.overflow = ''; if (UI.pwdRes) { const r = UI.pwdRes; UI.pwdRes = null; r(null); } }
 const modalHead = t => `<div class="flex items-center justify-between mb-4"><h2 class="text-xl font-extrabold">${t}</h2>
   <button data-close class="w-9 h-9 rounded-full bg-brand-50 grid place-items-center" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`;
 const brokerOpts = sel => Object.entries(TF.BROKERS).map(([k, b]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>${b.name}</option>`).join('');
@@ -4187,17 +4187,50 @@ async function pdfLib() {
 }
 // Quando um PDF não é reconhecido: mostra o texto lido, para poder enviá-lo e corrigirmos a leitura
 function pdfDiag(text, msg) {
+  if (String(text || '').replace(/\s+/g, '').length < 30) return openModal(`<h3 class="text-lg font-extrabold">Este PDF é uma imagem</h3>
+    <p class="text-sm text-slate-600 mt-2">O PDF não tem texto: parece uma captura de ecrã ou uma fotografia guardada como PDF, por isso a app não consegue ler os números.</p>
+    <p class="text-sm text-slate-600 mt-2">Use o <b>PDF original</b> que a corretora envia (por exemplo, o anexo do email da XTB: Partilhar › Guardar em Ficheiros). Se tiver palavra-passe, a app pede-a.</p>
+    <button data-close class="w-full mt-4 h-11 rounded-2xl bg-brand-600 text-white text-sm font-bold">Percebi</button>`);
   UI.pdfDiagText = String(text || '').slice(0, 6000);
   openModal(`<h3 class="text-lg font-extrabold">PDF não reconhecido</h3><p class="text-sm text-slate-600 mt-1">${esc(msg)}</p>
     <p class="text-xs text-slate-500 mt-3">Este é o texto que a app conseguiu ler do PDF. Copie-o e envie-o ao suporte para melhorarmos a leitura deste tipo de extrato.</p>
     <textarea readonly rows="9" class="field mt-2 text-[11px] font-mono w-full">${esc(UI.pdfDiagText)}</textarea>
     <div class="flex gap-2 mt-3"><button onclick="navigator.clipboard?.writeText(UI.pdfDiagText).then(()=>toast('Texto copiado'),()=>toast('Selecione o texto e copie'))" class="flex-1 h-11 rounded-2xl bg-brand-600 text-white text-sm font-bold">Copiar texto</button><button data-close class="flex-1 h-11 rounded-2xl bg-brand-50 text-brand-700 text-sm font-bold">Fechar</button></div>`);
 }
+// PDF com palavra-passe (ex.: confirmações da XTB): pede-a e, se o utilizador quiser, guarda-a só neste dispositivo
+const PDF_PWD_KEY = 'allfolio.pdfpwd';
+function askPdfPassword(wrong) {
+  return new Promise(res => {
+    UI.pwdRes = res;
+    openModal(`<h3 class="text-lg font-extrabold">PDF protegido</h3>
+      <p class="text-sm text-slate-600 mt-1">${wrong ? '<b class="text-loss">Palavra-passe errada.</b> Tente de novo.' : 'Este PDF tem palavra-passe. Escreva a mesma que usa para o abrir no telemóvel.'}</p>
+      <input id="pdfPwd" type="password" autocomplete="off" class="field mt-3 w-full" placeholder="Palavra-passe do PDF">
+      <label class="flex items-center gap-2 text-sm mt-3"><input id="pdfPwdKeep" type="checkbox" ${(() => { try { return localStorage.getItem(PDF_PWD_KEY) ? 'checked' : ''; } catch (e) { return ''; } })()}> Lembrar neste dispositivo</label>
+      <p class="text-[11px] text-slate-500 mt-1">Fica só neste telemóvel/computador. Nunca é enviada para nenhum servidor nem para a nuvem.</p>
+      <div class="flex gap-2 mt-4"><button id="pdfPwdOk" class="flex-1 h-11 rounded-2xl bg-brand-600 text-white text-sm font-bold">Abrir PDF</button><button data-close class="flex-1 h-11 rounded-2xl bg-brand-50 text-brand-700 text-sm font-bold">Cancelar</button></div>`);
+    const inp = $('#pdfPwd'), ok = () => { const v = inp.value; if (!v) return inp.focus(); const keep = $('#pdfPwdKeep').checked;
+      try { keep ? localStorage.setItem(PDF_PWD_KEY, v) : localStorage.removeItem(PDF_PWD_KEY); } catch (e) {}
+      const r = UI.pwdRes; UI.pwdRes = null; closeModal(); r && r(v); };
+    $('#pdfPwdOk').onclick = ok; inp.onkeydown = e => { if (e.key === 'Enter') ok(); };
+    setTimeout(() => inp.focus(), 60);
+  });
+}
 async function pdfText(file) {
   UI.pdfErr = '';
   try {
     const lib = await pdfLib();
-    const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const buf = await file.arrayBuffer();
+    let pwd; try { pwd = localStorage.getItem(PDF_PWD_KEY) || undefined; } catch (e) {}
+    let pdf = null;
+    for (let tries = 0; tries < 5 && !pdf; tries++) {
+      try { pdf = await lib.getDocument({ data: new Uint8Array(buf.slice(0)), password: pwd }).promise; }
+      catch (e) {
+        if (e?.name !== 'PasswordException') throw e;
+        pwd = await askPdfPassword(!!pwd);
+        if (pwd == null) { UI.pdfErr = 'o PDF tem palavra-passe'; return null; }
+      }
+    }
+    if (!pdf) { UI.pdfErr = 'palavra-passe errada'; return null; }
     const lines = [];
     for (let p = 1; p <= pdf.numPages; p++) {
       const items = (await (await pdf.getPage(p)).getTextContent()).items.filter(it => it.str && it.str.trim());
