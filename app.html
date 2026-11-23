@@ -17,6 +17,38 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+/* Se a app falhar ao arrancar, mostra o erro no ecrã (para o enviar ao suporte) e um botão para limpar a cache */
+(function () {
+  var shown = false;
+  function show(msg) {
+    if (shown) return; shown = true;
+    var d = document.createElement('div');
+    d.setAttribute('style', 'position:fixed;left:12px;right:12px;bottom:90px;z-index:99999;background:#fff;border:2px solid #E11D48;border-radius:16px;padding:14px;font:14px/1.4 system-ui,sans-serif;color:#0F1A2E;box-shadow:0 10px 30px rgba(0,0,0,.25)');
+    d.innerHTML = '<b style="color:#E11D48">A app encontrou um erro</b><div style="font-size:12px;margin:6px 0 10px;word-break:break-word;font-family:monospace">' + String(msg).replace(/</g, '&lt;').slice(0, 400) + '</div>' +
+      '<button id="errReload" style="background:#1D4ED8;color:#fff;border:0;border-radius:10px;padding:9px 12px;font-weight:700;margin-right:6px">Recarregar</button>' +
+      '<button id="errClear" style="background:#EEF3FD;color:#1D4ED8;border:0;border-radius:10px;padding:9px 12px;font-weight:700">Limpar cache e recarregar</button>' +
+      '<div style="font-size:11px;color:#64748B;margin-top:8px">Os seus dados não são apagados. Se o erro continuar, tire uma captura deste aviso.</div>';
+    (document.body || document.documentElement).appendChild(d);
+    document.getElementById('errReload').onclick = function () { location.reload(); };
+    document.getElementById('errClear').onclick = function () {
+      var p = [];
+      if (navigator.serviceWorker) p.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+      if (window.caches) p.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }));
+      Promise.all(p).catch(function () {}).then(function () { location.href = location.pathname + '?r=' + Date.now(); });
+    };
+  }
+  window.addEventListener('error', function (e) { if (e && e.message) show(e.message + (e.lineno ? ' (linha ' + e.lineno + ')' : '')); });
+  window.addEventListener('unhandledrejection', function (e) { var r = e && e.reason; if (r && /is not defined|before initialization|is not a function|Cannot read/i.test(String(r.message || r))) show(r.message || r); });
+  window.__showAppError = show;
+  // Vigia: se passados 12 s o ecrã continuar vazio (sem login à espera), mostra o aviso
+  setTimeout(function () { try {
+    var g = document.getElementById('authGate'); if (g && !g.classList.contains('hidden')) return;
+    var v = document.querySelector('main [data-view]:not(.hidden)'); if (v && v.innerHTML.trim()) return;
+    show('A app não terminou de arrancar (ecrã em branco).');
+  } catch (e) {} }, 12000);
+})();
+</script>
 <script src="firebase-config.js"></script>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script>
@@ -1273,39 +1305,4 @@ function openQuoteSettings(first = false) {
     <div id="pvAv" class="${prov === 'av' ? '' : 'hidden'}">
       <p class="text-sm text-slate-600 mb-2">Gratuito com 25 pedidos por dia. Bom para os EUA; para a Europa os preços podem vir atrasados (fecho do dia anterior).</p>
     </div>
-    <div><label class="lbl" for="qKey">Chave Alpha Vantage <span class="font-normal text-slate-400">(usada também nos dividendos previstos)</span></label>
-      <input id="qKey" class="field font-mono" autocomplete="off" autocapitalize="characters" value="${esc(S.settings.avKey || '')}" placeholder="opcional com servidor próprio">
-      <p class="text-[11px] text-slate-500 mt-1">Chave gratuita em <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener" class="text-brand-600 font-bold underline">alphavantage.co/support</a>. Pedidos usados hoje: ${quotaToday()} de ${AV_DAY}.${S.settings.fx ? ` Câmbio BCE de ${fmtD(S.settings.fx.date)}.` : ''}</p></div>
-    <button class="w-full h-12 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold">Guardar</button>
-  </form>`);
-  let pv = prov;
-  document.querySelectorAll('[data-prov]').forEach(b => b.onclick = () => {
-    pv = b.dataset.prov; $('#pvWorker').classList.toggle('hidden', pv !== 'worker'); $('#pvAv').classList.toggle('hidden', pv !== 'av');
-    document.querySelectorAll('[data-prov]').forEach(x => x.className = 'flex-1 h-10 rounded-xl text-sm font-bold ' + (x.dataset.prov === pv ? 'bg-white shadow-sm text-ink' : 'text-slate-500')); });
-  $('#qTest').onclick = async () => {
-    const u = $('#qUrl').value.trim(), res = $('#qTestRes');
-    if (!/^https:\/\//.test(u)) { res.textContent = 'O endereço deve começar por https://'; res.className = 'text-sm font-semibold text-loss'; return; }
-    res.textContent = 'A testar…'; res.className = 'text-sm font-semibold text-slate-500';
-    const ok = await testWorker(u);
-    res.textContent = ok ? 'Ligação OK' : 'Sem resposta válida'; res.className = 'text-sm font-semibold ' + (ok ? 'text-gain' : 'text-loss');
-  };
-  $('#qForm').onsubmit = e => {
-    e.preventDefault();
-    const u = $('#qUrl').value.trim();
-    if (pv === 'worker' && !/^https:\/\//.test(u)) return toast('Indique o endereço do servidor (começa por https://)');
-    Object.assign(S.settings, { priceProvider: pv, workerUrl: u, avKey: $('#qKey').value.trim(), autoPrices: Number($('#qAuto').value) || 0 });
-    save(); closeModal(); render(); toast('Definições guardadas');
-    if (first) refreshPrices();
-  };
-}
-
-/* ---------- Navegação ---------- */
-
-const NAV_TABS = ['home', 'portfolio', 'market', 'tax', 'more'];
-function go(tab, isBack = false) {
-  if (tab === 'import' && needPort()) return;
-  if (!isBack && UI.tab && UI.tab !== tab) { (UI.hist ||= []).push(UI.tab); if (UI.hist.length > 20) UI.hist.shift(); }
-  if (NAV_TABS.includes(tab)) UI.hist = [];
-  UI.tab = tab; try { localStorage.setItem(KEY + '.tab', tab); } catch (e) {}
-  document.querySelectorAll('[data-view]').forEach(v => v.classList.toggle('hidden', v.id !== 'view-' + tab));
-  const navOn = NAV_TABS.includes(tab) || document.queryS
+    <div><label class="lbl" for="qKey">Chave Alpha Vantage <span class="font-norm
