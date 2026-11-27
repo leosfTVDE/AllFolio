@@ -2062,7 +2062,7 @@ function renderMore() {
 /* ================= CONFIGURAÇÕES ================= */
 const APP_VERSION = '2.0';
 // Número da versão (igual ao do sw.js: 'taxfolio-vNN'). Mostrado em Definições, no menu Mais e num aviso após cada atualização.
-const APP_BUILD = 65;
+const APP_BUILD = 66;
 (function () { try { const k = 'allfolio.build', old = +localStorage.getItem(k) || 0; localStorage.setItem(k, APP_BUILD);
   if (old && old !== APP_BUILD) setTimeout(() => typeof toast === 'function' && toast(`App atualizada: versão ${APP_BUILD}`), 1500); } catch (e) {} })();
 function setTheme(t) {
@@ -2378,6 +2378,12 @@ async function refreshDividends() {
   errors.length ? showPriceReport(errors, [], batch.length) : toast('Dividendos previstos atualizados');
 }
 
+// Registar um dividendo recebido que a app não previu (ex.: ETF de distribuição na XTB)
+function divAdd(tk) {
+  openTxForm('div');
+  setTimeout(() => { const t = $('#fTicker'); if (t) { t.value = tk; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); }
+    const d = $('#fDate'); if (d) { d.value = today(); d.dispatchEvent(new Event('change', { bubbles: true })); } $('#fGross')?.focus(); }, 80);
+}
 function renderDivs() {
   const list = forecastList(), t0 = today(), fut = list.filter(x => x.pay >= t0), due = list.filter(x => x.pay <= t0);
   const pos = TF.positions(TF.fifo(S.tx).lots, S.assets);
@@ -2407,7 +2413,10 @@ function renderDivs() {
   ${due.length ? `<h2 class="font-extrabold mt-5 mb-2">Para confirmar</h2>${card(due.map(item).join(''), 'divide-y divide-brand-50 overflow-hidden')}` : ''}
   <h2 class="font-extrabold mt-5 mb-2">Próximos</h2>
   ${fut.filter(x => x.pay > t0).length ? card(fut.filter(x => x.pay > t0).map(item).join(''), 'divide-y divide-brand-50 overflow-hidden') : card('<div class="p-4 text-sm text-slate-500">Sem dividendos anunciados para os próximos 90 dias.</div>')}
-  ${none.length || unknown.length ? card(`${none.map(p => `<div class="px-4 py-3 flex justify-between text-sm"><span class="font-semibold">${esc(p.ticker)}</span><span class="text-slate-500">${p.kind === 'etf' ? 'ETF sem distribuição prevista' : 'sem dividendo anunciado'}</span></div>`).join('')}
+  ${none.length || unknown.length ? card(`${none.map(p => { const pol = S.assets[p.ticker]?.policy, dist = p.kind === 'etf' && pol !== 'acc';
+      return `<div class="px-4 py-3 flex justify-between items-center gap-3 text-sm"><span class="font-semibold">${esc(p.ticker)}</span><span class="text-right">${p.kind === 'etf'
+        ? (pol === 'acc' ? '<span class="text-slate-500">ETF de acumulação · não distribui</span>' : `<span class="text-slate-500 block">${pol === 'dist' ? 'ETF de distribuição · sem datas na fonte' : 'ETF sem distribuição prevista'}</span>`)
+        : '<span class="text-slate-500">sem dividendo anunciado</span>'}${dist || p.kind !== 'etf' ? `<button onclick="divAdd('${esc(p.ticker)}')" class="mt-1 text-xs font-bold text-brand-600">+ Registar dividendo recebido</button>` : ''}</span></div>`; }).join('')}
     ${unknown.map(p => `<div class="px-4 py-3 flex justify-between text-sm"><span class="font-semibold">${esc(p.ticker)}</span><span class="text-slate-500">${quoteOf(p.ticker).sym ? 'toque em Atualizar' : 'sem símbolo de cotação'}</span></div>`).join('')}`, 'mt-3 divide-y divide-brand-50 overflow-hidden') : ''}
   <p class="text-[11px] text-slate-500 mt-4 leading-relaxed">Estimativa: dividendo anunciado por ação × ações que tinha na véspera da data ex-dividendo, convertido ao câmbio BCE de hoje. O valor certo só se sabe quando a corretora paga. Usa a mesma chave da Alpha Vantage dos preços (um pedido por ativo).</p>`;
 }
