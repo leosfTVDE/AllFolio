@@ -2062,7 +2062,7 @@ function renderMore() {
 /* ================= CONFIGURAÇÕES ================= */
 const APP_VERSION = '2.0';
 // Número da versão (igual ao do sw.js: 'taxfolio-vNN'). Mostrado em Definições, no menu Mais e num aviso após cada atualização.
-const APP_BUILD = 66;
+const APP_BUILD = 67;
 (function () { try { const k = 'allfolio.build', old = +localStorage.getItem(k) || 0; localStorage.setItem(k, APP_BUILD);
   if (old && old !== APP_BUILD) setTimeout(() => typeof toast === 'function' && toast(`App atualizada: versão ${APP_BUILD}`), 1500); } catch (e) {} })();
 function setTheme(t) {
@@ -2384,41 +2384,118 @@ function divAdd(tk) {
   setTimeout(() => { const t = $('#fTicker'); if (t) { t.value = tk; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); }
     const d = $('#fDate'); if (d) { d.value = today(); d.dispatchEvent(new Event('change', { bubbles: true })); } $('#fGross')?.focus(); }, 80);
 }
+// Frequência de pagamento a partir do histórico (dias entre pagamentos)
+function divFreq(dates) {
+  if (dates.length < 2) return null;
+  const g = []; for (let i = 1; i < dates.length; i++) g.push((Date.parse(dates[i]) - Date.parse(dates[i - 1])) / 864e5);
+  g.sort((a, b) => a - b); const m = g[Math.floor(g.length / 2)];
+  return m < 45 ? { l: 'mensal', d: 30 } : m < 120 ? { l: 'trimestral', d: 91 } : m < 240 ? { l: 'semestral', d: 182 } : { l: 'anual', d: 365 };
+}
+function divGoalSet() {
+  const cur = S.settings.divGoal || '';
+  openModal(`<h3 class="text-lg font-extrabold">Meta de rendimento passivo</h3>
+    <p class="text-sm text-slate-600 mt-1">Quanto gostaria de receber em dividendos, por mês, já líquido de impostos na origem?</p>
+    <div class="flex items-center gap-2 mt-3"><input id="dgIn" class="field flex-1 num" inputmode="decimal" placeholder="Ex.: 100" value="${cur}"><span class="font-bold">€ / mês</span></div>
+    <div class="flex gap-2 mt-4"><button id="dgOk" class="flex-1 h-11 rounded-2xl bg-brand-600 text-white text-sm font-bold">Guardar</button>${cur ? '<button id="dgDel" class="h-11 px-4 rounded-2xl bg-brand-50 text-loss text-sm font-bold">Tirar meta</button>' : ''}</div>`);
+  $('#dgOk').onclick = () => { const v = parseFloat(String($('#dgIn').value).replace(',', '.')); if (v > 0) { S.settings.divGoal = Math.round(v * 100) / 100; save(); } closeModal(); render(); };
+  if ($('#dgDel')) $('#dgDel').onclick = () => { delete S.settings.divGoal; save(); closeModal(); render(); };
+}
+function divBarHover(e, el) {
+  const b = e && e.target.closest ? e.target.closest('[data-m]') : null, tip = el.querySelector('.dv-tip');
+  el.querySelectorAll('[data-m]').forEach(x => x.style.opacity = b && x !== b ? '.45' : '');
+  if (!b) { tip.textContent = el.dataset.def; return; }
+  tip.innerHTML = `<b>${b.dataset.ml}</b> · ${b.dataset.v}${b.dataset.est ? ' <span class="text-slate-400">(estimado)</span>' : ''}`;
+}
 function renderDivs() {
-  const list = forecastList(), t0 = today(), fut = list.filter(x => x.pay >= t0), due = list.filter(x => x.pay <= t0);
-  const pos = TF.positions(TF.fifo(S.tx).lots, S.assets);
-  const none = pos.filter(p => S.divCal?.[p.ticker] && !list.some(x => x.tk === p.ticker));
-  const unknown = pos.filter(p => !S.divCal?.[p.ticker]);
+  const list = forecastList(), t0 = today(), fut = list.filter(x => x.pay > t0), due = list.filter(x => x.pay <= t0);
+  const pos = TF.positions(TF.fifo(S.tx).lots, S.assets), C = dkColors(), yr = t0.slice(0, 4), y1 = addDays(t0, -365);
+  const divs = (S.div || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const net = d => divNet(d), sum = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
+  const d12 = divs.filter(d => d.date > y1), dYr = divs.filter(d => d.date.startsWith(yr));
+  const net12 = sum(d12, net), gross12 = sum(d12, d => d.gross), netYr = sum(dYr, net), irsYr = sum(dYr, d => divIRS(d));
+  const cost = sum(pos, p => p.cost), value = sum(pos, p => p.value ?? p.cost);
+  const months = divs.length ? Math.max(1, Math.min(12, Math.round((Date.parse(t0) - Date.parse(divs[0].date)) / (864e5 * 30.4)) + 1)) : 12;
+  const perMonth = net12 / months, goal = S.settings.divGoal || 0;
+  // estimativas pelo histórico (para quem a fonte não tem datas)
+  const est = [];
+  const byTk = {}; divs.forEach(d => (byTk[d.ticker] ||= []).push(d));
+  const rows = pos.map(p => {
+    const a = S.assets[p.ticker] || {}, h = byTk[p.ticker] || [], h12 = h.filter(d => d.date > y1), fq = divFreq(h.map(d => d.date)), last = h[h.length - 1];
+    const ann = fut.find(x => x.tk === p.ticker);
+    let next = ann ? { date: ann.pay, v: ann.net, src: 'anunciado' } : null;
+    if (!next && last && (fq || a.policy === 'dist' || p.kind !== 'etf')) {
+      const gap = fq ? fq.d : 91; let nd = addDays(last.date, gap); while (nd <= t0) nd = addDays(nd, gap);
+      next = { date: nd, v: net(last), src: 'estimado' };
+      if (nd <= addDays(t0, 365)) for (let k = 0, dd = nd; k < 12 && dd <= addDays(t0, 365); k++, dd = addDays(dd, gap)) est.push({ tk: p.ticker, date: dd, v: net(last), src: 'estimado' });
+    }
+    return { p, a, h, r12: sum(h12, net), yoc: p.cost > 0 ? sum(h12, d => d.gross) / p.cost * 100 : 0, fq, last, next, acc: p.kind === 'etf' && a.policy === 'acc' };
+  }).sort((x, y) => y.r12 - x.r12 || (x.acc - y.acc));
+  // barras: 12 meses passados + 6 futuros
+  const mk = (y, m) => `${y}-${String(m).padStart(2, '0')}`, [Y, M] = t0.split('-').map(Number), bars = [];
+  for (let k = -11; k <= 6; k++) { const dt = new Date(Date.UTC(Y, M - 1 + k, 1)), key = mk(dt.getUTCFullYear(), dt.getUTCMonth() + 1);
+    const real = sum(divs.filter(d => d.date.startsWith(key)), net), fv = k >= 0 ? sum(fut.filter(x => x.pay.startsWith(key)), x => x.net) + sum(est.filter(x => x.date.startsWith(key) && !fut.some(f => f.tk === x.tk && f.pay.startsWith(key))), x => x.v) : 0;
+    bars.push({ key, k, real, fv, l: MES_C[dt.getUTCMonth()] }); }
+  const mx = Math.max(goal * 0.0001, ...bars.map(b => b.real + (b.k > 0 ? b.fv : b.k === 0 ? Math.max(0, b.fv - b.real) : 0)), 0.01);
+  const barsHTML = `<div class="relative" onpointermove="divBarHover(event,this)" onpointerdown="divBarHover(event,this)" onpointerleave="divBarHover(null,this)" data-def="Toque numa barra para ver o mês">
+    <div class="flex items-end gap-[3px] h-28">${bars.map(b => { const f = b.k > 0 ? b.fv : b.k === 0 ? Math.max(0, b.fv - b.real) : 0, H = v => Math.max(v > 0 ? 3 : 0, v / mx * 100);
+      return `<div data-m data-ml="${b.l} ${b.key.slice(2, 4)}" data-v="${fmtEUR(b.real + f)}" ${b.k > 0 || (b.k === 0 && f > 0) ? 'data-est="1"' : ''} class="flex-1 flex flex-col justify-end h-full">
+        ${f > 0 ? `<i class="block rounded-t-[4px]" style="height:${H(f)}%;background:repeating-linear-gradient(135deg,#A7F3D0 0 4px,#D1FAE5 4px 8px)"></i>` : ''}
+        ${b.real > 0 ? `<i class="block ${f > 0 ? '' : 'rounded-t-[4px]'}" style="height:${H(b.real)}%;background:#10B981"></i>` : ''}
+        ${!b.real && !f ? '<i class="block h-[3px] rounded bg-slate-200"></i>' : ''}</div>`; }).join('')}</div>
+    <div class="flex gap-[3px] mt-1 text-[9.5px] text-slate-400">${bars.map(b => `<span class="flex-1 text-center ${b.k === 0 ? 'font-extrabold text-ink' : ''}">${b.k % 3 === 0 ? b.l : ''}</span>`).join('')}</div>
+    <div class="dv-tip text-[12px] text-slate-600 mt-2 num">Toque numa barra para ver o mês</div></div>`;
+  const nextList = [...fut.map(x => ({ tk: x.tk, date: x.pay, v: x.net, src: x.payKnown ? 'anunciado' : 'anunciado · data aprox.' })), ...est.filter(x => !fut.some(f => f.tk === x.tk))]
+    .filter(x => x.date > t0).sort((a, b) => a.date.localeCompare(b.date)).filter((x, i, arr) => arr.findIndex(y => y.tk === x.tk) === i).slice(0, 6);
+  const nm = t => esc(t.replace(/\.[A-Z]+$/, ''));
   const item = x => {
     const now = x.pay <= t0;
-    return `<div class="p-4 ${now ? 'bg-emerald-50' : ''}">
-      <div class="flex justify-between gap-2"><div class="font-bold ${now ? 'text-emerald-800' : ''}">${esc(x.tk)} · ${now ? (x.pay === t0 ? 'pagamento hoje' : 'pago a ' + fmtD(x.pay)) : 'pagamento ' + fmtD(x.pay) + (x.payKnown ? '' : ' (aprox.)')}</div>
-        <div class="num font-extrabold ${now ? 'text-emerald-800' : ''}">${fmtEUR(x.net)}</div></div>
-      <div class="text-xs ${now ? 'text-emerald-800' : 'text-slate-500'} mt-0.5">${fmtN(x.amt, 4)} ${x.cur} por ação × ${fmtQ(x.qty)} · ${x.country === 620 ? 'após 28% retido em Portugal' : x.wr ? `após ${fmtN(x.wr, 0)}% retido na origem` : 'sem retenção na origem'} · IRS ${fmtEUR(x.irs)}</div>
-      ${now ? `<div class="grid grid-cols-2 gap-2 mt-2">
-        <button data-divok="${esc(x.key)}" class="h-10 rounded-xl bg-white border border-emerald-200 text-emerald-800 text-sm font-bold">Recebi</button>
-        <button data-divother="${esc(x.key)}" class="h-10 rounded-xl bg-white border border-emerald-200 text-emerald-800 text-sm font-bold">Outro valor</button></div>
-        <button data-divskip="${esc(x.key)}" class="mt-2 text-xs font-semibold text-slate-500">Não recebi este dividendo</button>` : ''}</div>`;
+    return `<div class="p-4 bg-emerald-50"><div class="flex justify-between gap-2"><div class="font-bold text-emerald-800">${esc(x.tk)} · ${x.pay === t0 ? 'pagamento hoje' : 'pago a ' + fmtD(x.pay)}</div><div class="num font-extrabold text-emerald-800">${fmtEUR(x.net)}</div></div>
+      <div class="grid grid-cols-2 gap-2 mt-2"><button data-divok="${esc(x.key)}" class="h-10 rounded-xl bg-white border border-emerald-200 text-emerald-800 text-sm font-bold">Recebi</button>
+      <button data-divother="${esc(x.key)}" class="h-10 rounded-xl bg-white border border-emerald-200 text-emerald-800 text-sm font-bold">Outro valor</button></div>
+      <button data-divskip="${esc(x.key)}" class="mt-2 text-xs font-semibold text-slate-500">Não recebi este dividendo</button></div>`;
   };
   $('#view-divs').innerHTML = `
   <div class="flex items-center gap-2 mb-3"><button data-back class="w-9 h-9 rounded-full bg-white border border-brand-100 grid place-items-center" aria-label="Voltar">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
-    <h1 class="text-2xl font-extrabold tracking-tight flex-1">Dividendos previstos</h1>
+    <h1 class="text-2xl font-extrabold tracking-tight flex-1">Dividendos</h1>
     <button data-divref class="h-9 px-3 rounded-full bg-white border border-brand-100 text-sm font-bold text-brand-700" ${UI.job ? 'disabled' : ''}>${UI.job ? 'A atualizar…' : 'Atualizar'}</button></div>
   ${jobBanner()}
-  <div class="grid grid-cols-2 gap-2">
-    <div class="rounded-2xl bg-white border border-brand-100 p-3"><div class="text-xs text-slate-500 font-semibold">Próximos 90 dias</div><div class="num font-extrabold">${fmtEUR(fut.reduce((s, x) => s + x.net, 0))} líquido</div></div>
-    <div class="rounded-2xl bg-white border border-brand-100 p-3"><div class="text-xs text-slate-500 font-semibold">IRS a pagar sobre isto</div><div class="num font-extrabold text-amber-700">${fmtEUR(fut.reduce((s, x) => s + x.irs, 0))}</div></div>
+  <div class="rounded-[24px] text-white p-5" style="background:#0F1A2E">
+    <div class="text-[12px] font-bold uppercase tracking-[.12em] text-emerald-300">Rendimento passivo</div>
+    <div class="flex items-end gap-2 mt-1"><span class="num text-[34px] font-extrabold leading-none">${fmtEUR(perMonth)}</span><span class="text-sm text-slate-300 mb-1">/ mês em média</span></div>
+    <div class="grid grid-cols-3 gap-2 mt-4 text-[11px] text-slate-300">
+      <div class="rounded-xl bg-white/10 p-2.5"><div>Recebido em ${yr}</div><b class="num text-[14px] text-white">${fmtEUR(netYr)}</b></div>
+      <div class="rounded-xl bg-white/10 p-2.5"><div>Últimos 12 meses</div><b class="num text-[14px] text-white">${fmtEUR(net12)}</b></div>
+      <div class="rounded-xl bg-white/10 p-2.5"><div>Rendimento s/ custo</div><b class="num text-[14px] text-white">${cost > 0 ? fmtN(gross12 / cost * 100, 2) : '0'}%</b></div></div>
+    ${goal ? `<div class="mt-4"><div class="flex justify-between text-[12px]"><span class="text-slate-300">Meta: <b class="text-white">${fmtEUR(goal)}/mês</b></span><button onclick="divGoalSet()" class="text-emerald-300 font-bold">${fmtN(Math.min(100, perMonth / goal * 100), 1)}% ›</button></div>
+      <div class="h-2 rounded-full bg-white/10 mt-1.5 overflow-hidden"><i class="block h-full rounded-full bg-emerald-400" style="width:${Math.min(100, perMonth / goal * 100)}%"></i></div>
+      <div class="text-[11px] text-slate-400 mt-1.5 num">Ao rendimento atual (${cost > 0 ? fmtN(gross12 / cost * 100, 2) : '0'}%/ano), precisaria de cerca de ${gross12 > 0 ? fmtEUR(goal * 12 / (net12 / cost)) : '—'} investidos.</div></div>`
+      : `<button onclick="divGoalSet()" class="mt-4 w-full h-10 rounded-xl bg-white/10 text-sm font-bold text-emerald-300">+ Definir meta de rendimento mensal</button>`}
   </div>
   ${due.length ? `<h2 class="font-extrabold mt-5 mb-2">Para confirmar</h2>${card(due.map(item).join(''), 'divide-y divide-brand-50 overflow-hidden')}` : ''}
-  <h2 class="font-extrabold mt-5 mb-2">Próximos</h2>
-  ${fut.filter(x => x.pay > t0).length ? card(fut.filter(x => x.pay > t0).map(item).join(''), 'divide-y divide-brand-50 overflow-hidden') : card('<div class="p-4 text-sm text-slate-500">Sem dividendos anunciados para os próximos 90 dias.</div>')}
-  ${none.length || unknown.length ? card(`${none.map(p => { const pol = S.assets[p.ticker]?.policy, dist = p.kind === 'etf' && pol !== 'acc';
-      return `<div class="px-4 py-3 flex justify-between items-center gap-3 text-sm"><span class="font-semibold">${esc(p.ticker)}</span><span class="text-right">${p.kind === 'etf'
-        ? (pol === 'acc' ? '<span class="text-slate-500">ETF de acumulação · não distribui</span>' : `<span class="text-slate-500 block">${pol === 'dist' ? 'ETF de distribuição · sem datas na fonte' : 'ETF sem distribuição prevista'}</span>`)
-        : '<span class="text-slate-500">sem dividendo anunciado</span>'}${dist || p.kind !== 'etf' ? `<button onclick="divAdd('${esc(p.ticker)}')" class="mt-1 text-xs font-bold text-brand-600">+ Registar dividendo recebido</button>` : ''}</span></div>`; }).join('')}
-    ${unknown.map(p => `<div class="px-4 py-3 flex justify-between text-sm"><span class="font-semibold">${esc(p.ticker)}</span><span class="text-slate-500">${quoteOf(p.ticker).sym ? 'toque em Atualizar' : 'sem símbolo de cotação'}</span></div>`).join('')}`, 'mt-3 divide-y divide-brand-50 overflow-hidden') : ''}
-  <p class="text-[11px] text-slate-500 mt-4 leading-relaxed">Estimativa: dividendo anunciado por ação × ações que tinha na véspera da data ex-dividendo, convertido ao câmbio BCE de hoje. O valor certo só se sabe quando a corretora paga. Usa a mesma chave da Alpha Vantage dos preços (um pedido por ativo).</p>`;
+  <div class="lg:grid lg:grid-cols-2 lg:gap-4 items-start"><div>
+  <div class="dkc p-4 mt-3"><div class="flex justify-between items-baseline"><h2 class="font-extrabold">Por mês</h2><span class="text-[11px] text-slate-500 flex items-center gap-3"><span class="flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-sm inline-block bg-emerald-500"></i>recebido</span><span class="flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-sm inline-block" style="background:repeating-linear-gradient(135deg,#A7F3D0 0 3px,#D1FAE5 3px 6px)"></i>previsto</span></span></div>
+    <div class="mt-3">${barsHTML}</div></div>
+  <div class="dkc mt-3 overflow-hidden"><div class="px-4 pt-4 pb-2 flex justify-between items-baseline"><h2 class="font-extrabold">Próximos pagamentos</h2><span class="text-[11px] text-slate-500">${fmtEUR(sum(nextList.filter(x => x.date <= addDays(t0, 90)), x => x.v))} em 90 dias</span></div>
+    ${nextList.length ? nextList.map(x => `<div class="px-4 py-3 border-t border-brand-50 flex items-center gap-3"><div class="w-11 text-center shrink-0"><div class="text-[10px] font-bold uppercase text-slate-400">${MES_C[+x.date.slice(5, 7) - 1]}</div><div class="text-lg font-extrabold leading-none">${+x.date.slice(8, 10)}</div></div>
+      <i class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${C[x.tk] || '#94A3B8'}"></i><div class="flex-1 min-w-0"><b>${nm(x.tk)}</b><div class="text-[11px] ${x.src === 'estimado' ? 'text-amber-700' : 'text-slate-500'}">${x.src === 'estimado' ? 'estimado pelo histórico' : x.src}</div></div><b class="num">${fmtEUR(x.v)}</b></div>`).join('')
+      : '<div class="px-4 pb-4 text-sm text-slate-500">Ainda sem pagamentos previstos. Registe os dividendos que recebe e a app aprende a frequência de cada ativo.</div>'}</div>
+  </div><div>
+  <div class="dkc mt-3 overflow-hidden"><div class="px-4 pt-4 pb-2 flex justify-between items-baseline"><h2 class="font-extrabold">Por ativo</h2><span class="text-[11px] text-slate-500">últimos 12 meses</span></div>
+    ${rows.map(r => `<div class="px-4 py-3 border-t border-brand-50 ${r.acc ? 'opacity-60' : ''}"><div class="flex items-center gap-3"><i class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${C[r.p.ticker] || '#94A3B8'}"></i>
+        <div class="flex-1 min-w-0"><b>${nm(r.p.ticker)}</b> <span class="text-[11px] text-slate-400 font-bold">${r.p.kind === 'etf' ? (r.a.policy === 'dist' ? 'ETF dist.' : r.a.policy === 'acc' ? 'ETF acum.' : 'ETF') : 'Ação'}</span>
+          <div class="text-[11px] text-slate-500">${r.acc ? 'reinveste dentro do fundo · não paga' : r.h.length ? `${r.fq ? r.fq.l : 'frequência a confirmar'} · último ${fmtD(r.last.date)}${r.next ? ` · próximo ~${fmtD(r.next.date)}` : ''}` : 'ainda sem dividendos registados'}</div></div>
+        <div class="text-right num shrink-0"><b class="block">${fmtEUR(r.r12)}</b><span class="text-[11px] ${r.yoc > 0 ? 'text-emerald-700 font-bold' : 'text-slate-400'}">${fmtN(r.yoc, 2)}% s/ custo</span></div></div>
+      ${!r.acc ? `<button onclick="divAdd('${esc(r.p.ticker)}')" class="ml-[22px] mt-1 text-xs font-bold text-brand-600">+ Registar dividendo recebido</button>` : ''}</div>`).join('')}</div>
+  <div class="dkc mt-3 overflow-hidden"><div class="px-4 pt-4 pb-2 flex justify-between items-baseline"><h2 class="font-extrabold">Recebidos</h2><span class="text-[11px] text-slate-500">${divs.length} registo(s)</span></div>
+    ${divs.length ? divs.slice().reverse().slice(0, UI.divAll ? 999 : 6).map(d => `<button data-edit="div:${esc(d.id)}" class="w-full text-left px-4 py-3 border-t border-brand-50 flex items-center gap-3">
+        <div class="w-11 text-center shrink-0"><div class="text-[10px] font-bold uppercase text-slate-400">${MES_C[+d.date.slice(5, 7) - 1]} ${d.date.slice(2, 4)}</div><div class="text-lg font-extrabold leading-none">${+d.date.slice(8, 10)}</div></div>
+        <div class="flex-1 min-w-0"><b>${nm(d.ticker)}</b><div class="text-[11px] text-slate-500 num">bruto ${fmtEUR(d.gross)}${(d.taxForeign || d.taxPT) ? ` · retido ${fmtEUR((d.taxForeign || 0) + (d.taxPT || 0))}` : ''}</div></div><b class="num text-emerald-700">+${fmtEUR(net(d))}</b></button>`).join('')
+      + (divs.length > 6 && !UI.divAll ? `<button onclick="UI.divAll=1;renderDivs()" class="w-full py-3 border-t border-brand-50 text-sm font-bold text-brand-600">Ver todos (${divs.length})</button>` : '')
+      : '<div class="px-4 pb-4 text-sm text-slate-500">Ainda não registou dividendos.</div>'}</div>
+  </div></div>
+  <div class="rounded-2xl bg-amber-50 border border-amber-200 p-3 mt-3 text-[12.5px] text-amber-900 num">IRS sobre os dividendos de ${yr}: cerca de <b>${fmtEUR(irsYr)}</b> (28%, já descontado o imposto pago no estrangeiro). <button data-tab="tax" class="font-bold underline">Ver IRS</button></div>
+  <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">Previsões: dividendos anunciados (fonte Alpha Vantage, sobretudo ações americanas) e, para os restantes, estimativas pelo seu histórico: repete o último pagamento com a frequência habitual. O valor certo só se sabe quando a corretora paga.</p>`;
 }
 
 function confirmDividend(key, netOverride) {
